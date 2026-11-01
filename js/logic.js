@@ -219,3 +219,85 @@ export function currentMeeting(S) {
   const ms = S.meetings.slice().sort((a, b) => a.meet_date.localeCompare(b.meet_date));
   return ms.find((m) => m.meet_date >= iso) || ms[ms.length - 1] || null;
 }
+
+// ================= طريق القوافل =================
+/** personal levels: cumulative net points, compared with yourself only (no ranking) */
+export const LEVELS = [
+  { min: 0, name: "رحّال", icon: "🎒" },
+  { min: 10, name: "دليل", icon: "🧭" },
+  { min: 20, name: "حادي", icon: "🐪" },
+  { min: 32, name: "فارس الطريق", icon: "🏇" },
+];
+export function level(total) {
+  let i = 0; for (let j = 0; j < LEVELS.length; j++) if (total >= LEVELS[j].min) i = j;
+  const nx = LEVELS[i + 1] || null;
+  return { i, ...LEVELS[i], next: nx, toNext: nx ? nx.min - total : 0, pct: nx ? Math.round(((total - LEVELS[i].min) / (nx.min - LEVELS[i].min)) * 100) : 100 };
+}
+
+/** power cards: every star = one draw (gold = two). Used in a league match, one per team per match. */
+export const POWER = {
+  golden: { name: "الهدف الذهبي", icon: "⚡", tier: 3, rule: "لمدة دقيقتين: أي هدف لكم يُحسب هدفين." },
+  shield: { name: "الدرع", icon: "🛡️", tier: 3, rule: "لمدة دقيقتين: أول هدف يدخل عليكم لا يُحسب." },
+  extra: { name: "اللاعب الإضافي", icon: "👟", tier: 2, rule: "تلعبون بلاعبٍ زيادة لمدة دقيقتين." },
+  freekick: { name: "الركلة الحرة", icon: "🎯", tier: 2, rule: "ركلة حرة مباشرة من منتصف الملعب، مرة واحدة." },
+  timeout: { name: "الوقت المستقطع", icon: "⏱️", tier: 1, rule: "توقيف المباراة دقيقة كاملة لخطة القافلة." },
+  kickoff: { name: "اختيار البداية", icon: "🧭", tier: 1, rule: "تختارون جهة الملعب وضربة البداية." },
+};
+export const TIER = { 1: "عادية", 2: "نادرة", 3: "أسطورية" };
+const WEIGHTS = [["kickoff", 20], ["timeout", 20], ["extra", 18], ["freekick", 17], ["golden", 13], ["shield", 12]];
+/** r in [0,1) */
+export function drawKind(r) { let x = r * 100; for (const [k, w] of WEIGHTS) { if (x < w) return k; x -= w; } return "kickoff"; }
+
+/** slots the caravan earned in a meeting but has not drawn yet */
+export function pendingDraws(S, I, mid, cid) {
+  const st = teamMeet(S, I, mid, cid).stars;
+  const have = (S.power_cards || []).filter((p) => p.meeting_id === mid && p.caravan_id === cid).map((p) => p.slot);
+  const out = []; for (let s = 1; s <= st; s++) if (!have.includes(s)) out.push(s);
+  return out;
+}
+export const cardsOf = (S, cid) => (S.power_cards || []).filter((p) => p.caravan_id === cid).sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
+export const freeCards = (S, cid) => cardsOf(S, cid).filter((p) => !p.used_match_id);
+export const cardFor = (S, matchId, cid) => (S.power_cards || []).find((p) => p.used_match_id === matchId && p.caravan_id === cid) || null;
+
+/** stations: each ROAD stop unlocks a free privilege for the next meeting */
+export const PERKS = [
+  null,
+  { name: "هتاف الدخول", what: "تختار القافلة هتاف أو نشيد دخول اللقاء القادم." },
+  { name: "أول الصف", what: "أول قافلة تتجه للوجبة في اللقاء القادم." },
+  { name: "صاحبة القرار", what: "تختار لعبة الفقرة الترفيهية في اللقاء القادم." },
+  { name: "شارة الكابتن", what: "قائد القافلة يلبس شارة الكابتن في مباراة الدوري القادمة." },
+  { name: "المجلس", what: "تختار القافلة مكان جلستها في الديوان." },
+  { name: "راية الشاشة", what: "شعار القافلة يتصدّر الشاشة طوال اللقاء القادم." },
+  { name: "المهمة السرّية", what: "تتسلم القافلة مهمة خاصة من مسؤول الفئة." },
+  { name: "أسطورة الطريق", what: "اسم القافلة في لوحة الشرف، وتختار جائزة اللقاء الختامي." },
+];
+/** station index after each meeting, and the latest station reached */
+export function roadOf(S, I, cid) {
+  let stars = 0; const reached = [];
+  for (const m of S.meetings) {
+    const before = Math.min(ROAD.length - 1, stars);
+    stars += teamMeet(S, I, m.id, cid).stars;
+    const after = Math.min(ROAD.length - 1, stars);
+    for (let p = before + 1; p <= after; p++) reached.push({ pos: p, meeting_id: m.id });
+  }
+  const pos = Math.min(ROAD.length - 1, stars);
+  return { pos, reached, last: reached[reached.length - 1] || null };
+}
+
+/** seals: from the start meeting on, each meeting where half the caravans earn a star opens the next seal */
+export function sealState(S, I) {
+  const seals = (S.seals || []).slice().sort((a, b) => a.n - b.n);
+  const start = Number((S.app_settings || []).find((x) => x.key === "seal_start")?.value ?? 1);
+  const cars = S.caravans;
+  const need = Math.max(1, Math.ceil(cars.length / 2));
+  const opened = {}; let k = 0;
+  const perMeet = {};
+  for (const m of S.meetings) {
+    if ((m.number || 0) < start) continue;
+    const got = cars.filter((c) => teamMeet(S, I, m.id, c.id).stars > 0).map((c) => c.id);
+    const open = got.length >= need && k < seals.length;
+    perMeet[m.id] = { seal: seals[k] || null, got, need, open };
+    if (open) { opened[seals[k].n] = m.id; k++; }
+  }
+  return { seals, opened, perMeet, need, start, nextSeal: seals[k] || null };
+}
