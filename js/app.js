@@ -5,7 +5,7 @@ import * as L from "./logic.js";
 const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings", "duty_log"];
 let S = null, I = null, me = null, accounts = [];
 let meetId = null;
-let ui = { seenCards: new Set(), liveCar: "all", kidsQ: "", kidsCar: "all", leagueTab: "matches", screenTab: "caravans", openDed: null, openMatch: null, armed: null };
+let ui = { present: (() => { try { return localStorage.getItem("mgh.present") === "1"; } catch (e) { return false; } })(), seenCards: new Set(), liveCar: "all", kidsQ: "", kidsCar: "all", leagueTab: "matches", screenTab: "caravans", openDed: null, openMatch: null, armed: null };
 const $app = () => document.getElementById("app");
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -21,12 +21,22 @@ function can(area) {
 }
 const isOwner = () => me && me.status === "approved" && me.role === "owner";
 
-function toast(msg, kind = "ok") {
+function toast(msg, kind = "ok", undo) {
   let t = document.getElementById("toast");
   if (!t) { t = document.createElement("div"); t.id = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
-  t.textContent = msg; t.className = "toast " + kind + " show";
-  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), kind === "err" ? 5000 : 2200);
+  t.innerHTML = ""; const sp = document.createElement("span"); sp.textContent = msg; t.appendChild(sp);
+  if (undo) { const bt = document.createElement("button"); bt.className = "toast-undo"; bt.textContent = "↩︎ تراجع"; bt.onclick = async () => { t.classList.remove("show"); await guard(undo, "تم التراجع"); render(); }; t.appendChild(bt); }
+  t.className = "toast " + kind + (undo ? " has-undo" : "") + " show";
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), kind === "err" ? 5000 : undo ? 8000 : 2200);
 }
+/** run a change, then offer «تراجع» for 8 seconds */
+async function doUndoable(msg, fn, undo, tables) {
+  const r = await guard(fn); if (r === undefined) return;
+  if (tables) await guard(() => reload(...tables));
+  toast(msg, "ok", async () => { await undo(r); if (tables) await reload(...tables); });
+  render();
+}
+const first = (r) => (Array.isArray(r) ? r[0] : r) || {};
 async function guard(fn, okMsg) {
   try { const r = await fn(); if (okMsg) toast(okMsg); return r; }
   catch (e) { toast(e instanceof ApiError ? e.message : "حدث خطأ: " + (e.message || e), "err"); console.error(e); return undefined; }
@@ -83,6 +93,7 @@ async function render() {
   const r = parseRoute();
   document.body.classList.toggle("is-screen", r.name === "screen");
   document.body.classList.toggle("is-print", r.name === "print");
+  document.body.classList.toggle("present", !!ui.present);
   if (["login", "signup", "forgot", "reset"].includes(r.name) || !auth.session) {
     if (r.name === "reset" && auth.session) return viewReset();
     if (!auth.session) return r.name === "signup" ? viewSignup() : r.name === "forgot" ? viewForgot() : viewLogin();
@@ -109,6 +120,7 @@ function shell(inner, active) {
     <div class="wrap top-in">
       <a class="brand" href="#home" aria-label="الرئيسية"><img src="assets/mahara.png" alt="نادي مهارة"><span><b>المغامرون</b><small>حي الهجرة</small></span></a>
       <nav class="nav" aria-label="الأقسام">${nav}<a href="#screen" class="scr">الشاشة</a></nav>
+      <button class="pm-btn ${ui.present ? "on" : ""}" data-act="present_mode" aria-pressed="${!!ui.present}" title="يخفي الملاحظات الخاصة بك (الصفراء) لما تعرض المنصة للمشاركين">${ui.present ? "👁️ وضع العرض" : "🔒 ملاحظاتي ظاهرة"}</button>
       <a class="who" href="#profile" title="حسابي"><span>${esc(me.full_name || me.email)}</span><small>${ROLE_AR[me.role] || ""}</small></a>
     </div>
     <div class="stripe" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -350,7 +362,7 @@ function viewKids() {
     ${edit ? `<section class="panel"><h3>إضافة مغامر</h3><div class="addrow"><input id="nk-first" placeholder="الاسم الأول" maxlength="30" aria-label="الاسم الأول"><input id="nk-fam" placeholder="اسم العائلة" maxlength="30" aria-label="اسم العائلة"><select id="nk-car" aria-label="القافلة">${carOpts(null)}</select><button class="btn" data-act="kidadd">إضافة</button></div><p class="muted small">نحفظ الاسم فقط. بيانات ولي الأمر والصحة تبقى في المنصة الرسمية.</p></section>` : ""}
     <div class="filters"><input id="kq" type="search" placeholder="ابحث بالاسم" value="${esc(ui.kidsQ)}" aria-label="بحث"><select id="kcar" aria-label="تصفية بالقافلة"><option value="all">كل القوافل</option>${S.caravans.map((c) => `<option value="${c.id}" ${ui.kidsCar === String(c.id) ? "selected" : ""}>${esc(c.name)}</option>`).join("")}<option value="none" ${ui.kidsCar === "none" ? "selected" : ""}>بدون قافلة</option></select></div>
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>المغامر</th><th>القافلة</th><th>المركز</th><th>الحرف</th><th>المجموع</th><th>الحضور</th>${edit ? "<th>تعديل</th>" : ""}</tr></thead><tbody>
-    ${list.map((k) => { const at = L.kidAttendance(S, I, k.id); if (edit && ui.editKid === k.id) return `<tr><td colspan="7"><div class="addrow"><input id="ek-first" value="${esc(k.first_name)}" maxlength="30" aria-label="الاسم الأول"><input id="ek-fam" value="${esc(k.family_name)}" maxlength="30" aria-label="اسم العائلة"><label class="chk"><input id="ek-off" type="checkbox" ${k.official ? "checked" : ""}> مسجّل في المنصة الرسمية</label><button class="btn sm" data-act="kidsave" data-id="${k.id}">حفظ</button><button class="btn ghost sm" data-act="kidedit" data-id="">إلغاء</button></div></td></tr>`;
+    ${list.map((k) => { const at = L.kidAttendance(S, I, k.id); if (edit && ui.editKid === k.id) return `<tr><td colspan="7"><div class="addrow"><input id="ek-first" value="${esc(k.first_name)}" maxlength="30" aria-label="الاسم الأول"><input id="ek-fam" value="${esc(k.family_name)}" maxlength="30" aria-label="اسم العائلة"><label class="chk"><input id="ek-off" type="checkbox" ${k.official ? "checked" : ""}> مسجّل في المنصة الرسمية</label><button class="btn sm" data-act="kidsave" data-id="${k.id}">حفظ</button><button class="btn ghost sm" data-act="kidedit" data-id="">إلغاء</button><button class="btn danger sm" data-act="kiddel" data-id="${k.id}">حذف المغامر نهائيًا</button></div></td></tr>`;
       return `<tr class="${k.active ? "" : "inactive"}"><td><a href="#kid/${k.id}">${esc(L.kidName(k))}</a>${k.official ? "" : ' <span class="tag">غير مسجّل</span>'}</td>
       <td>${edit ? `<select data-act="kidcar" data-id="${k.id}" aria-label="قافلة ${esc(k.first_name)}">${carOpts(k.caravan_id)}</select>` : esc(carName(k.caravan_id))}</td>
       <td>${edit ? `<select data-act="kidpos" data-id="${k.id}" aria-label="مركز ${esc(k.first_name)}">${posOpts(k.position)}</select>` : esc(L.POSITIONS[k.position] || "—")}</td>
@@ -460,7 +472,7 @@ function matchCard(m, edit) {
       <div class="grid2">${[[h, "mph"], [a, "mpa"]].map(([cc, pid]) => { const cur = L.cardFor(S, m.id, cc.id); const opts = (cur ? [cur] : []).concat(L.freeCards(S, cc.id));
         return `<label>🎴 بطاقة قوة ${esc(cc.name)}<select id="${pid}-${m.id}"><option value="">بدون</option>${opts.map((p) => `<option value="${p.id}" ${cur && cur.id === p.id ? "selected" : ""}>${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)}</option>`).join("")}</select></label>`; }).join("")}</div>
       <label>🏅 لاعب الروح الرياضية في المباراة<select id="msp-${m.id}">${kidOpt(both, m.spirit_kid)}</select></label>
-      <button class="btn" data-act="msave" data-id="${m.id}">حفظ النتيجة</button>
+      <div class="row-btns"><button class="btn" data-act="msave" data-id="${m.id}">حفظ النتيجة</button><button class="btn danger sm" data-act="matchdel" data-id="${m.id}">حذف المباراة</button></div>
       <div class="sub"><h4>الأهداف</h4><ul class="mini-list">${goals.map((g) => `<li>⚽ ${esc(L.kidName(I.kid[g.kid_id]))}<button class="x" data-act="goaldel" data-id="${g.id}" aria-label="حذف الهدف">×</button></li>`).join("") || '<li class="muted">لا أهداف</li>'}</ul>
         <div class="addrow"><select id="mg-${m.id}" aria-label="من سجّل">${kidOpt(both)}</select><button class="btn sm" data-act="goaladd" data-id="${m.id}">+ هدف</button></div></div>
       <div class="sub"><h4>البطاقات</h4><ul class="mini-list">${cards.map((c) => `<li>${c.color === "blue" ? "🟦 أمانة" : c.color === "yellow" ? "🟨 صفراء" : "🟥 حمراء"} · ${esc(L.kidName(I.kid[c.kid_id]))}${c.reason ? " · " + esc(c.reason) : ""}<button class="x" data-act="carddel" data-id="${c.id}" aria-label="حذف البطاقة">×</button></li>`).join("") || '<li class="muted">لا بطاقات</li>'}</ul>
@@ -481,7 +493,7 @@ function revealHTML(rv, closable) {
 function powerBar(c, m) {
   const pend = L.pendingDraws(S, I, m.id, c.id); const free = L.freeCards(S, c.id);
   if (!pend.length && !free.length) return "";
-  return `<div class="pw-bar"><span class="pw-have">🎴 بطاقات القافلة: ${free.length ? free.map((p) => `<span class="pw-chip t${L.POWER[p.kind].tier}">${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)}</span>`).join("") : '<span class="muted">لا شيء</span>'}</span>
+  return `<div class="pw-bar"><span class="pw-have">🎴 بطاقات القافلة: ${free.length ? free.map((p) => `<span class="pw-chip t${L.POWER[p.kind].tier}">${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)}${p.meeting_id === m.id && can("points") ? ` <button class="x" data-act="carddrawdel" data-id="${p.id}" aria-label="حذف السحبة">×</button>` : ""}</span>`).join("") : '<span class="muted">لا شيء</span>'}</span>
     ${pend.length && can("points") ? `<button class="btn sm pw-draw" data-act="draw" data-car="${c.id}" data-slot="${pend[0]}">🎴 اسحب بطاقة القوة${pend.length > 1 ? ` <span class="num">(${pend.length})</span>` : ""}</button>` : ""}</div>`;
 }
 function kalimaPick(c, m) {
@@ -527,32 +539,49 @@ function viewKit() {
     ${step(5, "تجهيز كلمة اللقاء القادم", "الختام · القافلة تختار المتحدث، وأنت تعطيه بطاقة الموضوع ليتجهز", kalNext ? `<p>قافلة <b>${esc(kalNext.name)}</b> عليها الكلمة في اللقاء ${nx.number}.</p><div class="duty-kal">${kalimaPick(kalNext, nx)}</div>` : '<p class="muted">لا يوجد لقاء قادم.</p>')}
   `, "kit");
 }
+const DUTY_TONE = { musalla: "#1fa865", kalima: "#0a63e6", food: "#ef8a33", clean: "#e7297a" };
+const LVL_TONE = ["#6b7cff", "#1fa865", "#0a63e6", "#ef8a33", "#e7297a", "#d4a106"];
+function printCards() {
+  const pc = (kind) => { const p = L.POWER[kind]; return `<div class="pp-card pw t${p.tier}"><div class="pw-frame">
+      <header class="pw-top"><span class="pw-gems">${"◆".repeat(p.tier)}${"◇".repeat(3 - p.tier)}</span><span class="pw-tier">${L.TIER[p.tier]}</span></header>
+      <div class="pw-medal"><span>${p.icon}</span></div>
+      <h3>${esc(p.name)}</h3><p class="pw-rule">${esc(p.rule)}</p>
+      <footer class="pw-foot"><span>بطاقة قوة</span><i></i><span>تُعلن قبل الصافرة</span></footer></div></div>`; };
+  const duty = (d) => `<div class="pp-duty" style="--dt:${DUTY_TONE[d.key]}"><header class="pd-head"><small>تكليف القافلة</small><h3>${esc(d.name)}</h3></header><div class="pd-medal">${d.icon}</div>
+      <div class="pd-body"><p class="pd-k">الإتقان يعني</p><ul>${d.tasks.map((t) => `<li><i></i>${esc(t)}</li>`).join("")}</ul></div>
+      <footer class="pd-f"><b>⭐</b> كل إتقانين = نجمة للقافلة</footer></div>`;
+  const lvl = (lv, name) => `<div class="pp-lvl" style="--lt:${LVL_TONE[lv.i]}"><div class="pl-side"><div class="pl-medal">${lv.icon}</div><div class="pl-ladder">${L.LEVELS.map((_, i) => `<i class="${i <= lv.i ? "on" : ""}"></i>`).join("")}</div></div>
+      <div class="pl-main"><small>لقب جديد في طريق القوافل</small><h3>${esc(lv.name)}</h3><p>${esc(lv.what)}</p>
+      <div class="pl-name"><span>${name ? esc(name) : ""}</span></div><div class="pl-sign"><span>المستوى ${lv.i + 1} من ${L.LEVELS.length}</span><span>نادي مهارة · المغامرون</span></div></div></div>`;
+  const topic = (i, who) => { const tp = L.TOPICS[i]; return `<div class="pp-topic ${tp.c}"><header class="pt-head"><span class="pt-cat">${L.TOPIC_CATS[tp.c]}</span><span class="pt-n">${String(i + 1).padStart(2, "0")}</span></header>
+      <h3>${esc(tp.t)}</h3><p class="pt-s">${esc(tp.s)}</p><div class="pt-q"><b>اسأل الحضور</b>${esc(tp.q)}</div>
+      <footer class="pt-f"><span>🎙️ منبر القافلة · ⏱️ 3 دقائق</span><span class="pt-who">${who ? esc(who) : "المتحدث: ............"}</span></footer></div>`; };
+  return { pc, duty, lvl, topic };
+}
 function viewPrint(arg) {
-  const m = I.meet[meetId];
-  const pc = (kind) => { const p = L.POWER[kind]; return `<div class="pp-card pw t${p.tier}"><span class="pc-tier">${L.TIER[p.tier]}</span><span class="pc-ic">${p.icon}</span><b>${esc(p.name)}</b><p>${esc(p.rule)}</p><small>بطاقة قوة · تُعلن قبل البداية</small></div>`; };
-  const duty = (d) => `<div class="pp-duty"><span class="pd-ic">${d.icon}</span><h3>${esc(d.name)}</h3><p class="pd-k">الإتقان يعني:</p><ul>${d.tasks.map((t) => `<li>☐ ${esc(t)}</li>`).join("")}</ul><p class="pd-f">كل إتقانين = ⭐ نجمة للقافلة</p></div>`;
-  const lvl = (lv, name) => `<div class="pp-lvl l${lv.i}"><span class="pl-ic">${lv.icon}</span><small>لقب جديد في طريق القوافل</small><h3>${esc(lv.name)}</h3><p>${esc(lv.what)}</p><div class="pl-name">${name ? esc(name) : "&nbsp;"}</div></div>`;
-  const topic = (i, who) => { const tp = L.TOPICS[i]; return `<div class="pp-topic"><small>منبر القافلة · الموضوع ${i + 1}</small><h3>${esc(tp.t)}</h3><p>${esc(tp.s)}</p><ol><li>ابدأ بسؤال أو قصة</li><li>فائدة وحدة واضحة</li><li>اختم بشي نطبّقه اليوم</li></ol><div class="pl-name">${who ? esc(who) : "&nbsp;"} · ⏱️ 3 دقائق</div></div>`; };
+  const m = I.meet[meetId]; const { pc, duty, lvl, topic } = printCards();
   let title, guide, sheets;
   if (arg === "meet" && m) {
     const nx = nextMeeting(m); const kalNext = nx && S.caravans.find((c) => (L.dutyOf(S, nx, c.id) || {}).key === "kalima");
     const kd = kalNext && L.dutyRow(S, nx.id, kalNext.id);
     const lv = newLevels(m);
     title = `بطاقات اللقاء ${m.number}`;
-    guide = `<li>بطاقات المستويات الجديدة: <b>${lv.length}</b></li><li>بطاقة موضوع كلمة اللقاء القادم: <b>${kd && kd.topic != null ? 1 : 0}</b>${kd && kd.topic != null ? "" : " (اختر الموضوع من حقيبة اللقاء أولًا)"}</li><li>بطاقات القوة والتكليفات من المجموعة الثابتة، ما تحتاج تطبعها كل مرة.</li>`;
-    sheets = `<div class="sheet small-cards">${lv.map((x) => lvl(x.lv, L.kidName(x.k))).join("")}${kd && kd.topic != null ? topic(kd.topic, kd.speaker_kid && I.kid[kd.speaker_kid] ? L.kidName(I.kid[kd.speaker_kid]) : "") : ""}</div>`;
-    if (!lv.length && !(kd && kd.topic != null)) sheets = '<p class="empty">ما فيه شي يحتاج طباعة لهذا اللقاء.</p>';
+    guide = `<li>بطاقات المستويات الجديدة بالأسماء: <b>${lv.length}</b></li><li>بطاقة موضوع كلمة اللقاء القادم: <b>${kd && kd.topic != null ? 1 : 0}</b>${kd && kd.topic != null ? "" : " (اختر الموضوع من حقيبة اللقاء أولًا)"}</li><li>بطاقات القوة والتكليفات من المجموعة الثابتة، ما تحتاج تطبعها كل مرة.</li>`;
+    sheets = lv.length ? `<div class="sheet lvls">${lv.map((x) => lvl(x.lv, L.kidName(x.k))).join("")}</div>` : "";
+    if (kd && kd.topic != null) sheets += `<div class="sheet topics">${topic(kd.topic, kd.speaker_kid && I.kid[kd.speaker_kid] ? L.kidName(I.kid[kd.speaker_kid]) : "")}</div>`;
+    if (!sheets) sheets = '<p class="empty">ما فيه شي يحتاج طباعة لهذا اللقاء.</p>';
   } else {
     title = "مجموعة الطباعة الثابتة";
+    const blanks = [[1, 8], [2, 6], [3, 5], [4, 3], [5, 2]];
     guide = `<li><b>بطاقات القوة:</b> 4 نسخ من كل بطاقة = 24 بطاقة (3 صفحات). تُسترد بعد كل مباراة وتُعاد للصندوق.</li>
       <li><b>بطاقات التكليف:</b> نسختان من كل تكليف = 8 بطاقات (صفحتان). تُسلّم في الانطلاقة وتُسترد في الختام.</li>
-      <li><b>بطاقات المستويات الفارغة:</b> 24 بطاقة (12 مرافق، 8 خبير الدرب، 4 شيخ القافلة) لكتابة الاسم بخط اليد احتياطًا.</li>
-      <li><b>بنك مواضيع الكلمة:</b> 40 بطاقة (5 صفحات). تُعطى بطاقة الموضوع للمتحدث قبل لقائه بأسبوع.</li>
-      <li>الورق: مقوّى 250–300 جرام في المطبعة، أو A4 عادي في البيت. اختر في نافذة الطباعة: الحجم A4، الهوامش «بلا»، وفعّل «رسومات الخلفية». القص على الخطوط المتقطعة.</li>`;
+      <li><b>بطاقات المستويات الفارغة:</b> 24 بطاقة (${blanks.map(([i, n]) => n + " " + L.LEVELS[i].name).join("، ")}) لكتابة الاسم بخط اليد احتياطًا.</li>
+      <li><b>بنك مواضيع الكلمة:</b> 40 بطاقة (7 صفحات): 26 قيم ومبادئ، و14 عن المدينة المنورة.</li>
+      <li>الورق: مقوّى 250–300 جرام في المطبعة، أو A4 عادي في البيت. في نافذة الطباعة: الحجم A4، الهوامش «بلا»، وفعّل «رسومات الخلفية». القص على الخطوط المتقطعة.</li>`;
     sheets = `<h2 class="pp-h">بطاقات القوة</h2><div class="sheet cards">${Object.keys(L.POWER).flatMap((k) => [k, k, k, k]).map(pc).join("")}</div>
       <h2 class="pp-h">بطاقات التكليف</h2><div class="sheet duties">${L.DUTIES.concat(L.DUTIES).map(duty).join("")}</div>
-      <h2 class="pp-h">بطاقات المستويات</h2><div class="sheet small-cards">${[[1, 12], [2, 8], [3, 4]].flatMap(([i, n]) => Array(n).fill(i)).map((i) => lvl(L.level(L.LEVELS[i].min))).join("")}</div>
-      <h2 class="pp-h">بنك مواضيع الكلمة</h2><div class="sheet small-cards">${L.TOPICS.map((_, i) => topic(i)).join("")}</div>`;
+      <h2 class="pp-h">بطاقات المستويات</h2><div class="sheet lvls">${blanks.flatMap(([i, n]) => Array(n).fill(i)).map((i) => lvl(L.level(L.LEVELS[i].min))).join("")}</div>
+      <h2 class="pp-h">بنك مواضيع الكلمة</h2><div class="sheet topics">${L.TOPICS.map((_, i) => topic(i)).join("")}</div>`;
   }
   $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#kit">→ رجوع لحقيبة اللقاء</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
 }
@@ -602,7 +631,8 @@ function viewRoad() {
 // ---------------- reports ----------------
 function viewReports() {
   const act = L.activeKids(S); const edit = can("plan");
-  const rows = S.meetings.map((m) => {
+  const rstart = Number((S.app_settings || []).find((x) => x.key === "report_start")?.value ?? 1);
+  const rows = S.meetings.filter((m) => (m.number || 0) >= rstart).map((m) => {
     const rec = act.filter((k) => L.recorded(I, m.id, k.id));
     const pres = rec.filter((k) => L.present(I, m.id, k.id));
     const avg = pres.length ? pres.reduce((n, k) => n + L.net(I, m.id, k.id), 0) / pres.length : 0;
@@ -618,6 +648,7 @@ function viewReports() {
   const weekly = m ? weeklyReport(m, cur) : "";
   $app().innerHTML = shell(`
     <section class="bar"><h1 class="h1">التقارير</h1>${meetPicker()}</section>
+    <p class="muted small">التقارير تُحسب من اللقاء ${edit ? `<select data-act="reportstart" aria-label="بداية التقارير">${S.meetings.map((x) => `<option value="${x.number}" ${x.number === rstart ? "selected" : ""}>${x.number}</option>`).join("")}</select>` : rstart} وما بعده.</p>
     <div class="stats">
       <div class="stat"><span>متوسط الحضور</span><b class="num">${attRate == null ? "—" : attRate + "%"}</b><small class="${attRate == null ? "" : attRate >= 85 ? "good" : "bad"}">المستهدف 85%+</small></div>
       <div class="stat"><span>المغامرون النشطون</span><b class="num">${act.length}</b><small>من ${S.kids.length} مسجّل</small></div>
@@ -698,21 +729,30 @@ document.addEventListener("click", async (e) => {
     case "livecar": ui.liveCar = b.dataset.v; return viewLive();
     case "draw": { const car = Number(b.dataset.car), slot = Number(b.dataset.slot); const kind = L.drawKind(crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296);
       const r = await guard(() => db.insert("power_cards", [{ caravan_id: car, meeting_id: meetId, slot, kind }]));
-      if (r !== undefined) ui.reveal = { car, kind }; await guard(() => reload("power_cards")); return render(); }
+      if (r !== undefined) { ui.reveal = { car, kind }; const nid = first(r).id; toast("انسحبت البطاقة", "ok", async () => { await db.remove("power_cards", { id: nid }); ui.reveal = null; await reload("power_cards"); }); }
+      await guard(() => reload("power_cards")); return render(); }
     case "revealclose": ui.reveal = null; return render();
+    case "present_mode": ui.present = !ui.present; try { localStorage.setItem("mgh.present", ui.present ? "1" : "0"); } catch (x) {} toast(ui.present ? "وضع العرض: ملاحظاتك الخاصة مخفية" : "ملاحظاتك الخاصة ظاهرة"); return render();
+    case "carddrawdel": if (ui.armed !== key) { ui.armed = key; b.textContent = "حذف؟"; setTimeout(() => (ui.armed = null), 3000); return; }
+      await guard(() => db.remove("power_cards", { id }), "حُذفت البطاقة، وتقدر تسحب من جديد"); await guard(() => reload("power_cards")); return render();
+    case "kiddel": if (ui.armed !== key) { ui.armed = key; b.textContent = "متأكد؟ يحذف كل سجله"; setTimeout(() => (ui.armed = null), 4000); return; }
+      ui.editKid = null; await guard(() => db.remove("kids", { id }), "حُذف المغامر"); await guard(() => reload("kids", "points", "deductions", "badges", "goals", "cards", "kid_notes", "measures", "duty_log")); return render();
+    case "matchdel": if (ui.armed !== key) { ui.armed = key; b.textContent = "متأكد؟"; setTimeout(() => (ui.armed = null), 3000); return; }
+      ui.openMatch = null; await guard(() => db.remove("matches", { id }), "حُذفت المباراة"); await guard(() => reload("matches", "goals", "cards", "power_cards")); return render();
     case "duty": { const car = Number(b.dataset.car); const mid = Number(b.dataset.mid) || meetId; const v = !L.dutyMastered(S, mid, car);
-      await guard(() => db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, mastered: v }], "meeting_id,caravan_id"), v ? "✅ سُجّل الإتقان" : "أُلغي الإتقان"); await guard(() => reload("duty_log")); return render(); }
+      return doUndoable(v ? "✅ سُجّل الإتقان" : "أُلغي الإتقان", () => db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, mastered: v }], "meeting_id,caravan_id"), () => db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, mastered: !v }], "meeting_id,caravan_id"), ["duty_log"]); }
     case "doprint": return window.print();
-    case "sealsave": { const n = Number(b.dataset.n); await guard(() => db.upsert("seals", [{ n, title: sel("sl-t-" + n).value.trim(), hint: sel("sl-h-" + n).value.trim(), body: sel("sl-b-" + n).value.trim(), mission: sel("sl-m-" + n).value.trim() }], "n"), "حُفظ الختم"); await guard(() => reload("seals")); return render(); }
+    case "sealsave": { const n = Number(b.dataset.n); const o = S.seals.find((x) => x.n === n) || {}; const prev = { n, title: o.title || "", hint: o.hint || "", body: o.body || "", mission: o.mission || "" };
+      return doUndoable("حُفظ الختم", () => db.upsert("seals", [{ n, title: sel("sl-t-" + n).value.trim(), hint: sel("sl-h-" + n).value.trim(), body: sel("sl-b-" + n).value.trim(), mission: sel("sl-m-" + n).value.trim() }], "n"), () => db.upsert("seals", [prev], "n"), ["seals"]); }
     case "sealopen": ui.openSeal = ui.openSeal === Number(b.dataset.n) ? null : Number(b.dataset.n); return viewRoad();
     case "scrtab": ui.screenTab = b.dataset.v; return viewScreen();
     case "ltab": ui.leagueTab = b.dataset.v; return viewLeague();
     case "present": return setPoint(k, { present: !L.present(I, meetId, k) });
     case "pt": { const r = L.row(I, meetId, k) || {}; return setPoint(k, { [b.dataset.c]: r[b.dataset.c] ? 0 : 1 }); }
     case "fazaa": { const r = L.row(I, meetId, k) || {}; const car = I.kid[k].caravan_id; if (!r.fazaa && L.kidsOf(S, car).some((x) => x.id !== k && (L.row(I, meetId, x.id) || {}).fazaa)) return toast("الفزعة مرة وحدة لكل قافلة في اللقاء.", "err"); return setPoint(k, { fazaa: !r.fazaa }); }
-    case "warn": { await guard(() => db.insert("deductions", [{ meeting_id: meetId, kid_id: k, value: 0, reason: "إنذار شفهي" }]), "سُجّل الإنذار"); await guard(() => reload("deductions")); return render(); }
+    case "warn": return doUndoable("سُجّل الإنذار", () => db.insert("deductions", [{ meeting_id: meetId, kid_id: k, value: 0, reason: "إنذار شفهي" }]), (r) => db.remove("deductions", { id: first(r).id }), ["deductions"]);
     case "dedopen": ui.openDed = ui.openDed === k ? null : k; return render();
-    case "dedadd": { const r = L.REASONS[Number(sel("dr-" + k).value)]; ui.openDed = null; await guard(() => db.insert("deductions", [{ meeting_id: meetId, kid_id: k, value: r[1], reason: r[0] }]), "سُجّل الخصم"); await guard(() => reload("deductions")); return render(); }
+    case "dedadd": { const r = L.REASONS[Number(sel("dr-" + k).value)]; ui.openDed = null; return doUndoable("سُجّل الخصم", () => db.insert("deductions", [{ meeting_id: meetId, kid_id: k, value: r[1], reason: r[0] }]), (x) => db.remove("deductions", { id: first(x).id }), ["deductions"]); }
     case "dedundo": await guard(() => db.remove("deductions", { id }), "تم التراجع"); await guard(() => reload("deductions")); return render();
     case "tc": { const car = Number(b.dataset.car); const v = Math.max(0, (I.tc[meetId + "|" + car] || 0) + Number(b.dataset.d));
       const ix = S.team_challenge.findIndex((x) => x.meeting_id === meetId && x.caravan_id === car); const prev = ix >= 0 ? S.team_challenge[ix].points : null;
@@ -720,17 +760,20 @@ document.addEventListener("click", async (e) => {
       I = L.index(S); render();
       const r = await guard(() => db.upsert("team_challenge", [{ meeting_id: meetId, caravan_id: car, points: v }], "meeting_id,caravan_id"));
       if (r === undefined) { await guard(() => reload("team_challenge")); render(); } return; }
-    case "carsave": { const cid = Number(id); const patch = { name: sel("cn-" + cid).value.trim() || I.car[cid].name, color: sel("cc-" + cid).value, chant: sel("ch-" + cid).value.trim(), charter: sel("ct-" + cid).value.trim() }; await guard(() => db.update("caravans", { id: cid }, patch), "حُفظت القافلة"); await guard(() => reload("caravans")); return render(); }
+    case "carsave": { const cid = Number(id); const old = I.car[cid]; const prev = { name: old.name, color: old.color, chant: old.chant, charter: old.charter }; const patch = { name: sel("cn-" + cid).value.trim() || old.name, color: sel("cc-" + cid).value, chant: sel("ch-" + cid).value.trim(), charter: sel("ct-" + cid).value.trim() };
+      return doUndoable("حُفظت القافلة", () => db.update("caravans", { id: cid }, patch), () => db.update("caravans", { id: cid }, prev), ["caravans"]); }
     case "balance": ui.balancePlan = L.suggestBalance(S); return viewCaravans();
     case "balcancel": ui.balancePlan = null; return viewCaravans();
-    case "balapply": { const plan = ui.balancePlan; ui.balancePlan = null; const ch = L.activeKids(S).filter((x) => plan[x.id] !== x.caravan_id); await guard(async () => { for (const x of ch) await db.update("kids", { id: x.id }, { caravan_id: plan[x.id] }); }, "اعتُمد التوزيع (" + ch.length + " تغيير)"); await guard(() => reload("kids")); return render(); }
-    case "kidadd": { const f = sel("nk-first").value.trim(), fam = sel("nk-fam").value.trim(), car = sel("nk-car").value; if (!f) return toast("اكتب الاسم الأول.", "err"); await guard(() => db.insert("kids", [{ first_name: f, family_name: fam, caravan_id: car ? Number(car) : null }]), "أُضيف " + f); await guard(() => reload("kids")); return render(); }
+    case "balapply": { const plan = ui.balancePlan; ui.balancePlan = null; const ch = L.activeKids(S).filter((x) => plan[x.id] !== x.caravan_id).map((x) => ({ id: x.id, from: x.caravan_id, to: plan[x.id] }));
+      return doUndoable("اعتُمد التوزيع (" + ch.length + " تغيير)", async () => { for (const x of ch) await db.update("kids", { id: x.id }, { caravan_id: x.to }); return true; }, async () => { for (const x of ch) await db.update("kids", { id: x.id }, { caravan_id: x.from }); }, ["kids"]); }
+    case "kidadd": { const f = sel("nk-first").value.trim(), fam = sel("nk-fam").value.trim(), car = sel("nk-car").value; if (!f) return toast("اكتب الاسم الأول.", "err"); return doUndoable("أُضيف " + f, () => db.insert("kids", [{ first_name: f, family_name: fam, caravan_id: car ? Number(car) : null }]), (r) => db.remove("kids", { id: first(r).id }), ["kids"]); }
     case "kidedit": ui.editKid = id || null; return viewKids();
-    case "kidsave": { const f = sel("ek-first").value.trim(); if (!f) return toast("الاسم الأول مطلوب.", "err"); await guard(() => db.update("kids", { id }, { first_name: f, family_name: sel("ek-fam").value.trim(), official: sel("ek-off").checked }), "حُفظ الاسم"); ui.editKid = null; await guard(() => reload("kids")); return render(); }
-    case "kidactive": { const kd = I.kid[id]; await guard(() => db.update("kids", { id }, { active: !kd.active }), kd.active ? "أُوقف" : "فُعّل"); await guard(() => reload("kids")); return render(); }
-    case "badgeadd": { const ev = sel("bd-ev").value.trim(); if (!ev) return toast("اكتب الشاهد: الموقف أو الإنجاز اللي استحق عليه الشارة.", "err"); await guard(() => db.insert("badges", [{ kid_id: k, badge: sel("bd-type").value, evidence: ev, meeting_id: meetId }]), "مُنحت الشارة"); await guard(() => reload("badges")); return render(); }
+    case "kidsave": { const f = sel("ek-first").value.trim(); if (!f) return toast("الاسم الأول مطلوب.", "err"); const o = I.kid[id]; const prev = { first_name: o.first_name, family_name: o.family_name, official: o.official }; const patch = { first_name: f, family_name: sel("ek-fam").value.trim(), official: sel("ek-off").checked }; ui.editKid = null;
+      return doUndoable("حُفظ الاسم", () => db.update("kids", { id }, patch), () => db.update("kids", { id }, prev), ["kids"]); }
+    case "kidactive": { const kd = I.kid[id]; const was = kd.active; return doUndoable(was ? "أُوقف" : "فُعّل", () => db.update("kids", { id }, { active: !was }), () => db.update("kids", { id }, { active: was }), ["kids"]); }
+    case "badgeadd": { const ev = sel("bd-ev").value.trim(); if (!ev) return toast("اكتب الشاهد: الموقف أو الإنجاز اللي استحق عليه الشارة.", "err"); return doUndoable("مُنحت الشارة", () => db.insert("badges", [{ kid_id: k, badge: sel("bd-type").value, evidence: ev, meeting_id: meetId }]), (r) => db.remove("badges", { id: first(r).id }), ["badges"]); }
     case "badgedel": if (ui.armed !== key) { ui.armed = key; b.textContent = "تأكيد؟"; setTimeout(() => (ui.armed = null), 3000); return; } await guard(() => db.remove("badges", { id }), "حُذفت"); await guard(() => reload("badges")); return render();
-    case "noteadd": { const t = sel("nt-body").value.trim(); if (!t) return; await guard(() => db.insert("kid_notes", [{ kid_id: k, body: t }]), "أُضيفت الكلمة"); await guard(() => reload("kid_notes")); return render(); }
+    case "noteadd": { const t = sel("nt-body").value.trim(); if (!t) return; return doUndoable("أُضيفت الكلمة", () => db.insert("kid_notes", [{ kid_id: k, body: t }]), (r) => db.remove("kid_notes", { id: first(r).id }), ["kid_notes"]); }
     case "notedel": if (ui.armed !== key) { ui.armed = key; b.textContent = "تأكيد؟"; setTimeout(() => (ui.armed = null), 3000); return; } await guard(() => db.remove("kid_notes", { id }), "حُذفت"); await guard(() => reload("kid_notes")); return render();
     case "print": return window.print();
     case "mopen": ui.openMatch = ui.openMatch === Number(id) ? null : Number(id); return viewLeague();
@@ -739,20 +782,23 @@ document.addEventListener("click", async (e) => {
       const played = hg !== "" && ag !== "";
       const patch = { home_id: th, away_id: ta, round: Number(sel("mr-" + mid).value) || 1, meeting_id: Number(sel("mm-" + mid).value), home_goals: played ? Number(hg) : null, away_goals: played ? Number(ag) : null, played, fair_home: sel("mfh-" + mid).checked, fair_away: sel("mfa-" + mid).checked, home_keeper: sel("mkh-" + mid).value || null, away_keeper: sel("mka-" + mid).value || null, spirit_kid: sel("msp-" + mid).value || null };
       const chosen = [sel("mph-" + mid), sel("mpa-" + mid)].map((x) => (x && x.value ? Number(x.value) : null)).filter(Boolean);
-      await guard(async () => {
+      const om = S.matches.find((x) => x.id === mid); const prevM = Object.fromEntries(Object.keys(patch).map((kk) => [kk, om[kk]])); const prevCards = S.power_cards.filter((p) => p.used_match_id === mid || chosen.includes(p.id)).map((p) => ({ id: p.id, used_match_id: p.used_match_id }));
+      return doUndoable("حُفظت النتيجة", async () => {
         await db.update("matches", { id: mid }, patch);
         for (const p of S.power_cards.filter((p) => p.used_match_id === mid && !chosen.includes(p.id))) await db.update("power_cards", { id: p.id }, { used_match_id: null });
         for (const pid of chosen) if (!S.power_cards.some((p) => p.id === pid && p.used_match_id === mid)) await db.update("power_cards", { id: pid }, { used_match_id: mid });
-      }, "حُفظت النتيجة"); await guard(() => reload("matches", "power_cards")); return render(); }
-    case "goaladd": { const mid = Number(id); const kid = sel("mg-" + mid).value; if (!kid) return toast("اختر اللاعب اللي سجّل.", "err"); await guard(() => db.insert("goals", [{ match_id: mid, kid_id: kid }]), "سُجّل الهدف"); await guard(() => reload("goals")); return render(); }
+        return true;
+      }, async () => { await db.update("matches", { id: mid }, prevM); for (const p of prevCards) await db.update("power_cards", { id: p.id }, { used_match_id: p.used_match_id }); }, ["matches", "power_cards"]); }
+    case "goaladd": { const mid = Number(id); const kid = sel("mg-" + mid).value; if (!kid) return toast("اختر اللاعب اللي سجّل.", "err"); return doUndoable("سُجّل الهدف", () => db.insert("goals", [{ match_id: mid, kid_id: kid }]), (r) => db.remove("goals", { id: first(r).id }), ["goals"]); }
     case "goaldel": await guard(() => db.remove("goals", { id }), "حُذف الهدف"); await guard(() => reload("goals")); return render();
-    case "cardadd": { const mid = Number(id); const kid = sel("mck-" + mid).value; if (!kid) return toast("اختر اللاعب.", "err"); await guard(() => db.insert("cards", [{ match_id: mid, kid_id: kid, color: sel("mcc-" + mid).value, reason: sel("mcr-" + mid).value.trim() }]), "سُجّلت البطاقة"); await guard(() => reload("cards")); return render(); }
+    case "cardadd": { const mid = Number(id); const kid = sel("mck-" + mid).value; if (!kid) return toast("اختر اللاعب.", "err"); return doUndoable("سُجّلت البطاقة", () => db.insert("cards", [{ match_id: mid, kid_id: kid, color: sel("mcc-" + mid).value, reason: sel("mcr-" + mid).value.trim() }]), (r) => db.remove("cards", { id: first(r).id }), ["cards"]); }
     case "carddel": await guard(() => db.remove("cards", { id }), "حُذفت البطاقة"); await guard(() => reload("cards")); return render();
     case "addfinal": { if (S.matches.some((m) => m.stage === "final")) return toast("النهائي مضاف من قبل.", "err"); const st = L.standings(S); if (st.length < 4) return; const last = S.meetings[S.meetings.length - 1];
-      await guard(() => db.insert("matches", [{ round: 7, stage: "final", meeting_id: last && last.id, home_id: st[0].id, away_id: st[1].id }, { round: 7, stage: "third", meeting_id: last && last.id, home_id: st[2].id, away_id: st[3].id }]), "أُضيف النهائي"); await guard(() => reload("matches")); return render(); }
-    case "meetsave": { const mid = Number(id); await guard(() => db.update("meetings", { id: mid }, { theme: sel("mt-theme").value.trim(), skill: sel("mt-skill").value.trim(), diwan: sel("mt-diwan").value.trim(), observation: sel("mt-obs").value.trim(), meet_date: sel("mt-date").value }), "حُفظت بيانات اللقاء"); await guard(() => reload("meetings")); return render(); }
+      return doUndoable("أُضيف النهائي", () => db.insert("matches", [{ round: 7, stage: "final", meeting_id: last && last.id, home_id: st[0].id, away_id: st[1].id }, { round: 7, stage: "third", meeting_id: last && last.id, home_id: st[2].id, away_id: st[3].id }]), async (r) => { for (const x of r) await db.remove("matches", { id: x.id }); }, ["matches"]); }
+    case "meetsave": { const mid = Number(id); const o = I.meet[mid]; const prev = { theme: o.theme, skill: o.skill, diwan: o.diwan, observation: o.observation, meet_date: o.meet_date };
+      return doUndoable("حُفظت بيانات اللقاء", () => db.update("meetings", { id: mid }, { theme: sel("mt-theme").value.trim(), skill: sel("mt-skill").value.trim(), diwan: sel("mt-diwan").value.trim(), observation: sel("mt-obs").value.trim(), meet_date: sel("mt-date").value }), () => db.update("meetings", { id: mid }, prev), ["meetings"]); }
     case "meetadd": { const d = sel("mt-new").value; if (!d) return toast("اختر تاريخ اللقاء.", "err"); if (S.meetings.some((x) => x.meet_date === d)) return toast("فيه لقاء بنفس التاريخ.", "err");
-      await guard(async () => { await db.insert("meetings", [{ meet_date: d }]); await renumber(); }, "أُضيف اللقاء"); return render(); }
+      return doUndoable("أُضيف اللقاء", async () => { const r = await db.insert("meetings", [{ meet_date: d }]); await renumber(); return r; }, async (r) => { await db.remove("meetings", { id: first(r).id }); meetId = null; await renumber(); }); }
     case "meetdel": if (ui.armed !== key) { ui.armed = key; b.textContent = "متأكد؟ يحذف نقاطه وحضوره"; setTimeout(() => (ui.armed = null), 4000); return; }
       await guard(async () => { await db.remove("meetings", { id }); meetId = null; await renumber(); }, "حُذف اللقاء"); return render();
     case "copyweekly": { const t = sel("weekly").textContent; try { await navigator.clipboard.writeText(t); toast("نُسخ التقرير"); } catch (x) { const r = document.createRange(); r.selectNodeContents(sel("weekly")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("النص محدد، انسخه"); } return; }
@@ -766,6 +812,7 @@ document.addEventListener("change", async (e) => {
   if (a === "dutyspk" || a === "dutytopic") { const mid = Number(t.dataset.mid), car = Number(t.dataset.car);
     const row = a === "dutyspk" ? { speaker_kid: t.value || null } : { topic: t.value === "" ? null : Number(t.value) };
     await guard(() => db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, ...row }], "meeting_id,caravan_id"), a === "dutyspk" ? "حُفظ المتحدث" : "حُفظ الموضوع"); await guard(() => reload("duty_log")); return render(); }
+  if (a === "reportstart") { await guard(() => db.upsert("app_settings", [{ key: "report_start", value: Number(t.value) }], "key"), "حُفظت بداية التقارير"); await guard(() => reload("app_settings")); return render(); }
   if (a === "sealstart") { await guard(() => db.upsert("app_settings", [{ key: "seal_start", value: Number(t.value) }], "key"), "حُفظ لقاء البداية"); await guard(() => reload("app_settings")); return render(); }
   if (a === "meet") { meetId = Number(t.value); ui.openDed = null; return render(); }
   if (a === "kidcar") { await guard(() => db.update("kids", { id: t.dataset.id }, { caravan_id: t.value ? Number(t.value) : null }), "نُقل المغامر"); await guard(() => reload("kids")); return render(); }
