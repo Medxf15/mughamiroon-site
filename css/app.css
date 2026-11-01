@@ -714,3 +714,10 @@ body.is-screen .tabbar,body.is-print .tabbar{display:none!important}
 .pp-lead .pl-name{margin:0 5mm;font-size:3mm;color:#5d6590;border-bottom:none;min-height:auto}
 .car-hero h1{line-height:1.2;margin-top:4px}
 .toast{z-index:80}
+
+.seal-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;width:100%;max-width:1400px}
+.seal-car{display:grid;justify-items:center;gap:10px;background:linear-gradient(180deg,#141d40,#0f1633);border:1px solid var(--line);border-top:6px solid var(--tc);border-radius:18px;padding:18px 10px}
+.seal-car b{font-family:var(--display);font-size:clamp(1.2rem,2vw,1.8rem);color:#fff}.seal-car small{color:#c9d2ff;font-size:clamp(.85rem,1.2vw,1.1rem);text-align:center}
+.small-wax{width:110px;height:110px;font-size:2.4rem}
+.pa-car{font-weight:700;color:#5a3a12;margin-bottom:6px;border-inline-start:6px solid var(--tc);padding-inline-start:10px}
+@media (max-width:900px){.seal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

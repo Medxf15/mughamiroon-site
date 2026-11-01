@@ -300,22 +300,17 @@ export function roadOf(S, I, cid) {
   return { pos, reached, last: reached[reached.length - 1] || null };
 }
 
-/** seals: from the start meeting on, each meeting where half the caravans earn a star opens the next seal */
+/** seals: one sealed letter waits at each station. A caravan opens letter n when its camel reaches station n (every star = one step). No dependence on other caravans. */
 export function sealState(S, I) {
   const seals = (S.seals || []).slice().sort((a, b) => a.n - b.n);
-  const start = Number((S.app_settings || []).find((x) => x.key === "seal_start")?.value ?? 1);
-  const cars = S.caravans;
-  const need = Math.max(1, Math.ceil(cars.length / 2));
-  const opened = {}; let k = 0;
-  const perMeet = {};
-  for (const m of S.meetings) {
-    if ((m.number || 0) < start) continue;
-    const got = cars.filter((c) => teamMeet(S, I, m.id, c.id).stars > 0).map((c) => c.id);
-    const open = got.length >= need && k < seals.length;
-    perMeet[m.id] = { seal: seals[k] || null, got, need, open };
-    if (open) { opened[seals[k].n] = m.id; k++; }
+  const byCar = {}; const at = {};
+  for (const c of S.caravans) {
+    const rd = roadOf(S, I, c.id);
+    byCar[c.id] = rd.reached.filter((x) => seals[x.pos - 1]).map((x) => ({ n: x.pos, meeting_id: x.meeting_id, seal: seals[x.pos - 1] }));
+    for (const o of byCar[c.id]) (at[o.meeting_id] ||= []).push({ cid: c.id, ...o });
+    byCar[c.id].next = seals[rd.pos] || null; byCar[c.id].pos = rd.pos;
   }
-  return { seals, opened, perMeet, need, start, nextSeal: seals[k] || null };
+  return { seals, byCar, at };
 }
 
 // ================= التكليفات =================

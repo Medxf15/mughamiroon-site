@@ -23,6 +23,17 @@
   body:hover .hud{opacity:1}.hud button{background:#1b2550;border:1px solid var(--line);color:#fff;border-radius:999px;padding:6px 14px;font:inherit;cursor:pointer}
   .hud input{flex:1}
   .vstat{color:#ffcf6b;font-size:clamp(.9rem,1.6vw,1.2rem);margin-top:14px}
+  .ia{position:fixed;inset:auto 0 6vh 0;display:grid;justify-items:center;gap:2vh;z-index:4;animation:iaIn .4s ease}
+  .ia[hidden]{display:none}
+  .ia-q{margin:0;font-size:clamp(1.6rem,4vw,3.4rem);font-weight:700;color:#fff;text-shadow:0 4px 30px rgba(0,0,0,.8);background:rgba(4,6,20,.55);padding:.3em 1em;border-radius:20px}
+  .ia-opts{display:flex;gap:2vw;flex-wrap:wrap;justify-content:center}
+  .ia-opts button{font:inherit;font-size:clamp(1.2rem,3vw,2.6rem);font-weight:700;color:#fff;background:linear-gradient(180deg,#3355ff,#27378a);border:3px solid rgba(255,255,255,.35);border-radius:22px;padding:.45em 1.1em;cursor:pointer;box-shadow:0 12px 40px rgba(0,0,0,.5);display:flex;align-items:center;gap:.5em}
+  .ia-opts button:hover{transform:translateY(-3px);border-color:#ffcf6b}
+  .ia-opts button b{font-size:.6em;background:rgba(0,0,0,.35);border-radius:10px;padding:.1em .45em;color:#ffcf6b}
+  @keyframes iaIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+  .testbtn{margin-top:14px;font:inherit;font-size:1.1rem;background:#1b2550;color:#fff;border:1px solid #3a4a9a;border-radius:999px;padding:8px 18px;cursor:pointer}
+  .keys{color:#8f9bcb;font-size:.9rem;margin-top:14px;max-width:640px}
+  .guide{background:#0f1633;border:1px solid #243063;border-radius:14px;padding:12px 16px;margin:0 0 18px}.guide summary{cursor:pointer;font-weight:700;color:#ffcf6b}.guide ol{margin:8px 0 0;padding-inline-start:20px;display:grid;gap:6px;color:#cfd6ff;line-height:1.7}
   /* storyboard */
   .board{max-width:1500px;margin:0 auto;padding:20px 16px 60px}
   .board h1{margin:0 0 4px}.board .sub{color:var(--muted);margin:0 0 18px}

@@ -136,162 +136,264 @@ function storm(ctx, t, order) {
   }
 }
 
-// ---------- scenes ----------
-// each: [start, end, title, draw(ctx, t), vo]
-export const SCENES = [
-  { a: 0, b: 5, title: "وسط العاصفة", key: 3.6, vo: "(ريح عالية… صوت ينادي) «وين راح؟!»", draw(ctx, t) {
-    sky(ctx, "#1a1209", "#3d2a14", "#7a5226"); dunes(ctx, H * 0.86, 40, t * 300, "#2a1c0e");
-    ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = "#2a1c0e"; for (let i = 0; i < 3; i++) camel(ctx, W * (0.25 + i * 0.25) + Math.sin(t * 2 + i) * 60, H * 0.78, 1.3 + i * 0.2, t * 3 + i); ctx.restore();
-    for (let i = 0; i < 7; i++) { const a = i * 0.9 + t * (0.6 + i * 0.1); lantern(ctx, W / 2 + Math.cos(a) * (300 + i * 90), H * 0.5 + Math.sin(a * 1.3) * (180 + i * 30), 14 + (i % 3) * 8, 3, null, 0.9, t); }
-    storm(ctx, t, 0); storm(ctx, t + 3.7, 0); ctx.fillStyle = "rgba(160,110,60,.22)"; ctx.fillRect(0, 0, W, H);
-    ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = "#e8c48a"; for (let i = 0; i < 6; i++) { const yy = ((t * 900 + i * 260) % (H + 400)) - 200; ctx.beginPath(); ctx.ellipse(W / 2 + Math.sin(t + i) * 300, yy, W * 0.7, 40, -0.25, 0, 7); ctx.fill(); } ctx.restore();
-    grain(ctx, t, 0.08); vignette(ctx, 0.7);
-    text(ctx, "حكاية من خيالنا", W / 2, H * 0.1, 48, { alpha: 0.85 * fadeIO(t, 0.2, 4.9, 0.4), color: "#ffe9c8", weight: 500 });
-    const k = fadeIO(t, 2.3, 4.9, 0.25); ctx.save(); ctx.fillStyle = `rgba(20,12,4,${0.45 * k})`; ctx.fillRect(0, H * 0.36, W, H * 0.18); ctx.restore(); text(ctx, "وين راح؟!", W / 2 + Math.sin(t * 40) * 6, H * 0.45, 130, { alpha: k, color: "#ffe2b8", glow: 1 });
-  } },
-  { a: 5, b: 12, title: "سكون", key: 9, vo: "(صمت… ثم يرتفع صوت حُداء بشري وحده)", draw(ctx, t) {
-    ctx.fillStyle = "#04050c"; ctx.fillRect(0, 0, W, H); stars(ctx, t, span(t, 6, 10) * 0.6);
-    lantern(ctx, W / 2, H * 0.55, 18 + 10 * span(t, 6, 11.5), 1 + 3 * span(t, 6, 11), null, 0.6 + 0.6 * span(t, 6, 11), t);
-    text(ctx, "كل قافلة… تحتاج حادي", W / 2, H * 0.3, 80, { alpha: fadeIO(t, 7.2, 11.8, 0.7), color: "#ffe7a8" });
-  } },
-  { a: 12, b: 35, title: "الفوضى تصير صفًّا", key: 27, vo: "في الصحراء… ما ينجّي القافلة أقواها. ينجّيها إنها تمشي على إيقاع واحد. وكان لكل قافلة حادي… صوته يخلّي الإبل تمشي ولو تعبت.", draw(ctx, t) {
-    const beats = [14, 16.5, 19, 21.5]; const order = ease(beats.reduce((n, b) => n + span(t, b, b + 0.6) * 0.25, 0));
-    sky(ctx, "#070b22", "#1d2a6e", "#ef8a33", 0.85); stars(ctx, t, 0.6); ridge(ctx, H * 0.7, "#141b4a", 0.8, -100 - t * 4);
-    fog(ctx, H * 0.7, 60, 0.12); dunes(ctx, H * 0.76, 34, t * 12, "#121a48"); dunes(ctx, H * 0.79, 26, t * 24 + 300, "#0e1540", 1.3); const cv = span(t, 23, 26);
-    ctx.save(); ctx.globalAlpha = 1 - cv; storm(ctx, t, order); ctx.restore();
-    if (cv > 0) { ctx.save(); ctx.globalAlpha = cv; ctx.fillStyle = INK; const xf = W * 0.2 - (t - 23) * 18;
-      hadi(ctx, xf - 150, H * 0.8, 0.42, t); for (let i = 0; i < 6; i++) { const sc = 1.05 * (1 - 0.05 * (i % 3)); camel(ctx, xf + i * 215, H * 0.8 + (i % 2) * 6, sc, t + i * 0.7); lantern(ctx, xf + i * 215 - 10, H * 0.8 - 175 * sc + (i % 2) * 6, 11, 5, null, 0.9, t); } ctx.restore(); }
-    dunes(ctx, H * 0.95, 26, t * 40, "#0a0f2c", 0.8);
-    caption(ctx, "في الصحراء… ما ينجّي القافلة أقواها", t, 24.5, 28.5); caption(ctx, "ينجّيها إنها تمشي على إيقاع واحد", t, 28.5, 31.5); caption(ctx, "وكان لكل قافلة حادي… صوته يخلّي الإبل تمشي", t, 31.5, 35);
-    vignette(ctx, 0.5);
-  } },
-  { a: 35, b: 55, title: "الراكب الأخير", key: 47.5, vo: "(القافلة تتوقف لراكب تأخر… خيط ضوء يرجّع له نوره) ما في قافلة وصلت لأن ما أحد فيها تأخر… وصلت لأن ما أحد فيها انترك.", draw(ctx, t) {
-    sky(ctx, "#070b22", "#1b2667", "#e7297a", 0.6); stars(ctx, t, 0.8); ridge(ctx, H * 0.72, "#121947", 0.7, 200); fog(ctx, H * 0.73, 50, 0.1); dunes(ctx, H * 0.78, 28, 120, "#121a48"); dunes(ctx, H * 0.8, 24, 300, "#0f153c", 1.3);
-    const stop = span(t, 39, 41); const walk = (t - 35) * 22 * (1 - stop);
-    const lag = span(t, 36, 40) * (1 - span(t, 46, 50));
-    const thread = span(t, 42, 47); const back = span(t, 46.5, 48.5);
-    ctx.fillStyle = INK; const xf = W * 0.16 - walk; const X = (i) => xf + i * 215 + (i === 5 ? lag * 300 : 0);
-    hadi(ctx, xf - 150, H * 0.83, 0.44, t * (1 - stop * 0.7));
-    for (let i = 0; i < 6; i++) camel(ctx, X(i), H * 0.83, 1.08 * (1 - 0.05 * (i % 3)), t * (1 - stop) + i);
-    for (let i = 0; i < 6; i++) { const last = i === 5; const lvl = last ? lerp(5, 0.9, span(t, 37, 41)) * (1 - back) + 5 * back : 5; lantern(ctx, X(i) - 10, H * 0.83 - 182 * (1 - 0.05 * (i % 3)), 13, lvl, null, 1, t); }
-    if (thread > 0 && back < 1) { const p = thread * 5; ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "rgba(255,214,120,.95)"; ctx.lineWidth = 7; ctx.shadowColor = GLOW; ctx.shadowBlur = 40; ctx.beginPath();
-      for (let i = 0; i <= Math.floor(p); i++) { const x = X(i) - 10, y = H * 0.83 - 182 - Math.sin(i * 1.3) * 10; i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
-      const fi = Math.floor(p), fr = p - fi; if (fi < 5) ctx.lineTo(lerp(X(fi), X(fi + 1), fr) - 10, H * 0.83 - 182 - lerp(Math.sin(fi * 1.3), Math.sin((fi + 1) * 1.3), fr) * 10); ctx.stroke(); ctx.restore(); }
-    dunes(ctx, H * 0.97, 22, 500, "#0a0f2c", 0.7);
-    caption(ctx, "ما في قافلة وصلت لأن ما أحد فيها تأخر…", t, 49, 52.2); caption(ctx, "وصلت لأن ما أحد فيها انترك.", t, 52.2, 55, H * 0.84, 74);
-    vignette(ctx, 0.5);
-  } },
-  { a: 55, b: 70, title: "الطريق", key: 66, vo: "(الكاميرا ترتفع… الصف يصير طريقًا على خريطة المدينة) ترك الحادي ثماني رسائل مختومة… على الطريق.", draw(ctx, t) {
-    ctx.fillStyle = "#0b1130"; ctx.fillRect(0, 0, W, H);
-    const g = ctx.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, W * 0.7); g.addColorStop(0, "#1a2560"); g.addColorStop(1, "#070b22"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    ctx.save(); ctx.globalAlpha = 0.12; ctx.strokeStyle = "#8ea0ff"; for (let i = 0; i < 30; i++) { ctx.beginPath(); ctx.arc(W * 0.5, H * 0.55, 80 + i * 45, 0, 7); ctx.stroke(); } ctx.restore();
-    ctx.save(); ctx.fillStyle = "#151d52"; ctx.beginPath(); ctx.moveTo(W * 0.02, H * 0.3); for (let i = 0; i <= 20; i++) { const u = i / 20; ctx.lineTo(W * (0.02 + 0.5 * u), H * (0.3 - 0.13 * Math.sin(u * Math.PI) - 0.03 * Math.sin(u * 17))); } ctx.lineTo(W * 0.52, H * 0.3); ctx.closePath(); ctx.fill(); ctx.restore();
-    text(ctx, "أُحد", W * 0.27, H * 0.24, 48, { color: "#7f8fd8", weight: 600, glow: 0 });
-    const pts = ROAD.map((_, i) => { const u = i / (ROAD.length - 1); return [W * (0.86 - 0.6 * u) + Math.sin(u * 3.4) * 140, H * (0.84 - 0.48 * u) - Math.sin(u * Math.PI) * 60]; });
-    const draw = ease(span(t, 56, 64)) * (pts.length - 1);
-    ctx.save(); ctx.strokeStyle = GLOW; ctx.lineWidth = 7; ctx.shadowColor = GLOW; ctx.shadowBlur = 24; ctx.setLineDash([20, 14]); ctx.lineDashOffset = -t * 40; ctx.beginPath();
-    for (let i = 0; i <= Math.floor(draw); i++) { const [x, y] = pts[i]; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-    const fi = Math.floor(draw), fr = draw - fi; if (fi < pts.length - 1) ctx.lineTo(lerp(pts[fi][0], pts[fi + 1][0], fr), lerp(pts[fi][1], pts[fi + 1][1], fr)); ctx.stroke(); ctx.restore();
-    pts.forEach(([x, y], i) => { const k = clamp(draw - i + 1); if (k <= 0) return; ctx.save(); ctx.globalAlpha = k;
-      if (i === 0) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, 16, 0, 7); ctx.fill(); } else waxSeal(ctx, x, y, 44 * (0.6 + 0.4 * k), 0, 0, t); ctx.restore(); });
-    const cur = Math.min(ROAD.length - 1, Math.round(draw)); const [cx, cy] = pts[cur]; text(ctx, ROAD[cur], cx, cy + 86, 50, { color: "#fff", weight: 700 });
-    text(ctx, "خريطة رمزية", W * 0.08, H * 0.94, 30, { color: "#7f8fd8", weight: 500, glow: 0 });
-    ridge(ctx, H * 1.02, "rgba(10,15,44,.85)", 0.5, 0);
-    caption(ctx, "ترك الحادي ثماني رسائل مختومة… على الطريق", t, 64, 70, H * 0.12, 60);
-  } },
-  { a: 70, b: 80, title: "الالتفاتة", key: 79.2, vo: "والحين… أكلمكم أنتم.", draw(ctx, t) {
-    sky(ctx, "#05081c", "#18225f", "#ef8a33", 1); const sun = ctx.createRadialGradient(W / 2, H * 0.78, 10, W / 2, H * 0.78, 520); sun.addColorStop(0, "rgba(255,200,120,.75)"); sun.addColorStop(1, "rgba(255,200,120,0)"); ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
-    ridge(ctx, H * 0.8, "#0f153c", 0.7, 0); dunes(ctx, H * 0.92, 20, 0, INK);
-    hadi(ctx, W * 0.5, H * 1.05, 1.95 + span(t, 70, 80) * 0.08, t, INK, 1, 0.7);
-    caption(ctx, "والحين… أكلمكم أنتم.", t, 71, 75.5, H * 0.16, 76);
-    CARAVANS.forEach((c, i) => { const k = ease(span(t, 75.5 + i * 0.6, 76.5 + i * 0.6)); if (k <= 0) return; const x = W * (0.84 - i * 0.227); const top = 70; const y = top - 260 + k * 260 + 230; const wv = Math.sin(t * 2.4 + i) * 8;
-      ctx.save(); ctx.strokeStyle = "rgba(220,200,160,.6)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 70, 0); ctx.lineTo(x - 70, y - 230); ctx.moveTo(x + 70, 0); ctx.lineTo(x + 70, y - 230); ctx.stroke();
-      const g = ctx.createLinearGradient(x - 90, 0, x + 90, 0); g.addColorStop(0, mixHex(c.color, "#000000", 0.3)); g.addColorStop(0.5, c.color); g.addColorStop(1, mixHex(c.color, "#000000", 0.3));
-      ctx.fillStyle = g; ctx.shadowColor = c.color; ctx.shadowBlur = 30; ctx.beginPath(); ctx.moveTo(x - 90, y - 230); ctx.lineTo(x + 90, y - 230); ctx.quadraticCurveTo(x + 90 + wv, y - 110, x + 90, y); ctx.lineTo(x, y - 36); ctx.lineTo(x - 90, y); ctx.quadraticCurveTo(x - 90 + wv, y - 110, x - 90, y - 230); ctx.closePath(); ctx.fill(); ctx.restore();
-      text(ctx, c.name, x, y - 130, 50); });
-    vignette(ctx, 0.45);
-  } },
-  { a: 80, b: 100, title: "الفانوس", key: 96, vo: "كل واحد فيكم يحمل فانوس فيه خمسة أنوار. إذا كل فوانيس القافلة نورها أربعة أو أكثر… تاخذ القافلة نجمة. وكل نجمة… بطاقة قوة تلعبونها في الملعب. والباقي… تكتشفونه في الطريق.", draw(ctx, t) {
-    sky(ctx, "#05081c", "#121a4d", "#27378a", 0.4); stars(ctx, t, 0.5);
-    const p1 = span(t, 80, 88), p2 = span(t, 88, 93), p3 = span(t, 93, 100);
-    if (t < 88.6) { ctx.save(); ctx.globalAlpha = 1 - span(t, 87.9, 88.6); const lit = Math.floor(p1 * 5.99);
-      lantern(ctx, W / 2, H * 0.42, 80, Math.min(5, lit + 0.5), null, 1.1);
-      LIGHTS.forEach(([name, col], i) => { const on = i < lit; const x = W / 2 + (i - 2) * 340; const y = H * 0.68; ctx.fillStyle = on ? col : "rgba(255,255,255,.08)"; ctx.shadowColor = col; ctx.shadowBlur = on ? 40 : 0; ctx.beginPath(); ctx.arc(x, y, 38, 0, 7); ctx.fill(); ctx.shadowBlur = 0; text(ctx, name, x, y + 84, 48, { alpha: on ? 1 : 0.35, weight: 600 }); });
-      ctx.restore(); }
-    if (t > 88.4 && p3 < 1) { ctx.save(); ctx.globalAlpha = span(t, 88.4, 89.2) * (1 - span(t, 93.3, 94));
-      for (let r = 0; r < 5; r++) { const lx = W * 0.22 + r * 150, n = r === 2 ? 4 : 5; lantern(ctx, lx, H * 0.45, 30, n, null, 0.9, t);
-        LIGHTS.forEach(([, col], j) => { ctx.fillStyle = j < n ? col : "rgba(255,255,255,.12)"; ctx.beginPath(); ctx.arc(lx - 44 + j * 22, H * 0.45 + 70, 8, 0, 7); ctx.fill(); }); }
-      const st = span(t, 90, 92); const sx = lerp(W * 0.54, W * 0.78, ease(st)), sy = lerp(H * 0.38, H * 0.5, ease(st));
-      text(ctx, "⭐", sx, sy, 110 + 30 * Math.sin(t * 6) * (1 - st), { glow: 1, alpha: 1 - span(t, 92.6, 93.2) }); camel(ctx, W * 0.82 + ease(span(t, 92, 93)) * 0, H * 0.62, 0.7, t); ctx.restore(); }
-    if (p3 > 0) { ctx.save(); ctx.globalAlpha = span(t, 93, 94);
-      [-1, 1].forEach((d) => powerCard(ctx, W / 2 + d * 330, H * 0.47, 250, 0, t)); powerCard(ctx, W / 2, H * 0.45, 330, ease(span(t, 94, 95.5)), t); ctx.restore(); }
-    caption(ctx, "كل واحد يحمل فانوس فيه خمسة أنوار", t, 80.5, 87.8, H * 0.12, 60);
-    caption(ctx, "كل الفوانيس 4 أنوار أو أكثر = نجمة للقافلة", t, 88.4, 93.2, H * 0.8, 60);
-    caption(ctx, "وكل نجمة… بطاقة قوة تلعبونها في الملعب", t, 95.5, 98.2, H * 0.88, 62); caption(ctx, "والباقي… تكتشفونه في الطريق", t, 98.2, 100, H * 0.88, 62);
-    vignette(ctx, 0.5);
-  } },
-  { a: 100, b: 115, title: "الرسالة الأولى", key: 109, vo: "الرسالة الأولى ما تنفتح… إلا إذا أخذت قافلتين نجمة في نفس الخميس.", draw(ctx, t) {
-    ctx.fillStyle = "#06081a"; ctx.fillRect(0, 0, W, H); const g = ctx.createRadialGradient(W / 2, H * 0.45, 20, W / 2, H * 0.45, 700); g.addColorStop(0, "rgba(154,29,40,.35)"); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    const shake = span(t, 104, 108) * (1 - span(t, 112, 114)) * (0.5 + 0.5 * Math.sin(t * 3)); waxSeal(ctx, W / 2, H * 0.43, 220, span(t, 106, 112), shake, t);
-    caption(ctx, "الرسالة الأولى ما تنفتح…", t, 101, 107.5, H * 0.8, 70); caption(ctx, "إلا إذا أخذت قافلتين نجمة في نفس الخميس", t, 107.5, 115, H * 0.8, 66);
-    vignette(ctx, 0.6);
-  } },
-  { a: 115, b: 130, title: "الكشف", key: 125, vo: "الحادي… مو أنا. كل خميس، واحد منكم. يمكن تكون أنت… اللي يجمع قافلته.", draw(ctx, t) {
-    sky(ctx, "#05081c", "#18225f", "#ef8a33", 0.9); const sun = ctx.createRadialGradient(W / 2, H * 0.7, 10, W / 2, H * 0.7, 600); sun.addColorStop(0, `rgba(255,214,140,${0.5 + 0.4 * span(t, 118, 122)})`); sun.addColorStop(1, "rgba(255,200,120,0)"); ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
-    dunes(ctx, H * 0.92, 20, 0, INK);
-    const m = ease(span(t, 118.5, 121.5));
-    ctx.save(); ctx.globalAlpha = 1 - m; hadi(ctx, W / 2, H * 0.92, 1.3, t, INK, 1 - span(t, 117, 119), 0.6); ctx.restore();
-    const fall = span(t, 117, 119.5); if (fall > 0) { ctx.save(); ctx.globalAlpha = 0.9; ctx.fillStyle = INK; ctx.translate(W / 2 - 60 * fall, H * 0.92 - 470 * (1 - ease(fall)) - 10); ctx.rotate(fall * 1.2); ctx.beginPath(); ctx.ellipse(0, 0, 70, 18, 0, 0, 7); ctx.fill(); ctx.restore(); }
-    ctx.save(); ctx.globalAlpha = m; boy(ctx, W / 2, H * 0.92, 1.5, INK, t); ctx.restore();
-    if (m > 0.6) { const f = rng(5); ctx.save(); for (let i = 0; i < 60; i++) { ctx.globalAlpha = (m - 0.6) * 2 * f(); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(W / 2 + (f() - 0.5) * 500, H * 0.92 - f() * 600 - (t - 120) * 20 * f(), 2 + f() * 3, 0, 7); ctx.fill(); } ctx.restore(); }
-    caption(ctx, "الحادي… مو أنا.", t, 116, 119, H * 0.14, 76); caption(ctx, "كل خميس… واحد منكم.", t, 121.5, 125.5, H * 0.14, 76); caption(ctx, "يمكن تكون أنت… اللي يجمع قافلته.", t, 125.5, 130, H * 0.14, 70);
-    vignette(ctx, 0.45);
-  } },
-  { a: 130, b: 142, title: "النهاية", key: 138, vo: "الخميس، الساعة خمس… أول نجمة، أول بطاقة في تاريخ الطريق.", draw(ctx, t, img) {
-    ctx.fillStyle = "#060918"; ctx.fillRect(0, 0, W, H); stars(ctx, t, 0.7);
-    text(ctx, "الخميس · 5:00", W / 2, H * 0.24, 110, { alpha: fadeIO(t, 130.5, 142, 0.8), color: GLOW });
-    text(ctx, "أول نجمة… أول بطاقة في تاريخ الطريق", W / 2, H * 0.38, 62, { alpha: fadeIO(t, 132.5, 142, 0.8) });
-    const k = span(t, 135, 136.5); if (img && img.complete && img.naturalWidth) { ctx.save(); ctx.globalAlpha = k; const w = 640, h = w * img.naturalHeight / img.naturalWidth; ctx.drawImage(img, W / 2 - w / 2, H * 0.6 - h / 2, w, h); ctx.restore(); }
-    text(ctx, "أتحدى وأتعاون", W / 2, H * 0.84, 60, { alpha: k, color: "#ffe7a8", weight: 600 });
-    ctx.save(); ctx.fillStyle = "#0d1336"; dunes(ctx, H * 0.97, 14, 0, "#0b1030"); ctx.fillStyle = "#141c4c"; const cx = W + 200 - ((t - 130) * 70); for (let i = 0; i < 5; i++) camel(ctx, cx + i * 70, H * 0.955, 0.32, t + i); ctx.restore();
-  } },
+// ---------- shared pieces ----------
+function nightSky(ctx, t, hz = "#ef8a33", a = 0.8) { sky(ctx, "#060a20", "#1b2667", hz, a); stars(ctx, t, 0.7); }
+function desert(ctx, t, speed = 1) { ridge(ctx, H * 0.7, "#141b4a", 0.8, -100 - t * 3 * speed); fog(ctx, H * 0.7, 60, 0.1); dunes(ctx, H * 0.76, 34, t * 12 * speed, "#121a48"); dunes(ctx, H * 0.79, 26, t * 24 * speed + 300, "#0e1540", 1.3); }
+function front(ctx, t, speed = 1) { dunes(ctx, H * 0.96, 24, t * 40 * speed, "#0a0f2c", 0.8); }
+/** dots under a lantern showing how many of the five lights it has */
+function dots(ctx, x, y, n, r = 9, gap = 24) { LIGHTS.forEach(([, col], j) => { ctx.fillStyle = j < n ? col : "rgba(255,255,255,.13)"; if (j < n) { ctx.shadowColor = col; ctx.shadowBlur = 12; } ctx.beginPath(); ctx.arc(x - gap * 2 + j * gap, y, r, 0, 7); ctx.fill(); ctx.shadowBlur = 0; }); }
+/** a caravan of five lanterns in a row (levels array) */
+function lanternRow(ctx, t, levels, cx = W / 2, y = H * 0.42, gap = 250, r = 40) {
+  levels.forEach((n, i) => { const x = cx + (i - 2) * gap; const k = Math.round(n); lantern(ctx, x, y, r, n, null, 1, t); dots(ctx, x, y + r * 1.9, k, 13, 32);
+    text(ctx, `${k}/5`, x, y + r * 1.9 + 56, 46, { color: k >= 4 ? "#7cf0b4" : "#ffb648", weight: 700 }); });
+}
+/** horizontal road strip with stations, sealed letters and the caravan's camel */
+function roadStrip(ctx, t, pos, opened = 0, y = H * 0.84) {
+  const x0 = W * 0.9, x1 = W * 0.1; const X = (i) => lerp(x0, x1, i / (ROAD.length - 1));
+  ctx.save(); ctx.strokeStyle = "rgba(255,207,107,.35)"; ctx.lineWidth = 6; ctx.setLineDash([16, 12]); ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = GLOW; ctx.shadowColor = GLOW; ctx.shadowBlur = 16; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(lerp(x0, x1, pos / (ROAD.length - 1)), y); ctx.stroke(); ctx.restore();
+  for (let i = 0; i < ROAD.length; i++) { const x = X(i);
+    if (i === 0) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, 12, 0, 7); ctx.fill(); }
+    else waxSeal(ctx, x, y, 30, i <= opened ? 1 : 0, 0, t);
+    if (i <= 1 || i === ROAD.length - 1) text(ctx, ROAD[i], x, y + 58, 34, { weight: 600, color: "#dfe5ff" }); }
+  ctx.fillStyle = INK; ctx.save(); ctx.shadowColor = "rgba(255,207,107,.8)"; ctx.shadowBlur = 18; camel(ctx, lerp(x0, x1, pos / (ROAD.length - 1)), y - 26, 0.62, t); ctx.restore();
+}
+function starShape(ctx, x, y, r, a = 1, crack = 0) {
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.fillStyle = "#ffd34d"; ctx.shadowColor = "#ffcf6b"; ctx.shadowBlur = 50 * a;
+  ctx.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * 0.45 : r; const an = -Math.PI / 2 + (i * Math.PI) / 5; ctx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } ctx.closePath(); ctx.fill();
+  if (crack > 0) { ctx.shadowBlur = 0; ctx.strokeStyle = "#1a1300"; ctx.lineWidth = r * 0.07; ctx.beginPath(); ctx.moveTo(-r * 0.1, -r * 0.8); ctx.lineTo(r * 0.12, -r * 0.2); ctx.lineTo(-r * 0.15, r * 0.15); ctx.lineTo(r * 0.1, r * 0.6 * crack); ctx.stroke(); }
+  ctx.restore();
+}
+const DUTY_ICONS = [["🕌", "حُرّاس المصلى", "#1fa865"], ["🎙️", "منبر القافلة", "#0a63e6"], ["🍽️", "أُمناء الزاد", "#ef8a33"], ["✨", "رُوّاد النظافة", "#e7297a"]];
+export const POWER_DECK = [
+  { k: "golden", icon: "⚡", name: "الهدف الذهبي", tier: "أسطورية", rule: "دقيقتين: هدفكم بهدفين", c1: "#a8700f", c2: "#3a1d52" },
+  { k: "shield", icon: "🛡️", name: "الدرع", tier: "أسطورية", rule: "دقيقتين: أول هدف عليكم ما يُحسب", c1: "#a8700f", c2: "#3a1d52" },
+  { k: "extra", icon: "🦸", name: "الفزعة الكبرى", tier: "نادرة", rule: "مشرف من اختياركم يلعب معكم دقيقتين", c1: "#1f6a8a", c2: "#10294a" },
+  { k: "freekick", icon: "🎯", name: "الركلة الحرة", tier: "نادرة", rule: "ركلة حرة مباشرة من نص الملعب", c1: "#1f6a8a", c2: "#10294a" },
+  { k: "timeout", icon: "⏱️", name: "الوقت المستقطع", tier: "عادية", rule: "دقيقة توقف لخطة القافلة", c1: "#3a4680", c2: "#1a2250" },
+  { k: "kickoff", icon: "🧭", name: "اختيار البداية", tier: "عادية", rule: "تختارون الملعب وضربة البداية", c1: "#3a4680", c2: "#1a2250" },
 ];
-/** pauses that freeze the picture for a beat of silence: [content time, seconds] */
-const HOLDS = [[54.4, 2.5], [99.4, 1.5]];
-export const toContent = (r) => { let c = r; for (const [at, d] of HOLDS) { if (c <= at) break; c = Math.max(at, c - d); } return c; };
-export const toReal = (c) => c + HOLDS.filter(([at]) => at < c).reduce((n, h) => n + h[1], 0);
-export const DURATION = toReal(SCENES[SCENES.length - 1].b);
-export function drawAt(ctx, tReal, img) {
-  const t = toContent(tReal);
-  const s = SCENES.find((x) => t >= x.a && t < x.b) || SCENES[SCENES.length - 1];
-  ctx.save(); s.draw(ctx, t, img); ctx.restore();
-  // short dip to black between scenes
-  const edge = Math.min(t - s.a, s.b - t); if (edge < 0.35) { ctx.fillStyle = `rgba(0,0,0,${1 - edge / 0.35})`; ctx.fillRect(0, 0, W, H); }
+function deckCard(ctx, x, y, w, card, flip, t, glowK = 1) {
+  const h = w * 88 / 63; const k = Math.cos(Math.PI * (1 - clamp(flip))); const face = k > 0;
+  ctx.save(); ctx.translate(x, y); ctx.scale(Math.max(Math.abs(k), 0.02), 1);
+  const g = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+  if (face) { g.addColorStop(0, card.c1); g.addColorStop(1, card.c2); } else { g.addColorStop(0, "#27378a"); g.addColorStop(1, "#0f1540"); }
+  ctx.shadowColor = face ? "rgba(255,200,80,.8)" : "rgba(0,0,0,.6)"; ctx.shadowBlur = face ? 70 * glowK : 30; ctx.fillStyle = g; roundRect(ctx, -w / 2, -h / 2, w, h, w * 0.07); ctx.fill(); ctx.shadowBlur = 0;
+  ctx.strokeStyle = face ? "#ffd36b" : "#6b7cff"; ctx.lineWidth = w * 0.02; roundRect(ctx, -w / 2 + w * 0.05, -h / 2 + w * 0.05, w * 0.9, h - w * 0.1, w * 0.05); ctx.stroke();
+  if (face) { text(ctx, card.tier, 0, -h * 0.38, w * 0.08, { color: "#ffe7a8", weight: 600, glow: 0 });
+    if (card.k === "golden") lightning(ctx, 0, -h * 0.12, w * 0.42); else text(ctx, card.icon, 0, -h * 0.12, w * 0.34, { glow: 0.3 });
+    text(ctx, card.name, 0, h * 0.16, w * 0.12); wrapText(ctx, card.rule, 0, h * 0.31, w * 0.8, w * 0.075, "#ffe7a8"); }
+  else { ctx.save(); ctx.globalAlpha = 0.5; waxSeal(ctx, 0, -h * 0.05, w * 0.22, 0, 0, t); ctx.restore(); text(ctx, "؟", 0, h * 0.26, w * 0.2, { color: "#9fb0ff", glow: 0 }); }
+  ctx.restore();
+}
+function wrapText(ctx, str, x, y, maxW, size, color = "#fff") {
+  ctx.save(); ctx.font = `600 ${size}px ${FONT}`; const words = str.split(" "); const lines = []; let line = "";
+  for (const w of words) { const test = line ? line + " " + w : w; if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test; } lines.push(line); ctx.restore();
+  lines.forEach((l, i) => text(ctx, l, x, y + i * size * 1.35, size, { weight: 600, color, glow: 0 }));
 }
 
-/** narration cues, spoken by the device's Arabic voice (or replaced by a recorded voice.mp3 if one is added) */
-export const VO = [
-  { t: 2.6, s: "وين راح؟!", rate: 1.15, pitch: 1.15 },
-  { t: 7.4, s: "كل قافلة… تحتاج حادي.", rate: 0.82, pitch: 0.9 },
-  { t: 24.6, s: "في الصحراء… ما يُنَجِّي القافلة أقواها." },
-  { t: 28.6, s: "يُنَجِّيها إنها تمشي على إيقاعٍ واحد." },
-  { t: 31.6, s: "وكان لكل قافلة حادي… صوته يخلّي الإبل تمشي، ولو تعبت." },
-  { t: 49.0, s: "ما في قافلة وصلت لأن ما أحد فيها تأخّر…", rate: 0.95 },
-  { t: 53.4, s: "وصلت… لأن ما أحد فيها انْترك.", rate: 0.85 },
-  { t: 64.2, s: "ترك الحادي ثماني رسائل مختومة… على الطريق." },
-  { t: 71.2, s: "والحين… أكلّمكم أنتم.", pitch: 0.85, rate: 0.8 },
-  { t: 76.6, s: "أربع قوافل: أُحُد، القبلتين، قُباء، العقيق." },
-  { t: 80.8, s: "كل واحد فيكم يحمل فانوس، فيه خمسة أنوار." },
-  { t: 88.2, s: "إذا كل فوانيس القافلة نورها أربعة أو أكثر… تاخذ القافلة نجمة." },
-  { t: 95.3, s: "وكل نجمة… بطاقة قوة، مثل الهدف الذهبي." },
-  { t: 99.38, s: "والباقي… تكتشفونه في الطريق." },
-  { t: 101.2, s: "الرسالة الأولى… ما تنفتح…" },
-  { t: 107.6, s: "إلا إذا أخذت قافلتين نجمة، في نفس الخميس." },
-  { t: 116.2, s: "الحادي… مو أنا.", pitch: 0.85, rate: 0.8 },
-  { t: 121.6, s: "كل خميس… واحد منكم.", pitch: 0.85, rate: 0.85 },
-  { t: 125.6, s: "يمكن تكون أنت… اللي يجمع قافلته.", pitch: 0.85, rate: 0.85 },
-  { t: 131, s: "الخميس، الساعة خمسة." },
-  { t: 133.2, s: "أول نجمة… أول بطاقة، في تاريخ الطريق." },
-  { t: 137.0, s: "أتحدّى… وأتعاون.", rate: 0.85 },
+// ---------- segments ----------
+// t = seconds since the segment started (keeps running while waiting for an interaction)
+// st = shared interactive state: { drawn: [card], cheer: Set(index), choice }
+export const SEGMENTS = [
+  { id: "storm", title: "وسط العاصفة", dur: 5, key: 3.6, amb: "storm",
+    sfx: [[0, "storm", 1]], vo: [{ t: 2.6, s: "وين راح؟!", rate: 1.15, pitch: 1.15 }],
+    draw(ctx, t) {
+      sky(ctx, "#1a1209", "#3d2a14", "#7a5226"); dunes(ctx, H * 0.86, 40, t * 300, "#2a1c0e");
+      ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = "#2a1c0e"; for (let i = 0; i < 3; i++) camel(ctx, W * (0.25 + i * 0.25) + Math.sin(t * 2 + i) * 60, H * 0.78, 1.3 + i * 0.2, t * 3 + i); ctx.restore();
+      for (let i = 0; i < 7; i++) { const a = i * 0.9 + t * (0.6 + i * 0.1); lantern(ctx, W / 2 + Math.cos(a) * (300 + i * 90), H * 0.5 + Math.sin(a * 1.3) * (180 + i * 30), 14 + (i % 3) * 8, 3, null, 0.9, t); }
+      storm(ctx, t, 0); storm(ctx, t + 3.7, 0); ctx.fillStyle = "rgba(160,110,60,.22)"; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = "#e8c48a"; for (let i = 0; i < 6; i++) { const yy = ((t * 900 + i * 260) % (H + 400)) - 200; ctx.beginPath(); ctx.ellipse(W / 2 + Math.sin(t + i) * 300, yy, W * 0.7, 40, -0.25, 0, 7); ctx.fill(); } ctx.restore();
+      grain(ctx, t, 0.08); vignette(ctx, 0.7);
+      text(ctx, "حكاية من خيالنا", W / 2, H * 0.1, 48, { alpha: 0.85 * fadeIO(t, 0.2, 4.9, 0.4), color: "#ffe9c8", weight: 500 });
+      const k = fadeIO(t, 2.3, 4.9, 0.25); ctx.save(); ctx.fillStyle = `rgba(20,12,4,${0.45 * k})`; ctx.fillRect(0, H * 0.36, W, H * 0.18); ctx.restore(); text(ctx, "وين راح؟!", W / 2 + Math.sin(t * 40) * 6, H * 0.45, 130, { alpha: k, color: "#ffe2b8", glow: 1 });
+    } },
+  { id: "hadi", title: "كل قافلة تحتاج حادي", dur: 8, key: 5.5, amb: "wind",
+    sfx: [[0, "whoosh", 0.6], [3.5, "ignite", 0.7]], vo: [{ t: 1.0, s: "كل قافلة… تحتاج حادي.", rate: 0.82, pitch: 0.9 }, { t: 4.4, s: "صوته… يخلّي الإبل تمشي، ولو تعبت.", rate: 0.88 }],
+    draw(ctx, t) {
+      nightSky(ctx, t, "#ef8a33", 0.6 * span(t, 0, 4)); ridge(ctx, H * 0.78, "#0f153c", 0.6, 0);
+      const k = span(t, 3.2, 5); ctx.save(); ctx.globalAlpha = k; hadi(ctx, W * 0.5, H * 0.95, 1.2, t, INK, 1, 0.5); ctx.restore();
+      lantern(ctx, W * 0.5 + 95 * 1.2, H * 0.95 - 330 * 1.2 * 0.62, 22, 1 + 4 * span(t, 3.5, 4.5), null, 1, t);
+      text(ctx, "كل قافلة… تحتاج حادي", W / 2, H * 0.16, 84, { alpha: fadeIO(t, 0.6, 7.8, 0.7), color: "#ffe7a8" });
+      caption(ctx, "صوته يخلّي الإبل تمشي… ولو تعبت", t, 4.4, 8);
+      vignette(ctx, 0.5);
+    } },
+  { id: "order", title: "الفوضى تصير صفًّا", dur: 14, key: 12, amb: "wind",
+    sfx: [[1.5, "beat", 1], [4, "beat", 1], [6.5, "beat", 1], [9, "beat", 1], [10, "steps"]],
+    vo: [{ t: 10, s: "القافلة… تنجو لما تمشي على إيقاعٍ واحد." }],
+    draw(ctx, t) {
+      const beats = [1.5, 4, 6.5, 9]; const order = ease(beats.reduce((n, b) => n + span(t, b, b + 0.6) * 0.25, 0));
+      nightSky(ctx, t, "#ef8a33", 0.85); desert(ctx, t);
+      const cv = span(t, 9.4, 11.5); ctx.save(); ctx.globalAlpha = 1 - cv; storm(ctx, t + 12, order); ctx.restore();
+      beats.forEach((b) => { const p = span(t, b, b + 0.5); if (p > 0 && p < 1) { ctx.save(); ctx.globalAlpha = (1 - p) * 0.5; ctx.strokeStyle = GLOW; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(W / 2, H * 0.62, 100 + p * 900, 0, 7); ctx.stroke(); ctx.restore(); } });
+      if (cv > 0) { ctx.save(); ctx.globalAlpha = cv; ctx.fillStyle = INK; const xf = W * 0.2 - (t - 9.4) * 18;
+        hadi(ctx, xf - 150, H * 0.8, 0.42, t); for (let i = 0; i < 6; i++) { const sc = 1.05 * (1 - 0.05 * (i % 3)); camel(ctx, xf + i * 215, H * 0.8 + (i % 2) * 6, sc, t + i * 0.7); lantern(ctx, xf + i * 215 - 10, H * 0.8 - 175 * sc + (i % 2) * 6, 11, 5, null, 0.9, t); } ctx.restore(); }
+      front(ctx, t);
+      caption(ctx, "القافلة تنجو… لما تمشي على إيقاع واحد", t, 10, 14);
+      vignette(ctx, 0.5);
+    } },
+  { id: "lantern", title: "فانوسك وأنواره الخمسة", dur: 12, key: 10.5, amb: "night",
+    sfx: [[2, "ignite", 0.8], [3.6, "ignite", 0.8], [5.2, "ignite", 0.8], [6.8, "ignite", 0.8], [8.4, "ignite", 0.9]],
+    vo: [{ t: 0.4, s: "كل واحد فيكم… يحمل فانوس." }, { t: 2, s: "الالتزام", rate: 1 }, { t: 3.6, s: "التعاون", rate: 1 }, { t: 5.2, s: "المهارة", rate: 1 }, { t: 6.8, s: "الروح الرياضية", rate: 1 }, { t: 8.4, s: "الأخلاق", rate: 1 }, { t: 9.8, s: "هذا… نورك.", rate: 0.8 }],
+    draw(ctx, t) {
+      sky(ctx, "#05081c", "#121a4d", "#27378a", 0.4); stars(ctx, t, 0.5);
+      const lit = [2, 3.6, 5.2, 6.8, 8.4].filter((x) => t >= x).length;
+      lantern(ctx, W / 2, H * 0.4, 95, Math.max(0.5, lit), null, 1.2, t);
+      LIGHTS.forEach(([name, col], i) => { const on = i < lit; const x = W / 2 + (i - 2) * 340; const y = H * 0.74; const pop = on ? 1 + 0.25 * (1 - span(t, [2, 3.6, 5.2, 6.8, 8.4][i], [2, 3.6, 5.2, 6.8, 8.4][i] + 0.4)) : 1;
+        ctx.fillStyle = on ? col : "rgba(255,255,255,.08)"; ctx.shadowColor = col; ctx.shadowBlur = on ? 45 : 0; ctx.beginPath(); ctx.arc(x, y, 40 * pop, 0, 7); ctx.fill(); ctx.shadowBlur = 0; text(ctx, name, x, y + 88, 50, { alpha: on ? 1 : 0.3, weight: 700 }); });
+      caption(ctx, "كل واحد فيكم يحمل فانوس", t, 0.3, 1.9, H * 0.1, 62); caption(ctx, "هذا… نورك.", t, 9.8, 12, H * 0.1, 80);
+      vignette(ctx, 0.5);
+    } },
+  { id: "star", title: "نور القافلة يصنع النجمة", dur: 15, key: 13.5, amb: "night",
+    sfx: [[6.6, "star", 1], [9.2, "step", 1], [9.8, "step", 1], [11.2, "wax", 0.9], [11.8, "paper", 0.8]],
+    vo: [{ t: 0.4, s: "والقافلة… نورها من نور كل واحد فيها." }, { t: 3.4, s: "إذا كل فوانيسها… أربعة أنوار أو أكثر…" }, { t: 6.8, s: "تاخذ القافلة… نجمة!", rate: 0.95, pitch: 1.05 }, { t: 9.4, s: "وكل نجمة… خطوة على الطريق." }, { t: 12.2, s: "وكل محطة… فيها رسالة مختومة." }],
+    draw(ctx, t) {
+      sky(ctx, "#05081c", "#141c52", "#27378a", 0.5); stars(ctx, t, 0.5);
+      lanternRow(ctx, t, [5, 4, 5, 4, 5], W / 2, H * 0.3, 260, 38);
+      caption(ctx, "كل فوانيس القافلة 4 أنوار أو أكثر", t, 3.3, 6.6, H * 0.55, 60);
+      const sp = span(t, 6.6, 7.4), fly = ease(span(t, 8.2, 9.4));
+      if (t > 6.6 && fly < 1) starShape(ctx, lerp(W / 2, W * 0.9, fly), lerp(H * 0.57, H * 0.8, fly), 70 * ease(sp) * (1 - fly * 0.6), 1);
+      if (t > 6.6 && t < 8.2) text(ctx, "نجمة!", W / 2, H * 0.68, 70, { alpha: span(t, 6.8, 7.3), color: "#ffd34d" });
+      const pos = ease(span(t, 9.2, 10.6)); roadStrip(ctx, t, pos, t > 11.2 ? 1 : 0, H * 0.84);
+      if (t > 11.2) { const k = span(t, 11.2, 12); text(ctx, "📜 رسالة… انفتحت!", W * 0.79, H * 0.72, 46, { alpha: k, color: "#ffe7a8" }); }
+      caption(ctx, "كل نجمة = خطوة · كل محطة = رسالة مختومة", t, 9.4, 15, H * 0.62, 56);
+      vignette(ctx, 0.45);
+    } },
+  { id: "problem", title: "لو واحد ما التزم", dur: 10, key: 7.5, amb: "night",
+    sfx: [[1.5, "swell", 0.8], [6.2, "break", 1]],
+    vo: [{ t: 0.4, s: "كلنا… يجينا يوم نورنا يضعف." }, { t: 3.4, s: "ولو نور واحد بس… نقص عن أربعة…" }, { t: 6.4, s: "نجمة القافلة كلها… ما تطلع.", rate: 0.85 }],
+    interact: { type: "choice", q: "وش تسوي القافلة؟", opts: [["⏩", "نكمل ونتركه"], ["🤝", "نرجع له"]], next: ["leave", "fazaa"] },
+    draw(ctx, t) {
+      sky(ctx, "#05081c", "#141c52", "#3a1030", 0.5 * span(t, 1, 5)); stars(ctx, t, 0.5);
+      const dim = lerp(5, 3, ease(span(t, 2, 5)));
+      lanternRow(ctx, t, [5, 4, dim, 4, 5], W / 2, H * 0.3, 260, 38);
+      if (t > 2) { ctx.save(); ctx.globalAlpha = 0.6 * span(t, 2, 3) * (0.6 + 0.4 * Math.sin(t * 6)); ctx.strokeStyle = "rgba(255,182,72,.7)"; ctx.lineWidth = 4; ctx.setLineDash([10, 10]); ctx.beginPath(); ctx.arc(W / 2, H * 0.3, 90, 0, 7); ctx.stroke(); ctx.restore(); }
+      const tr = span(t, 5.2, 6.2); if (t > 5.2) starShape(ctx, W / 2, H * 0.6 - tr * 30 + (t > 6.2 ? (t - 6.2) * 60 : 0), 70, t > 6.2 ? Math.max(0, 1 - (t - 6.2) * 0.8) : tr, t > 6.2 ? 1 : 0);
+      roadStrip(ctx, t, 1, 1, H * 0.86);
+      caption(ctx, "كلنا يجينا يوم نورنا يضعف…", t, 0.4, 3.3, H * 0.1, 64); caption(ctx, "ولو نور واحد نقص عن 4…", t, 3.4, 6.3, H * 0.1, 64); caption(ctx, "نجمة القافلة كلها… ما تطلع", t, 6.4, 10, H * 0.1, 66);
+      vignette(ctx, 0.5);
+    } },
+  { id: "leave", title: "نكمل ونتركه؟", dur: 10, key: 6, amb: "wind", sfx: [[0.3, "whoosh", 0.4], [4.2, "break", 0.6]],
+    vo: [{ t: 0.4, s: "تكملون… وتتركونه؟" }, { t: 2.4, s: "القافلة توصل… ناقصة." }, { t: 4.6, s: "لا نجمة… لا خطوة… ولا بطاقة.", rate: 0.85 }, { t: 7.4, s: "النجمة ما تطلع… إلا لما يوصل الكل.", rate: 0.85 }],
+    interact: { type: "choice", q: "تبون تشوفون لو رجعتوا له؟", opts: [["🤝", "نشوف لو رجعنا له"], ["⏭️", "كمّل الفيلم"]], next: ["fazaa", "you"] },
+    draw(ctx, t) {
+      nightSky(ctx, t, "#3a1030", 0.6); desert(ctx, t * 0.5, 0.5);
+      const go = t * 70; ctx.fillStyle = INK; const xf = W * 0.25 - go;
+      hadi(ctx, xf - 150, H * 0.83, 0.44, t); for (let i = 0; i < 5; i++) { camel(ctx, xf + i * 215, H * 0.83, 1.05, t + i); lantern(ctx, xf + i * 215 - 10, H * 0.83 - 182, 13, 5, null, 1, t); }
+      camel(ctx, W * 0.86, H * 0.83, 1.05, 0); lantern(ctx, W * 0.86 - 10, H * 0.83 - 182, 13, 3 - 2 * span(t, 1, 5), null, 1, t);
+      front(ctx, t * 0.5, 0.5);
+      if (t > 3.6) starShape(ctx, W / 2, H * 0.32, 70, Math.max(0, 1 - (t - 4) * 0.5), 1);
+      caption(ctx, "القافلة توصل… ناقصة", t, 2.4, 4.5, H * 0.1, 64); caption(ctx, "لا نجمة · لا خطوة · لا بطاقة", t, 4.6, 7.3, H * 0.1, 64); caption(ctx, "النجمة ما تطلع… إلا لما يوصل الكل", t, 7.4, 10, H * 0.1, 64);
+      if (t > 4.4) { ctx.save(); ctx.globalAlpha = span(t, 4.4, 5) * 0.9; deckCard(ctx, W * 0.82, H * 0.34, 150, POWER_DECK[0], 0, t, 0); text(ctx, "🔒", W * 0.82, H * 0.34, 90, {}); ctx.restore(); }
+      vignette(ctx, 0.5);
+    } },
+  { id: "fazaa", title: "الفزعة", dur: 13, key: 7.6, amb: "night", sfx: [[2.2, "shimmer", 0.9], [4.8, "ignite", 1], [6.4, "star", 1]],
+    vo: [{ t: 0.4, s: "ترجع له… وتفزع له." }, { t: 4.6, s: "ويرجع نوره… وتطلع النجمة!", pitch: 1.05 }, { t: 8.4, s: "ما في قافلة وصلت لأن ما أحد فيها تأخّر…", rate: 0.92 }, { t: 11, s: "وصلت… لأن ما أحد فيها انْترك.", rate: 0.82 }],
+    draw(ctx, t) {
+      sky(ctx, "#05081c", "#141c52", "#27378a", 0.5); stars(ctx, t, 0.6);
+      const xs = [0, 1, 2, 3, 4].map((i) => W / 2 + (i - 2) * 260); const thread = span(t, 2.2, 4.6);
+      const lv = [5, 4, t < 4.8 ? 3 : 4, 4, 5]; lanternRow(ctx, t, lv, W / 2, H * 0.3, 260, 38);
+      if (thread > 0 && t < 5.6) { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "rgba(255,214,120,.95)"; ctx.lineWidth = 8; ctx.shadowColor = GLOW; ctx.shadowBlur = 40; ctx.globalAlpha = 1 - span(t, 5, 5.6);
+        [[0, 2], [4, 2], [1, 2], [3, 2]].forEach(([a, b], k) => { const p = clamp(thread * 1.4 - k * 0.12); if (p <= 0) return; ctx.beginPath(); ctx.moveTo(xs[a], H * 0.3); ctx.quadraticCurveTo((xs[a] + xs[b]) / 2, H * 0.3 - 120, lerp(xs[a], xs[b], p), H * 0.3 - Math.sin(p * Math.PI) * 60); ctx.stroke(); }); ctx.restore(); }
+      if (t > 6.4) starShape(ctx, W / 2, H * 0.6, 80 * ease(span(t, 6.4, 7.2)) * (1 + 0.05 * Math.sin(t * 4)), 1);
+      caption(ctx, "ترجع له… وتفزع له", t, 0.4, 4.5, H * 0.1, 66); caption(ctx, "ويرجع نوره… وتطلع النجمة!", t, 4.6, 8.3, H * 0.1, 66);
+      caption(ctx, "ما في قافلة وصلت لأن ما أحد فيها تأخر…", t, 8.4, 10.9, H * 0.84, 60); caption(ctx, "وصلت… لأن ما أحد فيها انترك.", t, 11, 13, H * 0.84, 72);
+      vignette(ctx, 0.45);
+    } },
+  { id: "you", title: "نورك نور قافلتك", dur: 7, key: 4.5, amb: "night", sfx: [[0.2, "whoosh", 0.5]],
+    vo: [{ t: 0.5, s: "انضباطك… مو لك بروحك.", rate: 0.85 }, { t: 3.4, s: "هو نور قافلتك… كلها.", rate: 0.82 }],
+    draw(ctx, t) {
+      ctx.fillStyle = "#04050c"; ctx.fillRect(0, 0, W, H);
+      const r = 70 + 50 * ease(span(t, 0, 3)); lantern(ctx, W / 2, H * 0.48, r, 5, null, 1.4, t);
+      CARAVANS.forEach((c, i) => { const a = (i / 4) * Math.PI * 2 + t * 0.4; const k = span(t, 3.2, 4.4); ctx.save(); ctx.globalAlpha = k; lantern(ctx, W / 2 + Math.cos(a) * 420, H * 0.48 + Math.sin(a) * 260, 26, 5, null, 0.9, t); ctx.restore(); });
+      text(ctx, "انضباطك… مو لك بروحك", W / 2, H * 0.12, 74, { alpha: fadeIO(t, 0.4, 7, 0.5), color: "#fff" });
+      text(ctx, "هو نور قافلتك كلها", W / 2, H * 0.88, 80, { alpha: fadeIO(t, 3.3, 7, 0.5), color: "#ffd34d" });
+    } },
+  { id: "duty", title: "نجمة التكليف", dur: 12, key: 10.5, amb: "night", sfx: [[0.6, "flag", 0.5], [5.4, "tick", 0.8], [7, "tick", 0.8], [8.4, "star", 1]],
+    vo: [{ t: 0.4, s: "وكل قافلة… لها تكليف كل خميس." }, { t: 4.8, s: "تتقنه مرتين…" }, { t: 8.6, s: "تاخذ نجمة! نجمتكم من إتقانكم… مو من سبق غيركم.", rate: 0.92 }],
+    draw(ctx, t) {
+      sky(ctx, "#05081c", "#121a4d", "#27378a", 0.4); stars(ctx, t, 0.4);
+      DUTY_ICONS.forEach(([ic, name, col], i) => { const k = ease(span(t, 0.6 + i * 0.5, 1.4 + i * 0.5)); const x = W / 2 + (i - 1.5) * 380; const y = H * 0.34 + (1 - k) * 60;
+        ctx.save(); ctx.globalAlpha = k; ctx.fillStyle = "rgba(255,255,255,.06)"; ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.shadowColor = col; ctx.shadowBlur = 30; roundRect(ctx, x - 150, y - 130, 300, 260, 30); ctx.fill(); ctx.stroke(); ctx.restore();
+        text(ctx, ic, x, y - 30, 110, { alpha: k, glow: 0.2 }); text(ctx, name, x, y + 80, 44, { alpha: k }); });
+      const sel = span(t, 4.4, 5); if (sel > 0) { ctx.save(); ctx.globalAlpha = sel; ctx.strokeStyle = "#ffd34d"; ctx.lineWidth = 8; roundRect(ctx, W / 2 - 1.5 * 380 - 165, H * 0.34 - 145, 330, 290, 34); ctx.stroke(); ctx.restore(); }
+      [5.4, 7].forEach((tt, j) => { const k = span(t, tt, tt + 0.4); if (k <= 0) return; const x = W / 2 - 1.5 * 380 - 90 + j * 190; text(ctx, "✔", x, H * 0.66, 100 * (1 + 0.3 * (1 - k)), { alpha: k, color: "#5fe3a1" }); text(ctx, j ? "الخميس ٢" : "الخميس ١", x, H * 0.77, 44, { alpha: k, color: "#dfe5ff", weight: 700 }); });
+      if (t > 8.4) starShape(ctx, W * 0.62, H * 0.7, 70 * ease(span(t, 8.4, 9.2)), 1);
+      caption(ctx, "تكليف كل خميس", t, 0.4, 4.4, H * 0.1, 64); caption(ctx, "تتقنه مرتين = نجمة لقافلتك", t, 4.8, 12, H * 0.1, 64);
+      vignette(ctx, 0.45);
+    } },
+  { id: "recap", title: "طريقين للنجمة", dur: 9, key: 7.5, amb: "night", sfx: [[0.3, "star", 0.6], [1.6, "star", 0.6]],
+    vo: [{ t: 0.4, s: "يعني… طريقين للنجمة:" }, { t: 2.2, s: "فوانيس القافلة كلها أربعة أو أكثر… أو تكليف متقن مرتين." }, { t: 6.2, s: "وكل نجمة: خطوة، ورسالة، وبطاقة!", pitch: 1.05 }],
+    draw(ctx, t) {
+      sky(ctx, "#05081c", "#121a4d", "#27378a", 0.4); stars(ctx, t, 0.4);
+      const tile = (x, k, title, sub, draw) => { ctx.save(); ctx.globalAlpha = k; ctx.fillStyle = "rgba(255,255,255,.06)"; ctx.strokeStyle = "#ffd34d"; ctx.lineWidth = 4; ctx.shadowColor = "#ffcf6b"; ctx.shadowBlur = 30; roundRect(ctx, x - 380, H * 0.16, 760, 470, 34); ctx.fill(); ctx.stroke(); ctx.restore();
+        starShape(ctx, x, H * 0.27, 52, k); text(ctx, title, x, H * 0.4, 58, { alpha: k }); text(ctx, sub, x, H * 0.5, 44, { alpha: k, color: "#ffe7a8", weight: 600 }); ctx.save(); ctx.globalAlpha = k; draw(x); ctx.restore(); };
+      tile(W * 0.73, ease(span(t, 0.2, 1)), "نجمة الفوانيس", "كل فوانيس القافلة 4+", (x) => { for (let i = 0; i < 5; i++) lantern(ctx, x - 240 + i * 120, H * 0.6, 22, i === 2 ? 4 : 5, null, 0.8, t); });
+      tile(W * 0.27, ease(span(t, 1.5, 2.3)), "نجمة التكليف", "تكليف متقن مرتين", (x) => { text(ctx, "✔ ✔", x, H * 0.6, 80, { color: "#5fe3a1" }); });
+      const k = span(t, 6, 6.8); text(ctx, "كل نجمة = 👣 خطوة · 📜 رسالة · 🎴 بطاقة", W / 2, H * 0.88, 64, { alpha: k, color: "#fff" });
+      vignette(ctx, 0.45);
+    } },
+  { id: "cards", title: "اسحب بطاقة قوة", dur: 7, key: 5, amb: "night", sfx: [[0.4, "whoosh", 0.6]],
+    vo: [{ t: 0.4, s: "وكل نجمة… سحبة بطاقة قوة، تلعبونها في الملعب." }, { t: 4.6, s: "جرّبوا… اسحبوا بطاقة!", pitch: 1.05 }],
+    interact: { type: "draw", q: "اضغط مسافة… واسحب بطاقة!", done: "كمّل" },
+    draw(ctx, t, st) {
+      sky(ctx, "#05081c", "#121a4d", "#3a1d52", 0.5); stars(ctx, t, 0.5);
+      const last = st.drawn[st.drawn.length - 1];
+      if (!last) { for (let i = 0; i < 6; i++) { const a = (i - 2.5) * 0.12; ctx.save(); ctx.translate(W / 2 + (i - 2.5) * 70, H * 0.5 + Math.abs(i - 2.5) * 14); ctx.rotate(a + Math.sin(t * 1.5 + i) * 0.02); deckCard(ctx, 0, 0, 240, POWER_DECK[0], 0, t); ctx.restore(); } }
+      else { const f = ease(span(t, last.at, last.at + 0.9)); const pop = 1 + 0.15 * Math.sin(Math.PI * span(t, last.at + 0.6, last.at + 1.1));
+        st.drawn.slice(-4, -1).forEach((d, i, arr) => deckCard(ctx, W * 0.14 + i * 150, H * 0.82, 120, d.card, 1, t, 0.3));
+        ctx.save(); ctx.translate(W / 2, H * 0.46); ctx.scale(pop, pop); deckCard(ctx, 0, 0, 380, last.card, f, t); ctx.restore();
+        if (f >= 1) { text(ctx, last.card.name, W / 2, H * 0.07, 76, { color: "#ffd34d" }); text(ctx, last.card.rule, W / 2, H * 0.15, 48, { color: "#fff" }); } }
+      caption(ctx, "كل نجمة = سحبة بطاقة قوة تلعبونها في الملعب", t, 0.4, 4.5, H * 0.1, 58);
+      vignette(ctx, 0.45);
+    } },
+  { id: "banners", title: "القوافل الأربع", dur: 6, key: 5.5, amb: "wind", sfx: [[0.8, "flag", 0.7], [1.4, "flag", 0.6], [2, "flag", 0.6], [2.6, "flag", 0.6]],
+    vo: [{ t: 0.4, s: "أربع قوافل… كل قافلة لها طريقها." }, { t: 3.8, s: "خلّونا نسمع صوتكم!", pitch: 1.1 }],
+    interact: { type: "cheer", q: "كل قافلة… اسمها بأعلى صوت!", done: "كمّل" },
+    draw(ctx, t, st) {
+      sky(ctx, "#05081c", "#18225f", "#ef8a33", 1); const sun = ctx.createRadialGradient(W / 2, H * 0.85, 10, W / 2, H * 0.85, 600); sun.addColorStop(0, "rgba(255,200,120,.6)"); sun.addColorStop(1, "rgba(255,200,120,0)"); ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
+      ridge(ctx, H * 0.86, "#0f153c", 0.6, 0); dunes(ctx, H * 0.95, 18, 0, INK);
+      CARAVANS.forEach((c, i) => { const k = ease(span(t, 0.8 + i * 0.6, 1.8 + i * 0.6)); if (k <= 0) return; const on = st.cheer.has(i); const pulse = on ? 1 + 0.06 * Math.sin(t * 8) : 1;
+        const x = W * (0.84 - i * 0.227); const y = 70 + k * 260 + 230; const wv = Math.sin(t * 2.4 + i) * (on ? 20 : 8);
+        ctx.save(); ctx.strokeStyle = "rgba(220,200,160,.6)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 80, 0); ctx.lineTo(x - 80, y - 260); ctx.moveTo(x + 80, 0); ctx.lineTo(x + 80, y - 260); ctx.stroke();
+        ctx.translate(x, y - 130); ctx.scale(pulse, pulse); ctx.translate(-x, -(y - 130));
+        const g = ctx.createLinearGradient(x - 100, 0, x + 100, 0); g.addColorStop(0, mixHex(c.color, "#000000", 0.3)); g.addColorStop(0.5, c.color); g.addColorStop(1, mixHex(c.color, "#000000", 0.3));
+        ctx.fillStyle = g; ctx.shadowColor = c.color; ctx.shadowBlur = on ? 90 : 25; ctx.beginPath(); ctx.moveTo(x - 100, y - 260); ctx.lineTo(x + 100, y - 260); ctx.quadraticCurveTo(x + 100 + wv, y - 120, x + 100, y); ctx.lineTo(x, y - 40); ctx.lineTo(x - 100, y); ctx.quadraticCurveTo(x - 100 + wv, y - 120, x - 100, y - 260); ctx.closePath(); ctx.fill(); ctx.restore();
+        text(ctx, c.name, x, y - 150, 54);
+        const lv = st.level ? st.level[i] || 0 : 0; if (lv > 0) { ctx.save(); ctx.fillStyle = "rgba(255,255,255,.12)"; roundRect(ctx, x - 90, y + 30, 180, 22, 11); ctx.fill(); ctx.fillStyle = c.color; ctx.shadowColor = c.color; ctx.shadowBlur = 20; roundRect(ctx, x - 90, y + 30, 180 * Math.min(1, lv), 22, 11); ctx.fill(); ctx.restore(); }
+        if (on) for (let q = 0; q < 14; q++) { const a = q * 0.45 + t * 2; ctx.fillStyle = c.color; ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.arc(x + Math.cos(a) * (140 + (t * 60) % 80), y - 130 + Math.sin(a) * 180, 6, 0, 7); ctx.fill(); ctx.globalAlpha = 1; } });
+      caption(ctx, "أربع قوافل… كل قافلة لها طريقها", t, 0.4, 3.7, H * 0.84, 60);
+      vignette(ctx, 0.4);
+    } },
+  { id: "reveal", title: "الكشف", dur: 14, key: 9.5, amb: "wind", sfx: [[2.4, "reveal", 1]],
+    vo: [{ t: 0.4, s: "الحادي… مو أنا.", pitch: 0.85, rate: 0.8 }, { t: 6, s: "كل خميس… واحد منكم.", pitch: 0.85, rate: 0.85 }, { t: 9.6, s: "يمكن تكون أنت… اللي يجمع قافلته.", pitch: 0.85, rate: 0.85 }],
+    draw(ctx, t) {
+      sky(ctx, "#05081c", "#18225f", "#ef8a33", 0.9); const sun = ctx.createRadialGradient(W / 2, H * 0.7, 10, W / 2, H * 0.7, 600); sun.addColorStop(0, `rgba(255,214,140,${0.5 + 0.4 * span(t, 2.4, 6)})`); sun.addColorStop(1, "rgba(255,200,120,0)"); ctx.fillStyle = sun; ctx.fillRect(0, 0, W, H);
+      dunes(ctx, H * 0.92, 20, 0, INK);
+      const m = ease(span(t, 2.4, 5.4));
+      ctx.save(); ctx.globalAlpha = 1 - m; hadi(ctx, W / 2, H * 0.92, 1.3, t, INK, 1 - span(t, 1, 3), 0.6); ctx.restore();
+      const fall = span(t, 1, 3.5); if (fall > 0) { ctx.save(); ctx.globalAlpha = 0.9; ctx.fillStyle = INK; ctx.translate(W / 2 - 60 * fall, H * 0.92 - 470 * (1 - ease(fall)) - 10); ctx.rotate(fall * 1.2); ctx.beginPath(); ctx.ellipse(0, 0, 70, 18, 0, 0, 7); ctx.fill(); ctx.restore(); }
+      ctx.save(); ctx.globalAlpha = m; boy(ctx, W / 2, H * 0.92, 1.5, INK, t); ctx.restore();
+      if (m > 0.6) { const f = rng(5); ctx.save(); for (let i = 0; i < 60; i++) { ctx.globalAlpha = (m - 0.6) * 2 * f(); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(W / 2 + (f() - 0.5) * 500, H * 0.92 - f() * 600 - (t - 4) * 20 * f(), 2 + f() * 3, 0, 7); ctx.fill(); } ctx.restore(); }
+      caption(ctx, "الحادي… مو أنا.", t, 0.4, 3.6, H * 0.14, 78); caption(ctx, "كل خميس… واحد منكم.", t, 6, 9.5, H * 0.14, 78); caption(ctx, "يمكن تكون أنت… اللي يجمع قافلته.", t, 9.6, 14, H * 0.14, 72);
+      vignette(ctx, 0.45);
+    } },
+  { id: "end", title: "النهاية", dur: 11, key: 8, amb: "night", sfx: [[0.2, "whoosh", 0.6], [5, "reveal", 0.6]],
+    vo: [{ t: 0.6, s: "الخميس، الساعة خمسة." }, { t: 2.6, s: "أول نجمة… أول خطوة… أول رسالة." }, { t: 6.4, s: "أتحدّى… وأتعاون.", rate: 0.85 }],
+    draw(ctx, t, st, img) {
+      ctx.fillStyle = "#060918"; ctx.fillRect(0, 0, W, H); stars(ctx, t, 0.7);
+      text(ctx, "الخميس · 5:00", W / 2, H * 0.22, 110, { alpha: fadeIO(t, 0.5, 11, 0.8), color: GLOW });
+      text(ctx, "أول نجمة… أول خطوة… أول رسالة", W / 2, H * 0.36, 64, { alpha: fadeIO(t, 2.5, 11, 0.8) });
+      const k = span(t, 5, 6.5); if (img && img.complete && img.naturalWidth) { ctx.save(); ctx.globalAlpha = k; const w = 620, h = w * img.naturalHeight / img.naturalWidth; ctx.drawImage(img, W / 2 - w / 2, H * 0.6 - h / 2, w, h); ctx.restore(); }
+      text(ctx, "أتحدى وأتعاون", W / 2, H * 0.84, 64, { alpha: k, color: "#ffe7a8", weight: 600 });
+      ctx.save(); dunes(ctx, H * 0.97, 14, 0, "#0b1030"); ctx.fillStyle = "#141c4c"; const cx = W + 200 - t * 70; for (let i = 0; i < 5; i++) camel(ctx, cx + i * 70, H * 0.955, 0.32, t + i); ctx.restore();
+    } },
 ];
-export const VO_REAL = VO.map((c) => ({ ...c, t: toReal(c.t) }));
+/** linear order (branches are reached from choices) */
+export const ORDER = ["storm", "hadi", "order", "lantern", "star", "problem", "fazaa", "you", "duty", "recap", "cards", "banners", "reveal", "end"];
+export const SEG = Object.fromEntries(SEGMENTS.map((s) => [s.id, s]));
+export const LINEAR_DURATION = ORDER.reduce((n, id) => n + SEG[id].dur, 0);
+export function drawSeg(ctx, id, t, st, img) {
+  const s = SEG[id]; ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; s.draw(ctx, t, st || { drawn: [], cheer: new Set() }, img); ctx.restore();
+  const edge = Math.min(t, s.interact ? 99 : s.dur - t); if (edge < 0.3) { ctx.fillStyle = `rgba(0,0,0,${1 - edge / 0.3})`; ctx.fillRect(0, 0, W, H); }
+}

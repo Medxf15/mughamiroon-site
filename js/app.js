@@ -222,10 +222,10 @@ function viewToday() {
   const todayMatches = S.matches.filter((x) => x.meeting_id === m.id);
   const pend = S.caravans.map((c) => [c, L.pendingDraws(S, I, m.id, c.id)]).filter(([, p]) => p.length);
   const drawn = (S.power_cards || []).filter((p) => p.meeting_id === m.id);
-  const lv = newLevels(m); const seal = L.sealState(S, I).perMeet[m.id];
+  const lv = newLevels(m); const sealsToday = L.sealState(S, I).at[m.id] || [];
   const steps = [
     { key: "prep", time: "4:30", icon: "🧳", title: "قبل اللقاء", auto: null,
-      body: `<ul class="todo"><li>بطاقات التكليف الأربع، وصندوق بطاقات القوة</li><li>${lv.length || (nx && kalNext && L.dutyRow(S, nx.id, kalNext.id)?.topic != null) ? `<a href="#print/meet">🖨️ اطبع بطاقات هذا اللقاء</a>` : "ما فيه بطاقات أسماء تحتاج طباعة الآن"}</li><li><a href="#screen">📺 افتح الشاشة</a> على التلفاز${seal && seal.seal ? ` (الختم ${seal.seal.n} جاهز)` : ""}</li></ul>` },
+      body: `<ul class="todo"><li>بطاقات التكليف الأربع، وصندوق بطاقات القوة</li><li>${lv.length || (nx && kalNext && L.dutyRow(S, nx.id, kalNext.id)?.topic != null) ? `<a href="#print/meet">🖨️ اطبع بطاقات هذا اللقاء</a>` : "ما فيه بطاقات أسماء تحتاج طباعة الآن"}</li><li><a href="#screen">📺 افتح الشاشة</a> على التلفاز</li></ul>` },
     { key: "start", time: "5:00", icon: "🚩", title: "الانطلاقة", auto: null,
       body: `<p>سلّم كل <b>قائد</b> بطاقة تكليف قافلته، وذكّرهم: <i>${esc(L.LEAD.motto)}</i>.</p><div class="lead-grid">${S.caravans.map((c) => { const d = L.dutyOf(S, m, c.id); return `<a class="lead-mini" href="#caravan/${c.id}" style="${carStyle(c)}"><b>${esc(c.name)}</b><span>🎖️ ${lead(c) ? esc(lead(c)) : '<span class="muted">بدون قائد</span>'}</span><small>${d ? d.icon + " " + esc(d.short) : ""}</small></a>`; }).join("")}</div>` },
     { key: "att", time: "5:15", icon: "✅", title: "التحضير والنقاط", auto: recN > 0,
@@ -240,7 +240,7 @@ function viewToday() {
         <p class="small muted">قبل الصافرة: كل قافلة تعلن بطاقتها، والكابتن يمثلها.</p>` },
     { key: "close", time: "9:45", icon: "🌙", title: "الختام", auto: null,
       body: `<div class="close-stars">${S.caravans.map((c) => { const t = L.teamMeet(S, I, m.id, c.id); return `<span style="${carStyle(c)}">${esc(c.name)} ${t.stars === 2 ? "🌟" : t.stars ? "⭐" : `<small class="num">${t.ready}/${t.n}</small>`}</span>`; }).join("")}</div>
-        <p>📜 الختم: ${seal ? (seal.open ? `<b>انفتح ${esc(seal.seal ? seal.seal.title : "")}</b> · <a href="#screen">اعرضه</a>` : `يحتاج ${seal.need} قوافل بنجمة (الحين ${seal.got.length})`) : "تبدأ الأختام لاحقًا"}</p>
+        <p>📜 الرسائل: ${sealsToday.length ? sealsToday.map((x) => `<b>${esc(carName(x.cid))}</b> فتحت «${esc(x.seal.title)}»`).join("، ") + ` · <a href="#screen">اعرضها على الشاشة</a>` : "ما وصلت أي قافلة محطة جديدة بعد. كل نجمة = خطوة."}</p>
         ${lv.length ? `<p>🏅 مستويات جديدة: ${lv.map((x) => `${x.lv.icon} <b>${esc(x.k.first_name)}</b> «${esc(x.lv.name)}»`).join("، ")} · <a href="#print/meet">اطبع بطاقاتهم</a></p>` : ""}
         <p class="reflect">سؤال التأمل: <b>«متى حسّيت إن فريقك يحتاجك؟»</b></p>
         ${kalNext ? `<div class="next-kal"><p>🎙️ كلمة اللقاء القادم على <b>${esc(kalNext.name)}</b>: يختارون المتحدث، وأنت تعطيه بطاقة الموضوع.</p>${ed ? `<div class="duty-kal">${kalimaPick(kalNext, nx)}</div>` : ""}</div>` : ""}
@@ -253,7 +253,7 @@ function viewToday() {
   $app().innerHTML = shell(`
     <section class="today-hero">
       <div><p class="muted">${m.number ? `اللقاء ${m.number}` : ""}${m.theme ? " · " + esc(m.theme) : ""}</p><h1>الخميس ${fmtDate(m.meet_date)}</h1>
-        <div class="hero-chips"><span>👥 <b class="num">${recN ? presN + "/" + act.length : "—"}</b> حضور</span><span>⭐ <b class="num">${totStars}</b> نجوم اليوم</span><span>📜 ${seal ? (seal.open ? "الختم انفتح" : `الختم ${seal.got.length}/${seal.need}`) : "—"}</span></div></div>
+        <div class="hero-chips"><span>👥 <b class="num">${recN ? presN + "/" + act.length : "—"}</b> حضور</span><span>⭐ <b class="num">${totStars}</b> نجوم اليوم</span><span>📜 <b class="num">${sealsToday.length}</b> رسائل انفتحت</span></div></div>
       <div class="hero-side">${meetPicker()}<div class="hero-prog"><div class="prog"><i style="width:${Math.round((doneN / steps.length) * 100)}%"></i></div><small class="num">${doneN} من ${steps.length} محطات</small></div></div>
     </section>
     ${isOwner() && accounts.some((a) => a.status === "pending") ? `<a class="notice" href="#accounts">${accounts.filter((a) => a.status === "pending").length} حساب ينتظر موافقتك</a>` : ""}
@@ -634,15 +634,11 @@ function levelsHTML(tv) {
 }
 function sealHTML(m, tv) {
   const st = L.sealState(S, I); if (!m) return '<div class="empty">لا يوجد لقاء</div>';
-  if ((m.number || 0) < st.start) return `<div class="seal-wrap"><div class="wax">🐪</div><p class="seal-hint">الرسائل المختومة تبدأ من اللقاء ${st.start}</p></div>`;
-  const pm = st.perMeet[m.id];
-  if (pm && pm.open && pm.seal) return `<div class="seal-wrap opened"><article class="parchment"><p class="pa-k">${esc(pm.seal.title)}</p><p class="pa-body">${esc(pm.seal.body)}</p>${pm.seal.mission ? `<p class="pa-mission">مهمة الأسبوع: ${esc(pm.seal.mission)}</p>` : ""}<p class="pa-sign">— الحادي</p></article></div>`;
-  const sl = (pm && pm.seal) || st.nextSeal;
-  if (!sl) return `<div class="seal-wrap"><div class="wax">🏔️</div><p class="seal-hint">فُتحت كل الأختام. الطريق القادم أطول.</p></div>`;
-  const got = pm ? pm.got : [];
-  return `<div class="seal-wrap"><div class="wax pulse"><span>${sl.n}</span></div><h2 class="seal-t">${esc(sl.title.split("·")[0])}</h2><p class="seal-hint">${esc(sl.hint)}</p>
-    <p class="seal-need">يُفتح الختم إذا أخذت <b class="num">${st.need}</b> قوافل نجمة في هذا اللقاء</p>
-    <div class="seal-cars">${S.caravans.map((c) => `<span class="${got.includes(c.id) ? "on" : ""}" style="${carStyle(c)}">${got.includes(c.id) ? "⭐" : "○"} ${esc(c.name)}</span>`).join("")}</div></div>`;
+  const today = st.at[m.id] || [];
+  const parch = (x) => `<article class="parchment" style="${carStyle(I.car[x.cid])}"><p class="pa-car">قافلة ${esc(carName(x.cid))} وصلت «${esc(L.ROAD[x.n])}»</p><p class="pa-k">${esc(x.seal.title)}</p><p class="pa-body">${esc(x.seal.body)}</p>${x.seal.mission ? `<p class="pa-mission">مهمة الأسبوع: ${esc(x.seal.mission)}</p>` : ""}<p class="pa-sign">— الحادي</p></article>`;
+  if (today.length) { const i = Math.floor(Date.now() / 20000) % today.length; return `<div class="seal-wrap opened">${parch(today[i])}${today.length > 1 ? `<p class="seal-hint">${today.length} رسائل انفتحت اليوم · تتبدّل كل 20 ثانية</p>` : ""}</div>`; }
+  return `<div class="seal-wrap"><h2 class="seal-t">كل نجمة… خطوة. وكل محطة… رسالة مختومة.</h2>
+    <div class="seal-grid">${S.caravans.map((c) => { const b = st.byCar[c.id]; const nx = b.next; return `<div class="seal-car" style="${carStyle(c)}"><b>${esc(c.name)}</b><div class="wax pulse small-wax"><span>${nx ? nx.n : "✓"}</span></div><small>${nx ? `الرسالة التالية في «${esc(L.ROAD[b.pos + 1])}»` : "فتحت كل الرسائل"}</small><small class="num">فتحت ${b.length} من ${st.seals.length}</small></div>`; }).join("")}</div></div>`;
 }
 function viewGuide() {
   const m = I.meet[meetId];
@@ -661,13 +657,12 @@ function viewGuide() {
 }
 function viewSeals() {
   const editPlan = can("plan"); const st = L.sealState(S, I);
-  const seals = st.seals.map((s) => { const om = st.opened[s.n]; const open = ui.openSeal === s.n;
-    return `<li class="${om ? "done" : ""}"><button class="sl-head" data-act="sealopen" data-n="${s.n}" aria-expanded="${open}"><span class="sl-n">${om ? "📜" : "🔒"} ${s.n}</span><b>${esc(s.title)}</b><small>${om ? "فُتح في اللقاء " + (I.meet[om] ? I.meet[om].number : "") : "مختوم"}</small></button>
-      ${open ? (editPlan ? `<div class="sl-edit"><label>العنوان<input id="sl-t-${s.n}" value="${esc(s.title)}" maxlength="80"></label><label>التلميح (يظهر والختم مغلق)<input id="sl-h-${s.n}" value="${esc(s.hint)}" maxlength="160"></label><label>الرسالة<textarea id="sl-b-${s.n}" rows="4" maxlength="900">${esc(s.body)}</textarea></label><label>مهمة الأسبوع<input id="sl-m-${s.n}" value="${esc(s.mission)}" maxlength="200"></label><button class="btn sm" data-act="sealsave" data-n="${s.n}">حفظ الختم</button></div>` : `<div class="sl-edit"><p>${esc(s.body)}</p><p class="muted">${esc(s.mission)}</p></div>`) : ""}</li>`; }).join("");
+  const seals = st.seals.map((s) => { const open = ui.openSeal === s.n; const who = S.caravans.filter((c) => st.byCar[c.id].some((x) => x.n === s.n));
+    return `<li class="${who.length ? "done" : ""}"><button class="sl-head" data-act="sealopen" data-n="${s.n}" aria-expanded="${open}"><span class="sl-n">${who.length ? "📜" : "🔒"} ${s.n}</span><b>${esc(s.title)}</b><small>في «${esc(L.ROAD[s.n] || "")}» · ${who.length ? who.map((c) => `<i class="sw" style="${carStyle(c)}"></i>${esc(c.name)}`).join(" ") : "ما وصلتها قافلة"}</small></button>
+      ${open ? (editPlan ? `<div class="sl-edit"><label>العنوان<input id="sl-t-${s.n}" value="${esc(s.title)}" maxlength="80"></label><label>التلميح<input id="sl-h-${s.n}" value="${esc(s.hint)}" maxlength="160"></label><label>الرسالة<textarea id="sl-b-${s.n}" rows="4" maxlength="900">${esc(s.body)}</textarea></label><label>مهمة الأسبوع<input id="sl-m-${s.n}" value="${esc(s.mission)}" maxlength="200"></label><button class="btn sm" data-act="sealsave" data-n="${s.n}">حفظ الختم</button></div>` : `<div class="sl-edit"><p>${esc(s.body)}</p><p class="muted">${esc(s.mission)}</p></div>`) : ""}</li>`; }).join("");
   $app().innerHTML = shell(`
     <a class="back" href="#admin">→ الإدارة</a>
-    ${pageHead("📜 الرسائل المختومة", `كل لقاء تاخذ فيه ${st.need} قوافل نجمة ينفتح الختم التالي على الشاشة، وإذا ما تحقق يبقى نفس الختم للأسبوع الجاي.`)}
-    <p class="muted small">تبدأ من اللقاء ${editPlan ? `<select data-act="sealstart" aria-label="لقاء البداية">${S.meetings.map((x) => `<option value="${x.number}" ${x.number === st.start ? "selected" : ""}>${x.number}</option>`).join("")}</select>` : st.start}</p>
+    ${pageHead("📜 الرسائل المختومة", "عند كل محطة رسالة مختومة. كل نجمة تقدّم جمل القافلة خطوة، ولما توصل القافلة محطة تنفتح رسالتها على الشاشة. كل قافلة على طريقها، ما لها دخل بغيرها.")}
     <ol class="seals">${seals}</ol>`, "seals");
 }
 function viewAdmin() {
