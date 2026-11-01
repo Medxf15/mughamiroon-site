@@ -140,18 +140,19 @@ function storm(ctx, t, order) {
 // each: [start, end, title, draw(ctx, t), vo]
 export const SCENES = [
   { a: 0, b: 5, title: "وسط العاصفة", key: 3.6, vo: "(ريح عالية… صوت ينادي) «وين راح؟!»", draw(ctx, t) {
-    if (t < 1.8) { ctx.fillStyle = "#04050c"; ctx.fillRect(0, 0, W, H); text(ctx, "حكاية من خيالنا", W / 2, H / 2, 64, { alpha: fadeIO(t, 0, 1.8, 0.4), color: "#c9d2ff", weight: 500, glow: 0 }); return; }
     sky(ctx, "#1a1209", "#3d2a14", "#7a5226"); dunes(ctx, H * 0.86, 40, t * 300, "#2a1c0e");
     ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = "#2a1c0e"; for (let i = 0; i < 3; i++) camel(ctx, W * (0.25 + i * 0.25) + Math.sin(t * 2 + i) * 60, H * 0.78, 1.3 + i * 0.2, t * 3 + i); ctx.restore();
     for (let i = 0; i < 7; i++) { const a = i * 0.9 + t * (0.6 + i * 0.1); lantern(ctx, W / 2 + Math.cos(a) * (300 + i * 90), H * 0.5 + Math.sin(a * 1.3) * (180 + i * 30), 14 + (i % 3) * 8, 3, null, 0.9, t); }
     storm(ctx, t, 0); storm(ctx, t + 3.7, 0); ctx.fillStyle = "rgba(160,110,60,.22)"; ctx.fillRect(0, 0, W, H);
     ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = "#e8c48a"; for (let i = 0; i < 6; i++) { const yy = ((t * 900 + i * 260) % (H + 400)) - 200; ctx.beginPath(); ctx.ellipse(W / 2 + Math.sin(t + i) * 300, yy, W * 0.7, 40, -0.25, 0, 7); ctx.fill(); } ctx.restore();
     grain(ctx, t, 0.08); vignette(ctx, 0.7);
+    text(ctx, "حكاية من خيالنا", W / 2, H * 0.1, 48, { alpha: 0.85 * fadeIO(t, 0.2, 4.9, 0.4), color: "#ffe9c8", weight: 500 });
     const k = fadeIO(t, 2.3, 4.9, 0.25); ctx.save(); ctx.fillStyle = `rgba(20,12,4,${0.45 * k})`; ctx.fillRect(0, H * 0.36, W, H * 0.18); ctx.restore(); text(ctx, "وين راح؟!", W / 2 + Math.sin(t * 40) * 6, H * 0.45, 130, { alpha: k, color: "#ffe2b8", glow: 1 });
   } },
   { a: 5, b: 12, title: "سكون", key: 9, vo: "(صمت… ثم يرتفع صوت حُداء بشري وحده)", draw(ctx, t) {
     ctx.fillStyle = "#04050c"; ctx.fillRect(0, 0, W, H); stars(ctx, t, span(t, 6, 10) * 0.6);
-    lantern(ctx, W / 2, H * 0.55, 18, 1 + 2.5 * span(t, 6, 11), null, 0.6 + 0.5 * span(t, 6, 11), t);
+    lantern(ctx, W / 2, H * 0.55, 18 + 10 * span(t, 6, 11.5), 1 + 3 * span(t, 6, 11), null, 0.6 + 0.6 * span(t, 6, 11), t);
+    text(ctx, "كل قافلة… تحتاج حادي", W / 2, H * 0.3, 80, { alpha: fadeIO(t, 7.2, 11.8, 0.7), color: "#ffe7a8" });
   } },
   { a: 12, b: 35, title: "الفوضى تصير صفًّا", key: 27, vo: "في الصحراء… ما ينجّي القافلة أقواها. ينجّيها إنها تمشي على إيقاع واحد. وكان لكل قافلة حادي… صوته يخلّي الإبل تمشي ولو تعبت.", draw(ctx, t) {
     const beats = [14, 16.5, 19, 21.5]; const order = ease(beats.reduce((n, b) => n + span(t, b, b + 0.6) * 0.25, 0));
@@ -213,18 +214,19 @@ export const SCENES = [
   { a: 80, b: 100, title: "الفانوس", key: 96, vo: "كل واحد فيكم يحمل فانوس فيه خمسة أنوار. إذا كل فوانيس القافلة نورها أربعة أو أكثر… تاخذ القافلة نجمة. وكل نجمة… بطاقة قوة تلعبونها في الملعب. والباقي… تكتشفونه في الطريق.", draw(ctx, t) {
     sky(ctx, "#05081c", "#121a4d", "#27378a", 0.4); stars(ctx, t, 0.5);
     const p1 = span(t, 80, 88), p2 = span(t, 88, 93), p3 = span(t, 93, 100);
-    if (p2 < 1) { ctx.save(); ctx.globalAlpha = 1 - span(t, 92, 93); const lit = Math.floor(p1 * 5.99);
+    if (t < 88.6) { ctx.save(); ctx.globalAlpha = 1 - span(t, 87.9, 88.6); const lit = Math.floor(p1 * 5.99);
       lantern(ctx, W / 2, H * 0.42, 80, Math.min(5, lit + 0.5), null, 1.1);
-      LIGHTS.forEach(([name, col], i) => { const on = i < lit; const x = W / 2 + (i - 2) * 300; const y = H * 0.72; ctx.fillStyle = on ? col : "rgba(255,255,255,.08)"; ctx.shadowColor = col; ctx.shadowBlur = on ? 40 : 0; ctx.beginPath(); ctx.arc(x, y, 30, 0, 7); ctx.fill(); ctx.shadowBlur = 0; text(ctx, name, x, y + 70, 36, { alpha: on ? 1 : 0.35, weight: 600 }); });
+      LIGHTS.forEach(([name, col], i) => { const on = i < lit; const x = W / 2 + (i - 2) * 340; const y = H * 0.68; ctx.fillStyle = on ? col : "rgba(255,255,255,.08)"; ctx.shadowColor = col; ctx.shadowBlur = on ? 40 : 0; ctx.beginPath(); ctx.arc(x, y, 38, 0, 7); ctx.fill(); ctx.shadowBlur = 0; text(ctx, name, x, y + 84, 48, { alpha: on ? 1 : 0.35, weight: 600 }); });
       ctx.restore(); }
-    if (p2 > 0 && p3 < 1) { ctx.save(); ctx.globalAlpha = span(t, 88, 89) * (1 - span(t, 94.5, 95.5));
-      for (let r = 0; r < 5; r++) lantern(ctx, W * 0.3 + r * 120, H * 0.5, 26, 4 + (r % 2), null, 0.9);
+    if (t > 88.4 && p3 < 1) { ctx.save(); ctx.globalAlpha = span(t, 88.4, 89.2) * (1 - span(t, 93.3, 94));
+      for (let r = 0; r < 5; r++) { const lx = W * 0.22 + r * 150, n = r === 2 ? 4 : 5; lantern(ctx, lx, H * 0.45, 30, n, null, 0.9, t);
+        LIGHTS.forEach(([, col], j) => { ctx.fillStyle = j < n ? col : "rgba(255,255,255,.12)"; ctx.beginPath(); ctx.arc(lx - 44 + j * 22, H * 0.45 + 70, 8, 0, 7); ctx.fill(); }); }
       const st = span(t, 90, 92); const sx = lerp(W * 0.54, W * 0.78, ease(st)), sy = lerp(H * 0.38, H * 0.5, ease(st));
       text(ctx, "⭐", sx, sy, 110 + 30 * Math.sin(t * 6) * (1 - st), { glow: 1, alpha: 1 - span(t, 92.6, 93.2) }); camel(ctx, W * 0.82 + ease(span(t, 92, 93)) * 0, H * 0.62, 0.7, t); ctx.restore(); }
     if (p3 > 0) { ctx.save(); ctx.globalAlpha = span(t, 93, 94);
       [-1, 1].forEach((d) => powerCard(ctx, W / 2 + d * 330, H * 0.47, 250, 0, t)); powerCard(ctx, W / 2, H * 0.45, 330, ease(span(t, 94, 95.5)), t); ctx.restore(); }
     caption(ctx, "كل واحد يحمل فانوس فيه خمسة أنوار", t, 80.5, 87.8, H * 0.12, 60);
-    caption(ctx, "كل الفوانيس 4 أنوار أو أكثر = نجمة للقافلة", t, 88, 93, H * 0.84, 60);
+    caption(ctx, "كل الفوانيس 4 أنوار أو أكثر = نجمة للقافلة", t, 88.4, 93.2, H * 0.8, 60);
     caption(ctx, "وكل نجمة… بطاقة قوة تلعبونها في الملعب", t, 95.5, 98.2, H * 0.88, 62); caption(ctx, "والباقي… تكتشفونه في الطريق", t, 98.2, 100, H * 0.88, 62);
     vignette(ctx, 0.5);
   } },
@@ -254,10 +256,42 @@ export const SCENES = [
     ctx.save(); ctx.fillStyle = "#0d1336"; dunes(ctx, H * 0.97, 14, 0, "#0b1030"); ctx.fillStyle = "#141c4c"; const cx = W + 200 - ((t - 130) * 70); for (let i = 0; i < 5; i++) camel(ctx, cx + i * 70, H * 0.955, 0.32, t + i); ctx.restore();
   } },
 ];
-export const DURATION = SCENES[SCENES.length - 1].b;
-export function drawAt(ctx, t, img) {
+/** pauses that freeze the picture for a beat of silence: [content time, seconds] */
+const HOLDS = [[54.4, 2.5], [99.4, 1.5]];
+export const toContent = (r) => { let c = r; for (const [at, d] of HOLDS) { if (c <= at) break; c = Math.max(at, c - d); } return c; };
+export const toReal = (c) => c + HOLDS.filter(([at]) => at < c).reduce((n, h) => n + h[1], 0);
+export const DURATION = toReal(SCENES[SCENES.length - 1].b);
+export function drawAt(ctx, tReal, img) {
+  const t = toContent(tReal);
   const s = SCENES.find((x) => t >= x.a && t < x.b) || SCENES[SCENES.length - 1];
   ctx.save(); s.draw(ctx, t, img); ctx.restore();
   // short dip to black between scenes
   const edge = Math.min(t - s.a, s.b - t); if (edge < 0.35) { ctx.fillStyle = `rgba(0,0,0,${1 - edge / 0.35})`; ctx.fillRect(0, 0, W, H); }
 }
+
+/** narration cues, spoken by the device's Arabic voice (or replaced by a recorded voice.mp3 if one is added) */
+export const VO = [
+  { t: 2.6, s: "وين راح؟!", rate: 1.15, pitch: 1.15 },
+  { t: 7.4, s: "كل قافلة… تحتاج حادي.", rate: 0.82, pitch: 0.9 },
+  { t: 24.6, s: "في الصحراء… ما يُنَجِّي القافلة أقواها." },
+  { t: 28.6, s: "يُنَجِّيها إنها تمشي على إيقاعٍ واحد." },
+  { t: 31.6, s: "وكان لكل قافلة حادي… صوته يخلّي الإبل تمشي، ولو تعبت." },
+  { t: 49.0, s: "ما في قافلة وصلت لأن ما أحد فيها تأخّر…", rate: 0.95 },
+  { t: 53.4, s: "وصلت… لأن ما أحد فيها انْترك.", rate: 0.85 },
+  { t: 64.2, s: "ترك الحادي ثماني رسائل مختومة… على الطريق." },
+  { t: 71.2, s: "والحين… أكلّمكم أنتم.", pitch: 0.85, rate: 0.8 },
+  { t: 76.6, s: "أربع قوافل: أُحُد، القبلتين، قُباء، العقيق." },
+  { t: 80.8, s: "كل واحد فيكم يحمل فانوس، فيه خمسة أنوار." },
+  { t: 88.2, s: "إذا كل فوانيس القافلة نورها أربعة أو أكثر… تاخذ القافلة نجمة." },
+  { t: 95.3, s: "وكل نجمة… بطاقة قوة، مثل الهدف الذهبي." },
+  { t: 99.38, s: "والباقي… تكتشفونه في الطريق." },
+  { t: 101.2, s: "الرسالة الأولى… ما تنفتح…" },
+  { t: 107.6, s: "إلا إذا أخذت قافلتين نجمة، في نفس الخميس." },
+  { t: 116.2, s: "الحادي… مو أنا.", pitch: 0.85, rate: 0.8 },
+  { t: 121.6, s: "كل خميس… واحد منكم.", pitch: 0.85, rate: 0.85 },
+  { t: 125.6, s: "يمكن تكون أنت… اللي يجمع قافلته.", pitch: 0.85, rate: 0.85 },
+  { t: 131, s: "الخميس، الساعة خمسة." },
+  { t: 133.2, s: "أول نجمة… أول بطاقة، في تاريخ الطريق." },
+  { t: 137.0, s: "أتحدّى… وأتعاون.", rate: 0.85 },
+];
+export const VO_REAL = VO.map((c) => ({ ...c, t: toReal(c.t) }));
