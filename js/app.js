@@ -75,17 +75,16 @@ function parseRoute() {
   const [name, arg] = h.split("/");
   return { name: name || "home", arg };
 }
+// [route, label, icon, visible, mobile tab]
 const NAV = [
-  ["home", "الرئيسية", () => true],
-  ["live", "وضع اللقاء", () => can("points")],
-  ["caravans", "القوافل", () => true],
-  ["road", "طريق القوافل", () => true],
-  ["kit", "حقيبة اللقاء", () => can("points")],
-  ["league", "الدوري", () => true],
-  ["kids", "المغامرون", () => true],
-  ["reports", "التقارير", () => true],
-  ["accounts", "الحسابات", () => isOwner()],
+  ["home", "اليوم", "🗓️", () => true, true],
+  ["live", "التحضير والنقاط", "✅", () => can("points"), true],
+  ["caravans", "القوافل", "🐪", () => true, true],
+  ["league", "الدوري", "⚽", () => true, true],
+  ["kids", "المغامرون", "🎒", () => true, false],
+  ["admin", "الإدارة", "⚙️", () => true, true],
 ];
+const SECTION = { kid: "kids", caravan: "caravans", reports: "admin", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", kit: "home" };
 
 let screenTimer = null;
 async function render() {
@@ -103,8 +102,8 @@ async function render() {
   if (me.status !== "approved") return viewPending();
   if (!S) { $app().innerHTML = shell('<div class="empty">جاري تحميل البيانات…</div>'); await guard(loadAll); if (!S) return; if (isOwner()) await guard(loadAccounts); }
   else if (r.name === "accounts" && isOwner()) await guard(loadAccounts);
-  const views = { home: viewHome, live: viewLive, caravans: viewCaravans, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewRoad, kit: viewKit, print: viewPrint };
-  const fn = views[r.name] || viewHome;
+  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint };
+  const fn = views[r.name] || viewToday;
   if (r.name === "live" && !can("points")) return go("home");
   if (r.name === "accounts" && !isOwner()) return go("home");
   fn(r.arg);
@@ -114,19 +113,29 @@ function go(name) { if (location.hash !== "#" + name) location.hash = name; else
 // ---------------- layout ----------------
 function shell(inner, active) {
   const pend = isOwner() ? accounts.filter((a) => a.status === "pending").length : 0;
-  const nav = NAV.filter((n) => n[2]()).map((n) => `<a href="#${n[0]}" class="${n[0] === active ? "on" : ""}">${n[1]}${n[0] === "accounts" && pend ? ` <b class="dot-n">${pend}</b>` : ""}</a>`).join("");
+  const sec = SECTION[active] || active;
+  const items = NAV.filter((n) => n[3]());
+  const badge = (n) => (n[0] === "admin" && pend ? ` <b class="dot-n">${pend}</b>` : "");
+  const nav = items.map((n) => `<a href="#${n[0]}" class="${n[0] === sec ? "on" : ""}">${n[1]}${badge(n)}</a>`).join("");
+  const tabs = items.filter((n) => n[4]).map((n) => `<a href="#${n[0]}" class="${n[0] === sec ? "on" : ""}"><span class="ti">${n[2]}</span><span>${n[0] === "live" ? "التحضير" : n[1]}</span>${badge(n)}</a>`).join("");
   return `
   <header class="top">
     <div class="wrap top-in">
-      <a class="brand" href="#home" aria-label="الرئيسية"><img src="assets/mahara.png" alt="نادي مهارة"><span><b>المغامرون</b><small>حي الهجرة</small></span></a>
-      <nav class="nav" aria-label="الأقسام">${nav}<a href="#screen" class="scr">الشاشة</a></nav>
-      <button class="pm-btn ${ui.present ? "on" : ""}" data-act="present_mode" aria-pressed="${!!ui.present}" title="يخفي الملاحظات الخاصة بك (الصفراء) لما تعرض المنصة للمشاركين">${ui.present ? "👁️ وضع العرض" : "🔒 ملاحظاتي ظاهرة"}</button>
-      <a class="who" href="#profile" title="حسابي"><span>${esc(me.full_name || me.email)}</span><small>${ROLE_AR[me.role] || ""}</small></a>
+      <a class="brand" href="#home" aria-label="اليوم"><img src="assets/mahara.png" alt="نادي مهارة"><span><b>المغامرون</b><small>حي الهجرة</small></span></a>
+      <nav class="nav" aria-label="الأقسام">${nav}</nav>
+      <div class="tools">
+        <a href="#screen" class="tool" title="شاشة التلفاز">📺<span>الشاشة</span></a>
+        <button class="tool pm-btn ${ui.present ? "on" : ""}" data-act="present_mode" aria-pressed="${!!ui.present}" title="يخفي ملاحظاتك الخاصة لما تعرض المنصة للمشاركين">${ui.present ? "👁️" : "🔒"}<span>${ui.present ? "وضع العرض" : "ملاحظاتي"}</span></button>
+        <a class="who" href="#profile" title="حسابي"><span>${esc((me.full_name || me.email).split(" ")[0])}</span><small>${ROLE_AR[me.role] || ""}</small></a>
+      </div>
     </div>
     <div class="stripe" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
   </header>
-  <main class="wrap main">${inner}</main>`;
+  <main class="wrap main">${inner}</main>
+  <nav class="tabbar" aria-label="التنقل">${tabs}</nav>`;
 }
+/** page header: title, subtitle, actions */
+const pageHead = (title, sub, actions = "") => `<section class="phead"><div><h1 class="h1">${title}</h1>${sub ? `<p class="muted">${sub}</p>` : ""}</div><div class="phead-act">${actions}</div></section>`;
 function meetPicker() {
   return `<label class="mp"><span>اللقاء</span><select data-act="meet">${S.meetings.map((m) => `<option value="${m.id}" ${m.id === meetId ? "selected" : ""}>اللقاء ${m.number || ""} · ${fmtDate(m.meet_date)}</option>`).join("")}</select></label>`;
 }
@@ -198,32 +207,61 @@ function viewPending() {
 }
 
 // ---------------- home ----------------
-function viewHome() {
-  const m = I.meet[meetId];
-  const act = L.activeKids(S);
-  const pres = m ? act.filter((k) => L.recorded(I, m.id, k.id) && L.present(I, m.id, k.id)).length : 0;
-  const pend = isOwner() ? accounts.filter((a) => a.status === "pending") : [];
-  const cars = S.caravans.map((c) => { const t = L.teamTotals(S, I, c.id); const r = m ? L.teamMeet(S, I, m.id, c.id) : null; return `<a class="car-mini" href="#caravans" style="${carStyle(c)}"><b>${esc(c.name)}</b><span class="num">⭐ ${t.stars}</span><small>${r && r.stars ? (r.stars === 2 ? "🌟 ذهبية في هذا اللقاء" : "⭐ نجمة في هذا اللقاء") : "رصيد " + t.bal}</small></a>`; }).join("");
-  const next = S.matches.filter((x) => x.meeting_id === meetId);
+function stepDone(mid, key) { try { return localStorage.getItem(`mgh.step.${mid}.${key}`) === "1"; } catch (e) { return false; } }
+function viewToday() {
+  const m = I.meet[meetId]; if (!m) return ($app().innerHTML = shell(pageHead("اليوم", "ما فيه لقاءات بعد. أضف لقاء من الإدارة ← التقارير.") , "home"));
+  const act = L.activeKids(S); const ed = can("points");
+  const recN = act.filter((k) => L.recorded(I, m.id, k.id)).length; const presN = act.filter((k) => L.recorded(I, m.id, k.id) && L.present(I, m.id, k.id)).length;
+  const nx = nextMeeting(m);
+  const dutyCar = (key, mm = m) => S.caravans.find((c) => (L.dutyOf(S, mm, c.id) || {}).key === key);
+  const lead = (c) => (c && c.leader_kid && I.kid[c.leader_kid] ? I.kid[c.leader_kid].first_name : null);
+  const dutyRow = (key) => { const c = dutyCar(key); if (!c) return ""; const d = L.dutyOf(S, m, c.id); const ok = L.dutyMastered(S, m.id, c.id);
+    return `<div class="dt-row ${ok ? "ok" : ""}" style="${carStyle(c)}"><span class="dt-ic">${d.icon}</span><div><b>${esc(d.name)}</b><small>قافلة ${esc(c.name)}${lead(c) ? " · القائد " + esc(lead(c)) : ""}</small></div>${ed ? `<button class="chip dchip" data-act="duty" data-car="${c.id}" data-mid="${m.id}" aria-pressed="${ok}">${ok ? "✅ أتقنوا" : "أتقنوا؟"}</button>` : ok ? "✅" : ""}</div>`; };
+  const kalC = dutyCar("kalima"); const kd = kalC && L.dutyRow(S, m.id, kalC.id);
+  const kalNext = nx && dutyCar("kalima", nx);
+  const todayMatches = S.matches.filter((x) => x.meeting_id === m.id);
+  const pend = S.caravans.map((c) => [c, L.pendingDraws(S, I, m.id, c.id)]).filter(([, p]) => p.length);
+  const drawn = (S.power_cards || []).filter((p) => p.meeting_id === m.id);
+  const lv = newLevels(m); const seal = L.sealState(S, I).perMeet[m.id];
+  const steps = [
+    { key: "prep", time: "4:30", icon: "🧳", title: "قبل اللقاء", auto: null,
+      body: `<ul class="todo"><li>بطاقات التكليف الأربع، وصندوق بطاقات القوة</li><li>${lv.length || (nx && kalNext && L.dutyRow(S, nx.id, kalNext.id)?.topic != null) ? `<a href="#print/meet">🖨️ اطبع بطاقات هذا اللقاء</a>` : "ما فيه بطاقات أسماء تحتاج طباعة الآن"}</li><li><a href="#screen">📺 افتح الشاشة</a> على التلفاز${seal && seal.seal ? ` (الختم ${seal.seal.n} جاهز)` : ""}</li></ul>` },
+    { key: "start", time: "5:00", icon: "🚩", title: "الانطلاقة", auto: null,
+      body: `<p>سلّم كل <b>قائد</b> بطاقة تكليف قافلته، وذكّرهم: <i>${esc(L.LEAD.motto)}</i>.</p><div class="lead-grid">${S.caravans.map((c) => { const d = L.dutyOf(S, m, c.id); return `<a class="lead-mini" href="#caravan/${c.id}" style="${carStyle(c)}"><b>${esc(c.name)}</b><span>🎖️ ${lead(c) ? esc(lead(c)) : '<span class="muted">بدون قائد</span>'}</span><small>${d ? d.icon + " " + esc(d.short) : ""}</small></a>`; }).join("")}</div>` },
+    { key: "att", time: "5:15", icon: "✅", title: "التحضير والنقاط", auto: recN > 0,
+      body: `<p>${recN ? `سُجّل حضور <b class="num">${presN}</b> من <b class="num">${act.length}</b>.` : "ما بدأ التحضير بعد."} البطاقات الخمس تُكسب طوال اللقاء.</p>${ed ? `<a class="btn sm" href="#live">افتح التحضير والنقاط</a>` : ""}` },
+    { key: "prayer", time: "الصلاة", icon: "🕌", title: "الصلاة والكلمة", auto: null,
+      body: `${dutyRow("musalla")}${dutyRow("kalima")}${kalC ? `<p class="small">${kd && kd.speaker_kid ? `🎙️ المتحدث: <b>${esc(L.kidName(I.kid[kd.speaker_kid]))}</b>${kd.topic != null ? " · " + esc(L.TOPICS[kd.topic].t) : ""}` : ed ? `<span class="alert">اختر متحدث وموضوع ${esc(kalC.name)}:</span>` : ""}</p>${ed && !(kd && kd.speaker_kid && kd.topic != null) ? `<div class="duty-kal">${kalimaPick(kalC, m)}</div>` : ""}` : ""}` },
+    { key: "meal", time: "الوجبة", icon: "🍽️", title: "الوجبة والنظافة", auto: null, body: `${dutyRow("food")}${dutyRow("clean")}` },
+    { key: "league", time: "الميدان", icon: "⚽", title: "الدوري", auto: todayMatches.length ? todayMatches.every((x) => x.played) : null,
+      body: `${todayMatches.length ? `<div class="mini-matches">${todayMatches.map((x) => `<a href="#league" class="mm ${x.played ? "done" : ""}"><span style="${carStyle(I.car[x.home_id])}">${esc(carName(x.home_id))}</span><b class="num">${x.played ? x.home_goals + " – " + x.away_goals : "ضد"}</b><span style="${carStyle(I.car[x.away_id])}">${esc(carName(x.away_id))}</span></a>`).join("")}</div>` : '<p class="muted">ما فيه مباريات في هذا اللقاء.</p>'}
+        ${pend.length ? `<p>🎴 سحبات تنتظر: ${pend.map(([c, p]) => `<b>${esc(c.name)}</b> (${p.length})`).join("، ")} · <a href="#live">اسحب من التحضير</a></p>` : ""}
+        ${drawn.length ? `<p class="small">سلّم البطاقات المطبوعة: ${drawn.map((p) => `${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)} ← ${esc(carName(p.caravan_id))}`).join("، ")}</p>` : ""}
+        <p class="small muted">قبل الصافرة: كل قافلة تعلن بطاقتها، والكابتن يمثلها.</p>` },
+    { key: "close", time: "9:45", icon: "🌙", title: "الختام", auto: null,
+      body: `<div class="close-stars">${S.caravans.map((c) => { const t = L.teamMeet(S, I, m.id, c.id); return `<span style="${carStyle(c)}">${esc(c.name)} ${t.stars === 2 ? "🌟" : t.stars ? "⭐" : `<small class="num">${t.ready}/${t.n}</small>`}</span>`; }).join("")}</div>
+        <p>📜 الختم: ${seal ? (seal.open ? `<b>انفتح ${esc(seal.seal ? seal.seal.title : "")}</b> · <a href="#screen">اعرضه</a>` : `يحتاج ${seal.need} قوافل بنجمة (الحين ${seal.got.length})`) : "تبدأ الأختام لاحقًا"}</p>
+        ${lv.length ? `<p>🏅 مستويات جديدة: ${lv.map((x) => `${x.lv.icon} <b>${esc(x.k.first_name)}</b> «${esc(x.lv.name)}»`).join("، ")} · <a href="#print/meet">اطبع بطاقاتهم</a></p>` : ""}
+        <p class="reflect">سؤال التأمل: <b>«متى حسّيت إن فريقك يحتاجك؟»</b></p>
+        ${kalNext ? `<div class="next-kal"><p>🎙️ كلمة اللقاء القادم على <b>${esc(kalNext.name)}</b>: يختارون المتحدث، وأنت تعطيه بطاقة الموضوع.</p>${ed ? `<div class="duty-kal">${kalimaPick(kalNext, nx)}</div>` : ""}</div>` : ""}
+        <p class="small"><a href="#reports">📝 التقرير الأسبوعي جاهز للنسخ</a></p>` },
+  ];
+  steps.forEach((st) => (st.done = st.auto === true || stepDone(m.id, st.key)));
+  const nowIdx = steps.findIndex((st) => !st.done);
+  const doneN = steps.filter((st) => st.done).length;
+  const totStars = S.caravans.reduce((n, c) => n + L.teamMeet(S, I, m.id, c.id).stars, 0);
   $app().innerHTML = shell(`
-    <section class="hero">
-      <div class="hero-txt"><p class="muted">أهلًا ${esc((me.full_name || "").split(" ")[0])}</p>
-        <h1>${m ? `اللقاء ${m.number} · الخميس ${fmtDate(m.meet_date)}` : "لا توجد لقاءات"}</h1>
-        ${m && (m.theme || m.skill) ? `<p class="muted">${m.theme ? "الموضوع: " + esc(m.theme) : ""}${m.theme && m.skill ? " · " : ""}${m.skill ? "المهارة: " + esc(m.skill) : ""}</p>` : ""}
-      </div>${meetPicker()}
+    <section class="today-hero">
+      <div><p class="muted">${m.number ? `اللقاء ${m.number}` : ""}${m.theme ? " · " + esc(m.theme) : ""}</p><h1>الخميس ${fmtDate(m.meet_date)}</h1>
+        <div class="hero-chips"><span>👥 <b class="num">${recN ? presN + "/" + act.length : "—"}</b> حضور</span><span>⭐ <b class="num">${totStars}</b> نجوم اليوم</span><span>📜 ${seal ? (seal.open ? "الختم انفتح" : `الختم ${seal.got.length}/${seal.need}`) : "—"}</span></div></div>
+      <div class="hero-side">${meetPicker()}<div class="hero-prog"><div class="prog"><i style="width:${Math.round((doneN / steps.length) * 100)}%"></i></div><small class="num">${doneN} من ${steps.length} محطات</small></div></div>
     </section>
-    ${pend.length ? `<a class="notice" href="#accounts"><b>${pend.length}</b> ${pend.length === 1 ? "حساب ينتظر موافقتك" : "حسابات تنتظر موافقتك"}</a>` : ""}
-    <div class="quick">
-      ${can("points") ? `<a class="qa qa-main" href="#live"><b>ابدأ وضع اللقاء</b><span>الحضور والنقاط والإنذار من جوالك</span></a>` : ""}
-      <a class="qa" href="#screen"><b>افتح الشاشة</b><span>للتلفاز: القوافل والترتيب والدوري</span></a>
-      <a class="qa" href="#league"><b>الدوري</b><span>${next.length ? next.length + " مباراة في هذا اللقاء" : "الجدول والترتيب والجوائز"}</span></a>
-    </div>
-    <div class="stats">
-      <div class="stat"><span>المغامرون النشطون</span><b class="num">${act.length}</b></div>
-      <div class="stat"><span>حضور هذا اللقاء</span><b class="num">${m && act.some((k) => L.recorded(I, m.id, k.id)) ? pres + " / " + act.length : "لم يُسجّل"}</b></div>
-      <div class="stat"><span>مباريات الدوري المنتهية</span><b class="num">${S.matches.filter((x) => x.played).length} / ${S.matches.length}</b></div>
-    </div>
-    <h2 class="h2">القوافل</h2><div class="car-grid">${cars}</div>`, "home");
+    ${isOwner() && accounts.some((a) => a.status === "pending") ? `<a class="notice" href="#accounts">${accounts.filter((a) => a.status === "pending").length} حساب ينتظر موافقتك</a>` : ""}
+    <ol class="day">${steps.map((st, i) => `<li class="day-step ${st.done ? "done" : ""} ${i === nowIdx ? "now" : ""}">
+      <div class="ds-rail"><span class="ds-dot">${st.done ? "✓" : st.icon}</span></div>
+      <div class="ds-card"><header><span class="ds-time">${st.time}</span><h3>${st.title}</h3>${i === nowIdx ? '<span class="ds-now">الحين</span>' : ""}
+        ${st.auto === null || st.auto === undefined ? `<button class="ds-check" data-act="stepdone" data-mid="${m.id}" data-k="${st.key}" aria-pressed="${st.done}">${st.done ? "✓ تم" : "تم؟"}</button>` : st.done ? '<span class="ds-auto">✓ تلقائي</span>' : ""}</header>
+        <div class="ds-body">${st.body}</div></div></li>`).join("")}</ol>`, "home");
 }
 
 // ---------------- live meeting ----------------
@@ -251,7 +289,7 @@ function liveCaravan(c, m) {
     const canFz = pr && (p.fazaa || (n === L.NC - 2 && !r.fz));
     const role = L.roleOf(S, k, m.number);
     return `<div class="krow ${pr ? "" : "abs"}">
-      <div class="kwho"><a href="#kid/${k.id}" class="nm">${esc(L.kidName(k))}</a><small>${k.official ? "" : '<span class="tag">غير مسجّل</span> '}${role ? esc(role[1]) + " · " : ""}<span class="num">${n}/${L.NC}</span> · المجموع <span class="num">${L.kidTotal(S, I, k.id)}</span></small></div>
+      <div class="kwho"><a href="#kid/${k.id}" class="nm">${esc(L.kidName(k))}</a><small>${L.leaderOf(S, k.id).map((x) => `<span class="ltag ${x[0]}">${x[1]} ${x[2]}</span> `).join("")}${k.official ? "" : '<span class="tag">غير مسجّل</span> '}${role ? esc(role[1]) + " · " : ""}<span class="num">${n}/${L.NC}</span> · المجموع <span class="num">${L.kidTotal(S, I, k.id)}</span></small></div>
       <div class="chips">
         <button class="chip pres" data-act="present" data-k="${k.id}" aria-pressed="${!pr}">${pr ? "حاضر" : "غائب"}</button>
         ${pr ? L.CATS.map((cat) => `<button class="chip" style="--c:${cat[2]}" data-act="pt" data-k="${k.id}" data-c="${cat[0]}" aria-pressed="${!!p[cat[0]]}">${cat[1]}</button>`).join("") : ""}
@@ -286,7 +324,7 @@ function viewScreen() {
       return `<section class="tv-col ${r.stars ? "star" : ""}" style="${carStyle(c)}">
         <header><h2>${esc(c.name)}</h2>${(() => { const d = L.dutyOf(S, m, c.id); return d ? `<small class="tv-duty ${L.dutyMastered(S, m.id, c.id) ? "ok" : ""}">${d.icon} ${esc(d.short)}${L.dutyMastered(S, m.id, c.id) ? " ✓" : ""}</small>` : ""; })()}<span class="num">⭐ ${t.stars}</span></header>
         <div class="road" aria-label="موقع القافلة: ${esc(L.ROAD[pos])}">${road}</div>
-        <ol class="tv-kids">${rk.map((x) => { const p = m ? L.row(I, m.id, x.k.id) || {} : {}; const pr = m ? L.present(I, m.id, x.k.id) : true; return `<li class="${pr ? "" : "abs"}"><span class="rk" title="${esc(L.level(x.tot).name)}">${L.level(x.tot).icon}</span><span class="nm">${esc(x.k.first_name)}</span><span class="pips">${L.CATS.map((cc) => `<i class="${p[cc[0]] ? "on" : ""}" style="--c:${cc[2]}"></i>`).join("")}</span><b class="num">${x.tot}</b></li>`; }).join("")}</ol>
+        <ol class="tv-kids">${rk.map((x) => { const p = m ? L.row(I, m.id, x.k.id) || {} : {}; const pr = m ? L.present(I, m.id, x.k.id) : true; return `<li class="${pr ? "" : "abs"}"><span class="rk" title="${esc(L.level(x.tot).name)}">${L.level(x.tot).icon}</span><span class="nm">${esc(x.k.first_name)}${L.leaderOf(S, x.k.id).filter((y) => y[0] !== "captain").map((y) => " " + y[1]).join("")}</span><span class="pips">${L.CATS.map((cc) => `<i class="${p[cc[0]] ? "on" : ""}" style="--c:${cc[2]}"></i>`).join("")}</span><b class="num">${x.tot}</b></li>`; }).join("")}</ol>
         <footer><b>${r.stars === 2 ? "🌟 نجمة ذهبية هذا اللقاء" : r.stars === 1 ? "⭐ نجمة هذا اللقاء" : `جاهزون للنجمة <span class="num">${r.ready} من ${r.n}</span>`}</b><div class="prog"><i style="width:${pct}%"></i></div><span>📍 ${esc(L.ROAD[pos])} · 🎴 <b class="num">${L.freeCards(S, c.id).length}</b> · رصيد <b class="num">${t.bal}</b></span>${fresh ? `<span class="perk-new">🎁 ${esc(fresh.name)}: ${esc(fresh.what)}</span>` : ""}</footer>
       </section>`; }).join("")}</div>`;
   } else if (ui.screenTab === "levels") {
@@ -320,30 +358,51 @@ function viewScreen() {
 
 // ---------------- caravans ----------------
 function viewCaravans() {
-  const m = I.meet[meetId]; const edit = can("kids");
+  const m = I.meet[meetId]; const edit = can("kids"); const plan = ui.balancePlan;
   const cards = S.caravans.map((c) => {
-    const ks = L.kidsOf(S, c.id); const t = L.teamTotals(S, I, c.id);
-    return `<section class="ccard" style="${carStyle(c)}">
-      <header><h3>${esc(c.name)}</h3><span class="num">⭐ ${t.stars} · رصيد ${t.bal}</span></header>
-      ${edit ? `<div class="cform"><label>الاسم<input id="cn-${c.id}" value="${esc(c.name)}" maxlength="20"></label><label>اللون<input id="cc-${c.id}" type="color" value="${esc(c.color)}"></label>
-        <label class="wide">الصيحة<input id="ch-${c.id}" value="${esc(c.chant || "")}" maxlength="60" placeholder="3 كلمات"></label>
-        <label class="wide">الميثاق<textarea id="ct-${c.id}" rows="2" maxlength="300" placeholder="3 قواعد اتفقت عليها القافلة">${esc(c.charter || "")}</textarea></label>
-        <button class="btn sm" data-act="carsave" data-id="${c.id}">حفظ القافلة</button></div>`
-        : `${c.chant ? `<p><b>الصيحة:</b> ${esc(c.chant)}</p>` : ""}${c.charter ? `<p><b>الميثاق:</b> ${esc(c.charter)}</p>` : ""}`}
-      <table class="tbl"><thead><tr><th>المغامر</th><th>دور هذا اللقاء</th><th>المجموع</th></tr></thead><tbody>
-      ${ks.map((k) => { const r = m ? L.roleOf(S, k, m.number) : null; return `<tr><td><a href="#kid/${k.id}">${esc(L.kidName(k))}</a> ${k.trait ? `<span class="trait">${esc(k.trait)}</span>` : ""}${k.position ? ` <small class="muted">${esc(L.POSITIONS[k.position])}</small>` : ""}</td><td>${r ? esc(r[1]) : "—"}</td><td class="num">${L.kidTotal(S, I, k.id)}</td></tr>`; }).join("") || '<tr><td colspan="3" class="muted">لا يوجد مغامرون</td></tr>'}
-      </tbody></table></section>`;
+    const ks = L.kidsOf(S, c.id); const t = L.teamTotals(S, I, c.id); const rd = L.roadOf(S, I, c.id); const d = L.dutyOf(S, m, c.id);
+    const nm = (id) => (id && I.kid[id] ? esc(I.kid[id].first_name) : '<span class="muted">—</span>');
+    return `<a class="car-card" href="#caravan/${c.id}" style="${carStyle(c)}">
+      <header><h2>${esc(c.name)}</h2><span class="cc-stars">⭐ <b class="num">${t.stars}</b></span></header>
+      <div class="cc-lead"><span>🎖️ القائد<b>${nm(c.leader_kid)}</b></span><span>🔰 النائب<b>${nm(c.deputy_kid)}</b></span><span>⚽ الكابتن<b>${nm(c.captain_kid)}</b></span></div>
+      <div class="cc-meta"><span>👥 <b class="num">${ks.length}</b></span><span>📍 ${esc(L.ROAD[rd.pos])}</span><span>🎴 <b class="num">${L.freeCards(S, c.id).length}</b></span>${d ? `<span>${d.icon} ${esc(d.short)}</span>` : ""}</div>
+      <span class="cc-open">افتح القافلة ←</span></a>`;
   }).join("");
-  const plan = ui.balancePlan;
   $app().innerHTML = shell(`
-    <section class="bar"><h1 class="h1">القوافل</h1>${meetPicker()}</section>
-    <p class="muted">الأدوار تتناوب تلقائيًا كل لقاء داخل القافلة، فيجرّب كل مغامر كل دور.</p>
-    ${edit ? `<section class="panel"><h3>توزيع متوازن</h3><p class="muted small">قاعدة العدالة: <b>الحارس الثابت ميزة، والعدد الأكبر ميزة، وما تجتمع الميزتان في قافلة وحدة.</b> كل قافلة تاخذ حارس ثابت واحد إذا توفر، والقافلة اللي بدون حارس ثابت (يتناوبون على المرمى) تاخذ اللاعب الزايد إذا العدد ما انقسم بالتساوي. بعدها يتوزع الدفاع والوسط والهجوم بأقل فرق ممكن بين القوافل، ويُفصل من يحملون نفس اسم العائلة، ويبقى الطفل في قافلته الحالية إذا تساوت الخيارات. تراجعه قبل الاعتماد، وتقدر تغيّر أي طفل بعدها.</p>${(() => { const gk = L.activeKids(S).filter((k) => k.position === "gk").length; return gk < S.caravans.length ? `<p class="alert">عندك ${gk} حراس لـ${S.caravans.length} قوافل، فـ${S.caravans.length - gk} قافلة بتلعب بحارس متناوب، ولها الأفضلية في العدد إذا ما انقسم بالتساوي.</p>` : ""; })()}
+    ${pageHead("القوافل", "اضغط على أي قافلة تشوف قيادتها وأعضاءها وطريقها وبطاقاتها.", meetPicker())}
+    <div class="car-cards">${cards}</div>
+    ${edit ? `<details class="panel tools-box" ${plan ? "open" : ""}><summary><h3>⚖️ أدوات التوزيع المتوازن</h3></summary><p class="muted small">قاعدة العدالة: <b>الحارس الثابت ميزة، والعدد الأكبر ميزة، وما تجتمع الميزتان في قافلة وحدة.</b> كل قافلة تاخذ حارس ثابت واحد إذا توفر، والقافلة اللي بدون حارس ثابت (يتناوبون على المرمى) تاخذ اللاعب الزايد إذا العدد ما انقسم بالتساوي. بعدها يتوزع الدفاع والوسط والهجوم بأقل فرق ممكن بين القوافل، ويُفصل من يحملون نفس اسم العائلة، ويبقى الطفل في قافلته الحالية إذا تساوت الخيارات. تراجعه قبل الاعتماد، وتقدر تغيّر أي طفل بعدها.</p>${(() => { const gk = L.activeKids(S).filter((k) => k.position === "gk").length; return gk < S.caravans.length ? `<p class="alert">عندك ${gk} حراس لـ${S.caravans.length} قوافل، فـ${S.caravans.length - gk} قافلة بتلعب بحارس متناوب، ولها الأفضلية في العدد إذا ما انقسم بالتساوي.</p>` : ""; })()}
       ${plan ? `<table class="tbl"><thead><tr><th>المغامر</th><th>المركز</th><th>الحرف</th><th>الحالية</th><th>المقترحة</th></tr></thead><tbody>${L.activeKids(S).slice().sort((a, b) => String(plan[a.id]).localeCompare(String(plan[b.id]))).map((k) => `<tr class="${plan[k.id] !== k.caravan_id ? "chg" : ""}"><td>${esc(L.kidName(k))}</td><td>${esc(L.POSITIONS[k.position] || "—")}</td><td>${esc(k.trait || "—")}</td><td>${esc(carName(k.caravan_id))}</td><td><b>${esc(carName(plan[k.id]))}</b></td></tr>`).join("")}</tbody></table>
         <div class="tbl-wrap"><table class="tbl"><thead><tr><th>القافلة</th><th>العدد</th><th>الحارس الثابت</th><th>دفاع</th><th>وسط</th><th>هجوم</th><th>بدون مركز</th></tr></thead><tbody>${L.balanceSummary(S, plan).map((x) => `<tr><td><span class="sw" style="${carStyle(x.c)}"></span>${esc(x.c.name)}</td><td class="num"><b>${x.size}</b></td><td>${x.gk ? esc(L.kidName(x.gk)) : "<b>حارس متناوب</b>"}</td><td class="num">${x.def}</td><td class="num">${x.mid}</td><td class="num">${x.fwd}</td><td class="num">${x.none}</td></tr>`).join("")}</tbody></table></div>
         <div class="row-btns"><button class="btn" data-act="balapply">اعتمد التوزيع</button><button class="btn ghost" data-act="balcancel">إلغاء</button></div>`
-        : `<button class="btn ghost" data-act="balance">اقترح توزيعًا متوازنًا</button>`}</section>` : ""}
-    <div class="ccards">${cards}</div>`, "caravans");
+        : `<button class="btn ghost" data-act="balance">اقترح توزيعًا متوازنًا</button>`}</details>` : ""}
+`, "caravans");
+}
+function viewCaravan(id) {
+  const c = I.car[Number(id)]; if (!c) return go("caravans");
+  const m = I.meet[meetId]; const edit = can("kids"); const ks = L.kidsOf(S, c.id); const t = L.teamTotals(S, I, c.id);
+  const rd = L.roadOf(S, I, c.id); const nx = L.PERKS[rd.pos + 1]; const d = L.dutyOf(S, m, c.id); const r = m ? L.teamMeet(S, I, m.id, c.id) : null;
+  const road = L.ROAD.map((name, i) => `${i ? `<i class="${i <= rd.pos ? "on" : ""}"></i>` : ""}<b class="${i < rd.pos ? "on" : ""} ${i === rd.pos ? "here" : ""}" title="${esc(name)}">${i === rd.pos ? "🐪" : ""}</b>`).join("");
+  const slot = (f, icon, title, note) => { const kid = c[f]; return `<div class="lead-slot"><span class="ls-ic">${icon}</span><div><small>${title}</small>${edit ? `<select data-act="carlead" data-car="${c.id}" data-f="${f}" aria-label="${title}"><option value="">— اختر —</option>${ks.map((k) => `<option value="${k.id}" ${kid === k.id ? "selected" : ""}>${esc(L.kidName(k))}</option>`).join("")}</select>` : `<b>${kid && I.kid[kid] ? esc(L.kidName(I.kid[kid])) : "—"}</b>`}<p class="muted small">${note}</p></div></div>`; };
+  $app().innerHTML = shell(`
+    <a class="back" href="#caravans">→ كل القوافل</a>
+    <header class="car-hero" style="${carStyle(c)}"><div><p class="muted">قافلة</p><h1>${esc(c.name)}</h1>${c.chant ? `<p class="chant">«${esc(c.chant)}»</p>` : ""}</div>
+      <div class="pp-nums"><div><b class="num">${t.stars}</b><span>نجوم</span></div><div><b class="num">${ks.length}</b><span>أعضاء</span></div><div><b class="num">${L.freeCards(S, c.id).length}</b><span>بطاقات</span></div><div><b class="num">${t.bal}</b><span>رصيد</span></div></div></header>
+    <section class="panel"><h3>القيادة</h3>
+      <div class="lead-slots">${slot("leader_kid", "🎖️", "قائد القافلة", "ثابت، ويتغير بقرارك")}${slot("deputy_kid", "🔰", "نائب القائد", "يساند القائد ويقوم مقامه")}${slot("captain_kid", "⚽", "كابتن الدوري", "يمثل القافلة في الملعب")}</div>
+      <div class="lead-creed"><p class="lc-verse">${L.LEAD.verse}</p><p class="lc-motto">${esc(L.LEAD.motto)}</p>
+        <div class="grid2"><div><b>🎖️ القائد</b><ul>${L.LEAD.leader.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div><div><b>🔰 النائب</b><ul>${L.LEAD.deputy.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div></div></section>
+    ${m ? `<section class="panel"><h3>هذا اللقاء</h3><div class="this-meet"><span>${r.stars === 2 ? "🌟 نجمة ذهبية" : r.stars ? "⭐ نجمة" : `جاهزون للنجمة <b class="num">${r.ready}/${r.n}</b>`}</span>${d ? `<span>${d.icon} ${esc(d.name)} ${L.dutyMastered(S, m.id, c.id) ? "✅" : ""}</span>` : ""}<span>إتقان التكليف <b class="num">${L.dutyCount(S, c.id, m.id) % 2}/2</b> للنجمة</span></div></section>` : ""}
+    <section class="panel"><h3>الأعضاء</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th>المغامر</th><th>دوره هذا اللقاء</th><th>المستوى</th><th>المجموع</th></tr></thead><tbody>
+      ${ks.map((k) => { const ro = m ? L.roleOf(S, k, m.number) : null; const tot = L.kidTotal(S, I, k.id); const lv = L.level(tot); const tags = L.leaderOf(S, k.id).map((x) => `<span class="ltag ${x[0]}">${x[1]} ${x[2]}</span>`).join(" ");
+        return `<tr><td><a href="#kid/${k.id}">${esc(L.kidName(k))}</a> ${tags}${k.position ? ` <small class="muted">${esc(L.POSITIONS[k.position])}</small>` : ""}</td><td>${ro ? esc(ro[1]) : "—"}</td><td>${lv.icon} ${esc(lv.name)}</td><td class="num">${tot}</td></tr>`; }).join("") || '<tr><td colspan="4" class="muted">لا يوجد أعضاء</td></tr>'}
+      </tbody></table></div></section>
+    <section class="panel"><h3>الطريق</h3><div class="road big-road">${road}</div><p>📍 <b>${esc(L.ROAD[rd.pos])}</b>${rd.last ? ` · 🎁 آخر مكافأة: <b>${esc(L.PERKS[rd.last.pos].name)}</b>: ${esc(L.PERKS[rd.last.pos].what)}` : ""}</p>${nx ? `<p class="muted small">المحطة القادمة «${esc(L.ROAD[rd.pos + 1])}» تفتح: ${esc(nx.name)}</p>` : ""}</section>
+    <section class="panel"><h3>🎴 بطاقات القوة</h3><div class="pc-row">${L.freeCards(S, c.id).map((p) => pcardHTML(p.kind)).join("") || '<span class="muted">لا بطاقات حاليًا. كل نجمة = سحبة.</span>'}</div></section>
+    <section class="panel"><h3>هوية القافلة</h3>${edit ? `<div class="cform"><label>الاسم<input id="cn-${c.id}" value="${esc(c.name)}" maxlength="20"></label><label>اللون<input id="cc-${c.id}" type="color" value="${esc(c.color)}"></label>
+        <label class="wide">الصيحة<input id="ch-${c.id}" value="${esc(c.chant || "")}" maxlength="60" placeholder="3 كلمات"></label>
+        <label class="wide">الميثاق<textarea id="ct-${c.id}" rows="2" maxlength="300" placeholder="3 قواعد اتفقت عليها القافلة">${esc(c.charter || "")}</textarea></label>
+        <button class="btn sm" data-act="carsave" data-id="${c.id}">حفظ</button></div>` : `${c.charter ? `<p><b>الميثاق:</b> ${esc(c.charter)}</p>` : '<p class="muted">—</p>'}`}</section>`, "caravan");
 }
 
 // ---------------- kids ----------------
@@ -517,28 +576,6 @@ const nextMeeting = (m) => S.meetings.find((x) => x.number === (m.number || 0) +
 function newLevels(m) {
   return L.activeKids(S).map((k) => { const tot = L.kidTotal(S, I, k.id); const before = tot - L.net(I, m.id, k.id); const a = L.level(before), b = L.level(tot); return b.i > a.i ? { k, lv: b } : null; }).filter(Boolean);
 }
-function viewKit() {
-  const m = I.meet[meetId]; if (!m) return ($app().innerHTML = shell('<div class="empty">أضف لقاءً أولًا.</div>', "kit"));
-  const nx = nextMeeting(m);
-  const drawn = (S.power_cards || []).filter((p) => p.meeting_id === m.id);
-  const usedNow = (S.power_cards || []).filter((p) => p.used_match_id && S.matches.some((x) => x.id === p.used_match_id && x.meeting_id === m.id));
-  const lv = newLevels(m);
-  const dutyStars = S.caravans.filter((c) => L.dutyStarAt(S, m.id, c.id));
-  const kalNow = S.caravans.find((c) => (L.dutyOf(S, m, c.id) || {}).key === "kalima");
-  const kalNext = nx && S.caravans.find((c) => (L.dutyOf(S, nx, c.id) || {}).key === "kalima");
-  const kd = kalNow && L.dutyRow(S, m.id, kalNow.id);
-  const step = (n, title, when, body) => `<section class="kit-step"><div class="kit-n">${n}</div><div class="kit-b"><h3>${title}</h3><p class="kit-when">${when}</p>${body}</div></section>`;
-  $app().innerHTML = shell(`
-    <section class="bar"><h1 class="h1">حقيبة اللقاء</h1>${meetPicker()}</section>
-    <p class="muted">كل شي تسلّمه بيدك في هذا اللقاء، بالترتيب. الأطفال ما يدخلون المنصة؛ اللي يشوفونه هو البطاقة والشاشة.</p>
-    <div class="row-btns no-print"><a class="btn" href="#print/meet">🖨️ اطبع بطاقات هذا اللقاء</a><a class="btn ghost" href="#print/set">🖨️ مجموعة الطباعة الثابتة (مرة وحدة)</a></div>
-    ${step(1, "التكليفات", "الانطلاقة · سلّم كل قافلة بطاقة تكليفها", `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>القافلة</th><th>التكليف</th><th>الإتقان</th></tr></thead><tbody>${S.caravans.map((c) => { const d = L.dutyOf(S, m, c.id); return `<tr><td><span class="sw" style="${carStyle(c)}"></span>${esc(c.name)}</td><td>${d ? d.icon + " " + esc(d.name) : "—"}</td><td>${L.dutyMastered(S, m.id, c.id) ? "✅" : "—"} <small class="muted num">(${L.dutyCount(S, c.id, m.id) % 2}/2)</small></td></tr>`; }).join("")}</tbody></table></div>`)}
-    ${step(2, "منبر القافلة", "بعد الصلاة · 3 دقائق", kalNow ? (kd && kd.speaker_kid ? `<p>🎙️ <b>${esc(L.kidName(I.kid[kd.speaker_kid]))}</b> من قافلة ${esc(kalNow.name)}${kd.topic != null ? ` · الموضوع: <b>${esc(L.TOPICS[kd.topic].t)}</b>` : ""}</p>` : `<p class="alert">قافلة ${esc(kalNow.name)} عليها الكلمة. اختر المتحدث والموضوع من وضع اللقاء.</p>`) : '<p class="muted">—</p>')}
-    ${step(3, "بطاقات القوة", "وقت السحب · سلّم البطاقة المطبوعة للقافلة، واستردها بعد استخدامها في المباراة", `${drawn.length ? `<ul class="kit-list">${drawn.map((p) => `<li>سلّم <b>${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)}</b> لقافلة ${esc(carName(p.caravan_id))}</li>`).join("")}</ul>` : '<p class="muted">ما انسحبت بطاقات في هذا اللقاء بعد.</p>'}${usedNow.length ? `<p class="small">استرد بعد المباراة: ${usedNow.map((p) => `${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)} (${esc(carName(p.caravan_id))})`).join("، ")}</p>` : ""}${dutyStars.length ? `<p class="small">⭐ نجمة تكليف: ${dutyStars.map((c) => esc(c.name)).join("، ")}</p>` : ""}`)}
-    ${step(4, "المستويات الجديدة", "الختام · سلّم بطاقة اللقب الجديد قدّام الكل", lv.length ? `<ul class="kit-list">${lv.map((x) => `<li>${x.lv.icon} <b>${esc(L.kidName(x.k))}</b> صار «${esc(x.lv.name)}»</li>`).join("")}</ul>` : '<p class="muted">ما فيه مستويات جديدة في هذا اللقاء.</p>')}
-    ${step(5, "تجهيز كلمة اللقاء القادم", "الختام · القافلة تختار المتحدث، وأنت تعطيه بطاقة الموضوع ليتجهز", kalNext ? `<p>قافلة <b>${esc(kalNext.name)}</b> عليها الكلمة في اللقاء ${nx.number}.</p><div class="duty-kal">${kalimaPick(kalNext, nx)}</div>` : '<p class="muted">لا يوجد لقاء قادم.</p>')}
-  `, "kit");
-}
 const DUTY_TONE = { musalla: "#1fa865", kalima: "#0a63e6", food: "#ef8a33", clean: "#e7297a" };
 const LVL_TONE = ["#6b7cff", "#1fa865", "#0a63e6", "#ef8a33", "#e7297a", "#d4a106"];
 function printCards() {
@@ -556,10 +593,13 @@ function printCards() {
   const topic = (i, who) => { const tp = L.TOPICS[i]; return `<div class="pp-topic ${tp.c}"><header class="pt-head"><span class="pt-cat">${L.TOPIC_CATS[tp.c]}</span><span class="pt-n">${String(i + 1).padStart(2, "0")}</span></header>
       <h3>${esc(tp.t)}</h3><p class="pt-s">${esc(tp.s)}</p><div class="pt-q"><b>اسأل الحضور</b>${esc(tp.q)}</div>
       <footer class="pt-f"><span>🎙️ منبر القافلة · ⏱️ 3 دقائق</span><span class="pt-who">${who ? esc(who) : "المتحدث: ............"}</span></footer></div>`; };
-  return { pc, duty, lvl, topic };
+  const lead = (dep) => `<div class="pp-lead ${dep ? "dep" : ""}"><header><span class="pl-badge">${dep ? "🔰" : "🎖️"}</span><div><small>طريق القوافل</small><h3>${dep ? "نائب القائد" : "قائد القافلة"}</h3></div></header>
+      <ul>${(dep ? L.LEAD.deputy : L.LEAD.leader).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      <p class="pl-motto">${L.LEAD.verse}<br><b>${esc(L.LEAD.motto)}</b></p><div class="pl-name"><span>قافلة: ............ · الاسم: ............</span></div></div>`;
+  return { pc, duty, lvl, topic, lead };
 }
 function viewPrint(arg) {
-  const m = I.meet[meetId]; const { pc, duty, lvl, topic } = printCards();
+  const m = I.meet[meetId]; const { pc, duty, lvl, topic, lead } = printCards();
   let title, guide, sheets;
   if (arg === "meet" && m) {
     const nx = nextMeeting(m); const kalNext = nx && S.caravans.find((c) => (L.dutyOf(S, nx, c.id) || {}).key === "kalima");
@@ -575,15 +615,17 @@ function viewPrint(arg) {
     const blanks = [[1, 8], [2, 6], [3, 5], [4, 3], [5, 2]];
     guide = `<li><b>بطاقات القوة:</b> 4 نسخ من كل بطاقة = 24 بطاقة (3 صفحات). تُسترد بعد كل مباراة وتُعاد للصندوق.</li>
       <li><b>بطاقات التكليف:</b> نسختان من كل تكليف = 8 بطاقات (صفحتان). تُسلّم في الانطلاقة وتُسترد في الختام.</li>
+      <li><b>بطاقات القيادة:</b> 4 قائد + 4 نائب (صفحتان). يحملها القائد والنائب، وفيها مسؤولياتهم ومبدأ «القيادة مشورة».</li>
       <li><b>بطاقات المستويات الفارغة:</b> 24 بطاقة (${blanks.map(([i, n]) => n + " " + L.LEVELS[i].name).join("، ")}) لكتابة الاسم بخط اليد احتياطًا.</li>
       <li><b>بنك مواضيع الكلمة:</b> 40 بطاقة (7 صفحات): 26 قيم ومبادئ، و14 عن المدينة المنورة.</li>
       <li>الورق: مقوّى 250–300 جرام في المطبعة، أو A4 عادي في البيت. في نافذة الطباعة: الحجم A4، الهوامش «بلا»، وفعّل «رسومات الخلفية». القص على الخطوط المتقطعة.</li>`;
     sheets = `<h2 class="pp-h">بطاقات القوة</h2><div class="sheet cards">${Object.keys(L.POWER).flatMap((k) => [k, k, k, k]).map(pc).join("")}</div>
       <h2 class="pp-h">بطاقات التكليف</h2><div class="sheet duties">${L.DUTIES.concat(L.DUTIES).map(duty).join("")}</div>
+      <h2 class="pp-h">بطاقات القيادة</h2><div class="sheet topics">${[0, 0, 0, 0, 1, 1, 1, 1].map((x) => lead(!!x)).join("")}</div>
       <h2 class="pp-h">بطاقات المستويات</h2><div class="sheet lvls">${blanks.flatMap(([i, n]) => Array(n).fill(i)).map((i) => lvl(L.level(L.LEVELS[i].min))).join("")}</div>
       <h2 class="pp-h">بنك مواضيع الكلمة</h2><div class="sheet topics">${L.TOPICS.map((_, i) => topic(i)).join("")}</div>`;
   }
-  $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#kit">→ رجوع لحقيبة اللقاء</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
+  $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#home">→ رجوع لليوم</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
 }
 function levelsHTML(tv) {
   const kids = L.activeKids(S).map((k) => ({ k, lv: L.level(L.kidTotal(S, I, k.id)) }));
@@ -602,30 +644,47 @@ function sealHTML(m, tv) {
     <p class="seal-need">يُفتح الختم إذا أخذت <b class="num">${st.need}</b> قوافل نجمة في هذا اللقاء</p>
     <div class="seal-cars">${S.caravans.map((c) => `<span class="${got.includes(c.id) ? "on" : ""}" style="${carStyle(c)}">${got.includes(c.id) ? "⭐" : "○"} ${esc(c.name)}</span>`).join("")}</div></div>`;
 }
-function viewRoad() {
-  const m = I.meet[meetId]; const editPlan = can("plan");
-  const st = L.sealState(S, I);
-  const rows = S.caravans.map((c) => { const rd = L.roadOf(S, I, c.id); const nx = L.PERKS[rd.pos + 1];
-    const road = L.ROAD.map((name, i) => `${i ? `<i class="${i <= rd.pos ? "on" : ""}"></i>` : ""}<b class="${i < rd.pos ? "on" : ""} ${i === rd.pos ? "here" : ""}" title="${esc(name)}">${i === rd.pos ? "🐪" : ""}</b>`).join("");
-    return `<section class="rd-car" style="${carStyle(c)}"><header><h3>${esc(c.name)}</h3><span>📍 ${esc(L.ROAD[rd.pos])}</span></header><div class="road">${road}</div>
-      <p class="small">${rd.last ? `🎁 آخر مكافأة: <b>${esc(L.PERKS[rd.last.pos].name)}</b> (اللقاء ${I.meet[rd.last.meeting_id] ? I.meet[rd.last.meeting_id].number : ""}): ${esc(L.PERKS[rd.last.pos].what)}` : '<span class="muted">لم تصل أول محطة بعد.</span>'}</p>
-      ${nx ? `<p class="small muted">المحطة القادمة «${esc(L.ROAD[rd.pos + 1])}» تفتح: ${esc(nx.name)}</p>` : ""}
-      <div class="pc-row">${L.freeCards(S, c.id).map((p) => pcardHTML(p.kind)).join("") || '<span class="muted small">لا بطاقات قوة حاليًا</span>'}</div></section>`; }).join("");
+function viewGuide() {
+  const m = I.meet[meetId];
+  $app().innerHTML = shell(`
+    <a class="back" href="#admin">→ الإدارة</a>
+    ${pageHead("دليل طريق القوافل", "قواعد النظام كاملة. تقدر تعرضها للمغامرين في وضع العرض.")}
+    <section class="panel guide-hero"><p>الانضباط <b>وقود القافلة</b>: كل نجمة تقدّم الجمل محطة وتعطي القافلة سحبة بطاقة قوة، ولما تاخذ نصف القوافل نجمة ينفتح ختم الأسبوع.</p>
+      <div class="g-rules"><span>⭐ كل الحاضرين ${L.NC - 1} نقاط فأكثر</span><span>🌟 الكل ${L.NC} نقاط</span><span>⭐ كل إتقانين للتكليف</span></div></section>
+    <section class="panel"><h3>🎖️ القيادة: مشورة لا تسلّط</h3><p class="lc-verse">${L.LEAD.verse}</p><p><b>${esc(L.LEAD.motto)}</b></p><div class="grid2"><div><b>القائد</b><ul>${L.LEAD.leader.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div><div><b>النائب</b><ul>${L.LEAD.deputy.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div></section>
+    <section class="panel"><h3>🧭 التكليفات</h3><p class="muted small">كل قافلة لها تكليف كل لقاء، ويتبدّل تلقائيًا. الكلمة: القافلة تختار المتحدث، وما يتكرر نفس الشخص قبل ما يتكلم الكل، وما يتكرر الموضوع.</p>
+      <div class="duty-grid">${L.DUTIES.map((d) => `<div class="duty-card"><b>${d.icon} ${esc(d.name)}</b><ul>${d.tasks.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("")}</div>
+      ${m ? `<p class="small">هذا اللقاء: ${S.caravans.map((c) => { const d = L.dutyOf(S, m, c.id); return `<span class="nowrap"><i class="sw" style="${carStyle(c)}"></i>${esc(c.name)}: ${d ? d.icon + " " + esc(d.short) : "—"}</span>`; }).join(" · ")}</p>` : ""}</section>
+    <section class="panel"><h3>🎴 بطاقات القوة</h3><p class="muted small">بطاقة واحدة لكل قافلة في المباراة، يعلنها الكابتن قبل صافرة البداية.</p><div class="pc-row">${Object.keys(L.POWER).map((k) => pcardHTML(k, true)).join("")}</div></section>
+    <section class="panel"><h3>🗺️ المحطات ومكافآتها</h3><ol class="perks">${L.ROAD.slice(1).map((n, i) => `<li><b>${esc(n)}</b> · ${esc(L.PERKS[i + 1].name)}: <span class="muted">${esc(L.PERKS[i + 1].what)}</span></li>`).join("")}</ol></section>
+    <section class="panel"><h3>🏅 المستويات</h3><p class="muted small">من مجموع نقاط المغامر. ما فيه ترتيب: كل واحد يقارن نفسه بنفسه.</p>${levelsHTML(false)}</section>`, "guide");
+}
+function viewSeals() {
+  const editPlan = can("plan"); const st = L.sealState(S, I);
   const seals = st.seals.map((s) => { const om = st.opened[s.n]; const open = ui.openSeal === s.n;
     return `<li class="${om ? "done" : ""}"><button class="sl-head" data-act="sealopen" data-n="${s.n}" aria-expanded="${open}"><span class="sl-n">${om ? "📜" : "🔒"} ${s.n}</span><b>${esc(s.title)}</b><small>${om ? "فُتح في اللقاء " + (I.meet[om] ? I.meet[om].number : "") : "مختوم"}</small></button>
       ${open ? (editPlan ? `<div class="sl-edit"><label>العنوان<input id="sl-t-${s.n}" value="${esc(s.title)}" maxlength="80"></label><label>التلميح (يظهر والختم مغلق)<input id="sl-h-${s.n}" value="${esc(s.hint)}" maxlength="160"></label><label>الرسالة<textarea id="sl-b-${s.n}" rows="4" maxlength="900">${esc(s.body)}</textarea></label><label>مهمة الأسبوع<input id="sl-m-${s.n}" value="${esc(s.mission)}" maxlength="200"></label><button class="btn sm" data-act="sealsave" data-n="${s.n}">حفظ الختم</button></div>` : `<div class="sl-edit"><p>${esc(s.body)}</p><p class="muted">${esc(s.mission)}</p></div>`) : ""}</li>`; }).join("");
   $app().innerHTML = shell(`
-    <section class="bar"><h1 class="h1">طريق القوافل</h1>${meetPicker()}</section>
-    <p class="muted">الانضباط وقود القافلة: كل نجمة تقدّم الجمل محطة وتعطي سحبة بطاقة قوة، ونجاح نصف القوافل يفتح ختم الأسبوع.</p>
-    <div class="rd-grid">${rows}</div>
-    <section class="panel"><h3>🎴 بطاقات القوة</h3><p class="muted small">⭐ نجمة = سحبة · 🌟 ذهبية = سحبتان. السحب من «وضع اللقاء» ويظهر على الشاشة. بطاقة واحدة لكل قافلة في المباراة، تُعلن قبل صافرة البداية، وتُسجَّل في نتيجة المباراة.</p>
-      <div class="pc-row">${Object.keys(L.POWER).map((k) => pcardHTML(k, true)).join("")}</div></section>
-    <section class="panel"><h3>🧭 التكليفات</h3><p class="muted small">كل قافلة لها تكليف في كل لقاء، ويتبدّل تلقائيًا فتجرّب كل قافلة كل التكليفات. كل إتقانين = ⭐ نجمة تكليف (تقدّم الجمل وتعطي سحبة بطاقة قوة). الكلمة: القافلة تختار المتحدث، وما يتكرر نفس الشخص قبل ما يتكلم الكل، وما يتكرر الموضوع.</p>
-      <div class="duty-grid">${L.DUTIES.map((d) => `<div class="duty-card"><b>${d.icon} ${esc(d.name)}</b><ul>${d.tasks.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("")}</div>
-      ${m ? `<p class="small">هذا اللقاء: ${S.caravans.map((c) => { const d = L.dutyOf(S, m, c.id); return `<span class="nowrap"><i class="sw" style="${carStyle(c)}"></i>${esc(c.name)}: ${d ? d.icon + " " + esc(d.short) : "—"}</span>`; }).join(" · ")}</p>` : ""}</section>
-    <section class="panel"><h3>المحطات ومكافآتها</h3><ol class="perks">${L.ROAD.slice(1).map((n, i) => `<li><b>${esc(n)}</b> · ${esc(L.PERKS[i + 1].name)}: <span class="muted">${esc(L.PERKS[i + 1].what)}</span></li>`).join("")}</ol></section>
-    <section class="panel"><h3>المستويات</h3><p class="muted small">مستوى كل مغامر من مجموع نقاطه. ما فيه ترتيب: كل واحد يقارن نفسه بنفسه.</p>${levelsHTML(false)}</section>
-    <section class="panel"><h3>📜 الرسائل المختومة</h3><p class="muted small">تبدأ من اللقاء ${editPlan ? `<select data-act="sealstart" aria-label="لقاء البداية">${S.meetings.map((x) => `<option value="${x.number}" ${x.number === st.start ? "selected" : ""}>${x.number}</option>`).join("")}</select>` : st.start}. كل لقاء تأخذ فيه ${st.need} قوافل نجمة يفتح الختم التالي على الشاشة، وإذا ما تحقق يبقى نفس الختم للأسبوع الجاي.</p><ol class="seals">${seals}</ol></section>`, "road");
+    <a class="back" href="#admin">→ الإدارة</a>
+    ${pageHead("📜 الرسائل المختومة", `كل لقاء تاخذ فيه ${st.need} قوافل نجمة ينفتح الختم التالي على الشاشة، وإذا ما تحقق يبقى نفس الختم للأسبوع الجاي.`)}
+    <p class="muted small">تبدأ من اللقاء ${editPlan ? `<select data-act="sealstart" aria-label="لقاء البداية">${S.meetings.map((x) => `<option value="${x.number}" ${x.number === st.start ? "selected" : ""}>${x.number}</option>`).join("")}</select>` : st.start}</p>
+    <ol class="seals">${seals}</ol>`, "seals");
+}
+function viewAdmin() {
+  const pend = isOwner() ? accounts.filter((a) => a.status === "pending").length : 0;
+  const tile = (href, icon, title, sub, badge) => `<a class="admin-tile" href="${href}"><span class="at-ic">${icon}</span><b>${title}${badge ? ` <b class="dot-n">${badge}</b>` : ""}</b><small>${sub}</small></a>`;
+  $app().innerHTML = shell(`
+    ${pageHead("الإدارة", "كل اللي تحتاجه خارج وقت اللقاء.")}
+    <div class="admin-grid">
+      ${tile("#reports", "📝", "التقارير", "الأسبوعي جاهز للنسخ، الحضور، بيانات اللقاءات")}
+      ${tile("#kids", "🎒", "المغامرون", "الأسماء والمراكز والجوازات")}
+      ${tile("#guide", "🧭", "دليل طريق القوافل", "القواعد والبطاقات والمحطات والمستويات")}
+      ${tile("#seals", "📜", "الرسائل المختومة", "نصوص الأختام ولقاء البداية")}
+      ${tile("#print/set", "🖨️", "الطباعة", "مجموعة البطاقات الثابتة")}
+      ${tile("#screen", "📺", "شاشة التلفاز", "القوافل والمستويات والختم والدوري")}
+      ${isOwner() ? tile("#accounts", "👥", "الحسابات", "الموافقات والصلاحيات", pend) : ""}
+      ${tile("#profile", "🙂", "حسابي", "الاسم وتسجيل الخروج")}
+    </div>`, "admin");
 }
 
 // ---------------- reports ----------------
@@ -732,6 +791,7 @@ document.addEventListener("click", async (e) => {
       if (r !== undefined) { ui.reveal = { car, kind }; const nid = first(r).id; toast("انسحبت البطاقة", "ok", async () => { await db.remove("power_cards", { id: nid }); ui.reveal = null; await reload("power_cards"); }); }
       await guard(() => reload("power_cards")); return render(); }
     case "revealclose": ui.reveal = null; return render();
+    case "stepdone": { const kk = `mgh.step.${b.dataset.mid}.${k}`; try { localStorage.getItem(kk) === "1" ? localStorage.removeItem(kk) : localStorage.setItem(kk, "1"); } catch (x) {} return render(); }
     case "present_mode": ui.present = !ui.present; try { localStorage.setItem("mgh.present", ui.present ? "1" : "0"); } catch (x) {} toast(ui.present ? "وضع العرض: ملاحظاتك الخاصة مخفية" : "ملاحظاتك الخاصة ظاهرة"); return render();
     case "carddrawdel": if (ui.armed !== key) { ui.armed = key; b.textContent = "حذف؟"; setTimeout(() => (ui.armed = null), 3000); return; }
       await guard(() => db.remove("power_cards", { id }), "حُذفت البطاقة، وتقدر تسحب من جديد"); await guard(() => reload("power_cards")); return render();
@@ -744,7 +804,7 @@ document.addEventListener("click", async (e) => {
     case "doprint": return window.print();
     case "sealsave": { const n = Number(b.dataset.n); const o = S.seals.find((x) => x.n === n) || {}; const prev = { n, title: o.title || "", hint: o.hint || "", body: o.body || "", mission: o.mission || "" };
       return doUndoable("حُفظ الختم", () => db.upsert("seals", [{ n, title: sel("sl-t-" + n).value.trim(), hint: sel("sl-h-" + n).value.trim(), body: sel("sl-b-" + n).value.trim(), mission: sel("sl-m-" + n).value.trim() }], "n"), () => db.upsert("seals", [prev], "n"), ["seals"]); }
-    case "sealopen": ui.openSeal = ui.openSeal === Number(b.dataset.n) ? null : Number(b.dataset.n); return viewRoad();
+    case "sealopen": ui.openSeal = ui.openSeal === Number(b.dataset.n) ? null : Number(b.dataset.n); return viewSeals();
     case "scrtab": ui.screenTab = b.dataset.v; return viewScreen();
     case "ltab": ui.leagueTab = b.dataset.v; return viewLeague();
     case "present": return setPoint(k, { present: !L.present(I, meetId, k) });
@@ -812,6 +872,9 @@ document.addEventListener("change", async (e) => {
   if (a === "dutyspk" || a === "dutytopic") { const mid = Number(t.dataset.mid), car = Number(t.dataset.car);
     const row = a === "dutyspk" ? { speaker_kid: t.value || null } : { topic: t.value === "" ? null : Number(t.value) };
     await guard(() => db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, ...row }], "meeting_id,caravan_id"), a === "dutyspk" ? "حُفظ المتحدث" : "حُفظ الموضوع"); await guard(() => reload("duty_log")); return render(); }
+  if (a === "carlead") { const car = Number(t.dataset.car), f = t.dataset.f; const prev = I.car[car][f] || null; const v = t.value || null;
+    const others = { leader_kid: "القائد", deputy_kid: "النائب" }; if (v && f !== "captain_kid" && ["leader_kid", "deputy_kid"].some((g) => g !== f && I.car[car][g] === v)) { toast("نفس الطفل ما يكون قائد ونائب.", "err"); return render(); }
+    return doUndoable("حُفظت القيادة", () => db.update("caravans", { id: car }, { [f]: v }), () => db.update("caravans", { id: car }, { [f]: prev }), ["caravans"]); }
   if (a === "reportstart") { await guard(() => db.upsert("app_settings", [{ key: "report_start", value: Number(t.value) }], "key"), "حُفظت بداية التقارير"); await guard(() => reload("app_settings")); return render(); }
   if (a === "sealstart") { await guard(() => db.upsert("app_settings", [{ key: "seal_start", value: Number(t.value) }], "key"), "حُفظ لقاء البداية"); await guard(() => reload("app_settings")); return render(); }
   if (a === "meet") { meetId = Number(t.value); ui.openDed = null; return render(); }
