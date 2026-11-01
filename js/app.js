@@ -2,7 +2,7 @@ import { auth, db, ApiError } from "./api.js";
 import * as L from "./logic.js";
 
 // ---------------- state ----------------
-const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings"];
+const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings", "duty_log"];
 let S = null, I = null, me = null, accounts = [];
 let meetId = null;
 let ui = { seenCards: new Set(), liveCar: "all", kidsQ: "", kidsCar: "all", leagueTab: "matches", screenTab: "caravans", openDed: null, openMatch: null, armed: null };
@@ -70,6 +70,7 @@ const NAV = [
   ["live", "وضع اللقاء", () => can("points")],
   ["caravans", "القوافل", () => true],
   ["road", "طريق القوافل", () => true],
+  ["kit", "حقيبة اللقاء", () => can("points")],
   ["league", "الدوري", () => true],
   ["kids", "المغامرون", () => true],
   ["reports", "التقارير", () => true],
@@ -81,6 +82,7 @@ async function render() {
   clearInterval(screenTimer); screenTimer = null;
   const r = parseRoute();
   document.body.classList.toggle("is-screen", r.name === "screen");
+  document.body.classList.toggle("is-print", r.name === "print");
   if (["login", "signup", "forgot", "reset"].includes(r.name) || !auth.session) {
     if (r.name === "reset" && auth.session) return viewReset();
     if (!auth.session) return r.name === "signup" ? viewSignup() : r.name === "forgot" ? viewForgot() : viewLogin();
@@ -90,7 +92,7 @@ async function render() {
   if (me.status !== "approved") return viewPending();
   if (!S) { $app().innerHTML = shell('<div class="empty">جاري تحميل البيانات…</div>'); await guard(loadAll); if (!S) return; if (isOwner()) await guard(loadAccounts); }
   else if (r.name === "accounts" && isOwner()) await guard(loadAccounts);
-  const views = { home: viewHome, live: viewLive, caravans: viewCaravans, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewRoad };
+  const views = { home: viewHome, live: viewLive, caravans: viewCaravans, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewRoad, kit: viewKit, print: viewPrint };
   const fn = views[r.name] || viewHome;
   if (r.name === "live" && !can("points")) return go("home");
   if (r.name === "accounts" && !isOwner()) return go("home");
@@ -249,8 +251,9 @@ function liveCaravan(c, m) {
     </div>`;
   }).join("");
   return `<section class="lcar" style="${carStyle(c)}">
-    <header><h3>${esc(c.name)}</h3><span class="st">${st}</span></header>
+    <header><h3>${esc(c.name)}</h3>${(() => { const d = L.dutyOf(S, m, c.id); return d ? `<span class="duty-tag">${d.icon} ${esc(d.short)}</span>` : ""; })()}<span class="st">${st}</span></header>
     ${rows || '<p class="muted pad">لا يوجد مغامرون في هذي القافلة.</p>'}
+    ${dutyBar(c, m)}
     ${powerBar(c, m)}
     <footer><span>نقاط التحديات</span><button class="step" data-act="tc" data-car="${c.id}" data-d="-5" aria-label="نقص 5">−</button><output class="num">${r.ch}</output><button class="step" data-act="tc" data-car="${c.id}" data-d="5" aria-label="زد 5">+</button><small class="muted">أساسي 10 · متقدم 15 · خبير 20</small></footer>
   </section>`;
@@ -269,7 +272,7 @@ function viewScreen() {
       const rk = L.kidsOf(S, c.id).map((k) => ({ k, tot: L.kidTotal(S, I, k.id) }));
       const pct = r.n ? Math.round((r.ready / r.n) * 100) : 0;
       return `<section class="tv-col ${r.stars ? "star" : ""}" style="${carStyle(c)}">
-        <header><h2>${esc(c.name)}</h2><span class="num">⭐ ${t.stars}</span></header>
+        <header><h2>${esc(c.name)}</h2>${(() => { const d = L.dutyOf(S, m, c.id); return d ? `<small class="tv-duty ${L.dutyMastered(S, m.id, c.id) ? "ok" : ""}">${d.icon} ${esc(d.short)}${L.dutyMastered(S, m.id, c.id) ? " ✓" : ""}</small>` : ""; })()}<span class="num">⭐ ${t.stars}</span></header>
         <div class="road" aria-label="موقع القافلة: ${esc(L.ROAD[pos])}">${road}</div>
         <ol class="tv-kids">${rk.map((x) => { const p = m ? L.row(I, m.id, x.k.id) || {} : {}; const pr = m ? L.present(I, m.id, x.k.id) : true; return `<li class="${pr ? "" : "abs"}"><span class="rk" title="${esc(L.level(x.tot).name)}">${L.level(x.tot).icon}</span><span class="nm">${esc(x.k.first_name)}</span><span class="pips">${L.CATS.map((cc) => `<i class="${p[cc[0]] ? "on" : ""}" style="--c:${cc[2]}"></i>`).join("")}</span><b class="num">${x.tot}</b></li>`; }).join("")}</ol>
         <footer><b>${r.stars === 2 ? "🌟 نجمة ذهبية هذا اللقاء" : r.stars === 1 ? "⭐ نجمة هذا اللقاء" : `جاهزون للنجمة <span class="num">${r.ready} من ${r.n}</span>`}</b><div class="prog"><i style="width:${pct}%"></i></div><span>📍 ${esc(L.ROAD[pos])} · 🎴 <b class="num">${L.freeCards(S, c.id).length}</b> · رصيد <b class="num">${t.bal}</b></span>${fresh ? `<span class="perk-new">🎁 ${esc(fresh.name)}: ${esc(fresh.what)}</span>` : ""}</footer>
@@ -300,7 +303,7 @@ function viewScreen() {
     ${ui.tvReveal ? revealHTML(ui.tvReveal, false) : ""}
     <p class="tv-legend">${L.CATS.map((c) => `<span><i class="dot" style="--c:${c[2]}"></i>${c[1]}</span>`).join("")}<span>⭐ كل القافلة ${L.NC - 1} نقاط فأكثر</span><span>🌟 كل القافلة ${L.NC}</span></p>
   </div>`;
-  screenTimer = setInterval(async () => { if (parseRoute().name !== "screen") return; try { await reload("points", "deductions", "team_challenge", "matches", "goals", "cards", "kids", "caravans", "league_rounds", "power_cards", "seals", "app_settings"); viewScreen(); } catch (e) {} }, 10000);
+  screenTimer = setInterval(async () => { if (parseRoute().name !== "screen") return; try { await reload("points", "deductions", "team_challenge", "matches", "goals", "cards", "kids", "caravans", "league_rounds", "power_cards", "seals", "app_settings", "duty_log"); viewScreen(); } catch (e) {} }, 10000);
 }
 
 // ---------------- caravans ----------------
@@ -392,6 +395,7 @@ function viewKid(id) {
           const cell = (ph, v) => edit ? `<input class="mini num" type="number" step="0.1" inputmode="decimal" value="${v ?? ""}" data-act="measure" data-k="${k.id}" data-t="${t}" data-p="${ph}" aria-label="${info.name} ${ph === "pre" ? "قبل" : "بعد"}">` : `<span class="num">${v ?? "—"}</span>`;
           return `<tr><td>${info.name}<small class="muted"> (${info.unit})</small></td><td>${cell("pre", pre)}</td><td>${cell("post", post)}</td><td>${imp}</td></tr>`; }).join("")}
       </tbody></table></div><p class="muted small">السرعة والرشاقة: الأقل أفضل. الباقي: الأكثر أفضل. المقارنة مع نفسه فقط.</p></section>
+      ${(() => { const ks = (S.duty_log || []).filter((d) => d.speaker_kid === k.id); return ks.length ? `<section><h2 class="h2">🎙️ منبر القافلة</h2><ul class="badges">${ks.map((d) => `<li><b>اللقاء ${I.meet[d.meeting_id] ? I.meet[d.meeting_id].number : ""}</b><span>${d.topic != null ? esc(L.TOPICS[d.topic].t) : "كلمة بعد الصلاة"}</span></li>`).join("")}</ul></section>` : ""; })()}
       <section><h2 class="h2">في الدوري</h2><div class="league-me"><span>⚽ أهداف <b class="num">${goals}</b></span><span>🟦 أمانة <b class="num">${blue}</b></span><span>🟨 <b class="num">${yel}</b></span><span>🟥 <b class="num">${red}</b></span><span>🏅 روح رياضية <b class="num">${spirit}</b></span></div></section>
       <section><h2 class="h2">كلمة المشرف</h2>${notes.length ? `<ul class="notes">${notes.map((n) => `<li><p>${esc(n.body)}</p><small>${n.created_at.slice(0, 10)}</small>${edit ? `<button class="x" data-act="notedel" data-id="${n.id}" aria-label="حذف">×</button>` : ""}</li>`).join("")}</ul>` : '<p class="muted">لا توجد كلمات بعد.</p>'}
         ${edit ? `<div class="addrow"><input id="nt-body" placeholder="سطر تشجيع أو ملاحظة تقدّم" maxlength="240" aria-label="كلمة المشرف"><button class="btn" data-act="noteadd" data-k="${k.id}">إضافة</button></div>` : ""}</section>
@@ -480,6 +484,78 @@ function powerBar(c, m) {
   return `<div class="pw-bar"><span class="pw-have">🎴 بطاقات القافلة: ${free.length ? free.map((p) => `<span class="pw-chip t${L.POWER[p.kind].tier}">${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)}</span>`).join("") : '<span class="muted">لا شيء</span>'}</span>
     ${pend.length && can("points") ? `<button class="btn sm pw-draw" data-act="draw" data-car="${c.id}" data-slot="${pend[0]}">🎴 اسحب بطاقة القوة${pend.length > 1 ? ` <span class="num">(${pend.length})</span>` : ""}</button>` : ""}</div>`;
 }
+function kalimaPick(c, m) {
+  const d = L.dutyRow(S, m.id, c.id) || {}; const used = L.usedTopics(S, m.id, c.id);
+  const spk = L.kidsOf(S, c.id).map((k) => { const okk = L.canSpeak(S, c.id, k.id, m.id) || d.speaker_kid === k.id; return `<option value="${k.id}" ${d.speaker_kid === k.id ? "selected" : ""} ${okk ? "" : "disabled"}>${esc(L.kidName(k))}${okk ? "" : " (تكلّم قبل)"}</option>`; }).join("");
+  const tps = L.TOPICS.map((tp, i) => `<option value="${i}" ${d.topic === i ? "selected" : ""} ${used.has(i) && d.topic !== i ? "disabled" : ""}>${i + 1}. ${esc(tp.t)}${used.has(i) && d.topic !== i ? " (قُدّم)" : ""}</option>`).join("");
+  return `<label>المتحدث (تختاره القافلة)<select data-act="dutyspk" data-mid="${m.id}" data-car="${c.id}"><option value="">—</option>${spk}</select></label>
+    <label>الموضوع من البنك<select data-act="dutytopic" data-mid="${m.id}" data-car="${c.id}"><option value="">—</option>${tps}</select></label>`;
+}
+function dutyBar(c, m) {
+  const d = L.dutyOf(S, m, c.id); if (!d) return "";
+  const done = L.dutyMastered(S, m.id, c.id); const cnt = L.dutyCount(S, c.id, m.id); const star = L.dutyStarAt(S, m.id, c.id);
+  const ed = can("points");
+  return `<div class="duty-bar ${done ? "ok" : ""}"><div class="duty-main"><span class="duty-name">${d.icon} ${esc(d.name)}</span>
+      <small class="muted">${d.tasks.map(esc).join(" · ")}</small></div>
+    <div class="duty-act">${ed ? `<button class="chip dchip" data-act="duty" data-car="${c.id}" data-mid="${m.id}" aria-pressed="${done}">${done ? "✅ أتقنوا التكليف" : "أتقنوا التكليف؟"}</button>` : done ? "✅ أُتقن" : ""}
+      <small class="num">${star ? "⭐ نجمة تكليف!" : `الإتقان ${cnt % 2}/2 للنجمة`}</small></div>
+    ${d.key === "kalima" && ed ? `<div class="duty-kal">${kalimaPick(c, m)}</div>` : ""}</div>`;
+}
+const nextMeeting = (m) => S.meetings.find((x) => x.number === (m.number || 0) + 1) || null;
+function newLevels(m) {
+  return L.activeKids(S).map((k) => { const tot = L.kidTotal(S, I, k.id); const before = tot - L.net(I, m.id, k.id); const a = L.level(before), b = L.level(tot); return b.i > a.i ? { k, lv: b } : null; }).filter(Boolean);
+}
+function viewKit() {
+  const m = I.meet[meetId]; if (!m) return ($app().innerHTML = shell('<div class="empty">أضف لقاءً أولًا.</div>', "kit"));
+  const nx = nextMeeting(m);
+  const drawn = (S.power_cards || []).filter((p) => p.meeting_id === m.id);
+  const usedNow = (S.power_cards || []).filter((p) => p.used_match_id && S.matches.some((x) => x.id === p.used_match_id && x.meeting_id === m.id));
+  const lv = newLevels(m);
+  const dutyStars = S.caravans.filter((c) => L.dutyStarAt(S, m.id, c.id));
+  const kalNow = S.caravans.find((c) => (L.dutyOf(S, m, c.id) || {}).key === "kalima");
+  const kalNext = nx && S.caravans.find((c) => (L.dutyOf(S, nx, c.id) || {}).key === "kalima");
+  const kd = kalNow && L.dutyRow(S, m.id, kalNow.id);
+  const step = (n, title, when, body) => `<section class="kit-step"><div class="kit-n">${n}</div><div class="kit-b"><h3>${title}</h3><p class="kit-when">${when}</p>${body}</div></section>`;
+  $app().innerHTML = shell(`
+    <section class="bar"><h1 class="h1">حقيبة اللقاء</h1>${meetPicker()}</section>
+    <p class="muted">كل شي تسلّمه بيدك في هذا اللقاء، بالترتيب. الأطفال ما يدخلون المنصة؛ اللي يشوفونه هو البطاقة والشاشة.</p>
+    <div class="row-btns no-print"><a class="btn" href="#print/meet">🖨️ اطبع بطاقات هذا اللقاء</a><a class="btn ghost" href="#print/set">🖨️ مجموعة الطباعة الثابتة (مرة وحدة)</a></div>
+    ${step(1, "التكليفات", "الانطلاقة · سلّم كل قافلة بطاقة تكليفها", `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>القافلة</th><th>التكليف</th><th>الإتقان</th></tr></thead><tbody>${S.caravans.map((c) => { const d = L.dutyOf(S, m, c.id); return `<tr><td><span class="sw" style="${carStyle(c)}"></span>${esc(c.name)}</td><td>${d ? d.icon + " " + esc(d.name) : "—"}</td><td>${L.dutyMastered(S, m.id, c.id) ? "✅" : "—"} <small class="muted num">(${L.dutyCount(S, c.id, m.id) % 2}/2)</small></td></tr>`; }).join("")}</tbody></table></div>`)}
+    ${step(2, "منبر القافلة", "بعد الصلاة · 3 دقائق", kalNow ? (kd && kd.speaker_kid ? `<p>🎙️ <b>${esc(L.kidName(I.kid[kd.speaker_kid]))}</b> من قافلة ${esc(kalNow.name)}${kd.topic != null ? ` · الموضوع: <b>${esc(L.TOPICS[kd.topic].t)}</b>` : ""}</p>` : `<p class="alert">قافلة ${esc(kalNow.name)} عليها الكلمة. اختر المتحدث والموضوع من وضع اللقاء.</p>`) : '<p class="muted">—</p>')}
+    ${step(3, "بطاقات القوة", "وقت السحب · سلّم البطاقة المطبوعة للقافلة، واستردها بعد استخدامها في المباراة", `${drawn.length ? `<ul class="kit-list">${drawn.map((p) => `<li>سلّم <b>${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)}</b> لقافلة ${esc(carName(p.caravan_id))}</li>`).join("")}</ul>` : '<p class="muted">ما انسحبت بطاقات في هذا اللقاء بعد.</p>'}${usedNow.length ? `<p class="small">استرد بعد المباراة: ${usedNow.map((p) => `${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)} (${esc(carName(p.caravan_id))})`).join("، ")}</p>` : ""}${dutyStars.length ? `<p class="small">⭐ نجمة تكليف: ${dutyStars.map((c) => esc(c.name)).join("، ")}</p>` : ""}`)}
+    ${step(4, "المستويات الجديدة", "الختام · سلّم بطاقة اللقب الجديد قدّام الكل", lv.length ? `<ul class="kit-list">${lv.map((x) => `<li>${x.lv.icon} <b>${esc(L.kidName(x.k))}</b> صار «${esc(x.lv.name)}»</li>`).join("")}</ul>` : '<p class="muted">ما فيه مستويات جديدة في هذا اللقاء.</p>')}
+    ${step(5, "تجهيز كلمة اللقاء القادم", "الختام · القافلة تختار المتحدث، وأنت تعطيه بطاقة الموضوع ليتجهز", kalNext ? `<p>قافلة <b>${esc(kalNext.name)}</b> عليها الكلمة في اللقاء ${nx.number}.</p><div class="duty-kal">${kalimaPick(kalNext, nx)}</div>` : '<p class="muted">لا يوجد لقاء قادم.</p>')}
+  `, "kit");
+}
+function viewPrint(arg) {
+  const m = I.meet[meetId];
+  const pc = (kind) => { const p = L.POWER[kind]; return `<div class="pp-card pw t${p.tier}"><span class="pc-tier">${L.TIER[p.tier]}</span><span class="pc-ic">${p.icon}</span><b>${esc(p.name)}</b><p>${esc(p.rule)}</p><small>بطاقة قوة · تُعلن قبل البداية</small></div>`; };
+  const duty = (d) => `<div class="pp-duty"><span class="pd-ic">${d.icon}</span><h3>${esc(d.name)}</h3><p class="pd-k">الإتقان يعني:</p><ul>${d.tasks.map((t) => `<li>☐ ${esc(t)}</li>`).join("")}</ul><p class="pd-f">كل إتقانين = ⭐ نجمة للقافلة</p></div>`;
+  const lvl = (lv, name) => `<div class="pp-lvl l${lv.i}"><span class="pl-ic">${lv.icon}</span><small>لقب جديد في طريق القوافل</small><h3>${esc(lv.name)}</h3><p>${esc(lv.what)}</p><div class="pl-name">${name ? esc(name) : "&nbsp;"}</div></div>`;
+  const topic = (i, who) => { const tp = L.TOPICS[i]; return `<div class="pp-topic"><small>منبر القافلة · الموضوع ${i + 1}</small><h3>${esc(tp.t)}</h3><p>${esc(tp.s)}</p><ol><li>ابدأ بسؤال أو قصة</li><li>فائدة وحدة واضحة</li><li>اختم بشي نطبّقه اليوم</li></ol><div class="pl-name">${who ? esc(who) : "&nbsp;"} · ⏱️ 3 دقائق</div></div>`; };
+  let title, guide, sheets;
+  if (arg === "meet" && m) {
+    const nx = nextMeeting(m); const kalNext = nx && S.caravans.find((c) => (L.dutyOf(S, nx, c.id) || {}).key === "kalima");
+    const kd = kalNext && L.dutyRow(S, nx.id, kalNext.id);
+    const lv = newLevels(m);
+    title = `بطاقات اللقاء ${m.number}`;
+    guide = `<li>بطاقات المستويات الجديدة: <b>${lv.length}</b></li><li>بطاقة موضوع كلمة اللقاء القادم: <b>${kd && kd.topic != null ? 1 : 0}</b>${kd && kd.topic != null ? "" : " (اختر الموضوع من حقيبة اللقاء أولًا)"}</li><li>بطاقات القوة والتكليفات من المجموعة الثابتة، ما تحتاج تطبعها كل مرة.</li>`;
+    sheets = `<div class="sheet small-cards">${lv.map((x) => lvl(x.lv, L.kidName(x.k))).join("")}${kd && kd.topic != null ? topic(kd.topic, kd.speaker_kid && I.kid[kd.speaker_kid] ? L.kidName(I.kid[kd.speaker_kid]) : "") : ""}</div>`;
+    if (!lv.length && !(kd && kd.topic != null)) sheets = '<p class="empty">ما فيه شي يحتاج طباعة لهذا اللقاء.</p>';
+  } else {
+    title = "مجموعة الطباعة الثابتة";
+    guide = `<li><b>بطاقات القوة:</b> 4 نسخ من كل بطاقة = 24 بطاقة (3 صفحات). تُسترد بعد كل مباراة وتُعاد للصندوق.</li>
+      <li><b>بطاقات التكليف:</b> نسختان من كل تكليف = 8 بطاقات (صفحتان). تُسلّم في الانطلاقة وتُسترد في الختام.</li>
+      <li><b>بطاقات المستويات الفارغة:</b> 24 بطاقة (12 مرافق، 8 خبير الدرب، 4 شيخ القافلة) لكتابة الاسم بخط اليد احتياطًا.</li>
+      <li><b>بنك مواضيع الكلمة:</b> 40 بطاقة (5 صفحات). تُعطى بطاقة الموضوع للمتحدث قبل لقائه بأسبوع.</li>
+      <li>الورق: مقوّى 250–300 جرام في المطبعة، أو A4 عادي في البيت. اختر في نافذة الطباعة: الحجم A4، الهوامش «بلا»، وفعّل «رسومات الخلفية». القص على الخطوط المتقطعة.</li>`;
+    sheets = `<h2 class="pp-h">بطاقات القوة</h2><div class="sheet cards">${Object.keys(L.POWER).flatMap((k) => [k, k, k, k]).map(pc).join("")}</div>
+      <h2 class="pp-h">بطاقات التكليف</h2><div class="sheet duties">${L.DUTIES.concat(L.DUTIES).map(duty).join("")}</div>
+      <h2 class="pp-h">بطاقات المستويات</h2><div class="sheet small-cards">${[[1, 12], [2, 8], [3, 4]].flatMap(([i, n]) => Array(n).fill(i)).map((i) => lvl(L.level(L.LEVELS[i].min))).join("")}</div>
+      <h2 class="pp-h">بنك مواضيع الكلمة</h2><div class="sheet small-cards">${L.TOPICS.map((_, i) => topic(i)).join("")}</div>`;
+  }
+  $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#kit">→ رجوع لحقيبة اللقاء</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
+}
 function levelsHTML(tv) {
   const kids = L.activeKids(S).map((k) => ({ k, lv: L.level(L.kidTotal(S, I, k.id)) }));
   return `<div class="${tv ? "tv-levels" : "lv-cols"}">${L.LEVELS.map((x, i) => { const ks = kids.filter((y) => y.lv.i === i).sort((a, b) => a.k.first_name.localeCompare(b.k.first_name, "ar"));
@@ -515,6 +591,9 @@ function viewRoad() {
     <div class="rd-grid">${rows}</div>
     <section class="panel"><h3>🎴 بطاقات القوة</h3><p class="muted small">⭐ نجمة = سحبة · 🌟 ذهبية = سحبتان. السحب من «وضع اللقاء» ويظهر على الشاشة. بطاقة واحدة لكل قافلة في المباراة، تُعلن قبل صافرة البداية، وتُسجَّل في نتيجة المباراة.</p>
       <div class="pc-row">${Object.keys(L.POWER).map((k) => pcardHTML(k, true)).join("")}</div></section>
+    <section class="panel"><h3>🧭 التكليفات</h3><p class="muted small">كل قافلة لها تكليف في كل لقاء، ويتبدّل تلقائيًا فتجرّب كل قافلة كل التكليفات. كل إتقانين = ⭐ نجمة تكليف (تقدّم الجمل وتعطي سحبة بطاقة قوة). الكلمة: القافلة تختار المتحدث، وما يتكرر نفس الشخص قبل ما يتكلم الكل، وما يتكرر الموضوع.</p>
+      <div class="duty-grid">${L.DUTIES.map((d) => `<div class="duty-card"><b>${d.icon} ${esc(d.name)}</b><ul>${d.tasks.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("")}</div>
+      ${m ? `<p class="small">هذا اللقاء: ${S.caravans.map((c) => { const d = L.dutyOf(S, m, c.id); return `<span class="nowrap"><i class="sw" style="${carStyle(c)}"></i>${esc(c.name)}: ${d ? d.icon + " " + esc(d.short) : "—"}</span>`; }).join(" · ")}</p>` : ""}</section>
     <section class="panel"><h3>المحطات ومكافآتها</h3><ol class="perks">${L.ROAD.slice(1).map((n, i) => `<li><b>${esc(n)}</b> · ${esc(L.PERKS[i + 1].name)}: <span class="muted">${esc(L.PERKS[i + 1].what)}</span></li>`).join("")}</ol></section>
     <section class="panel"><h3>المستويات</h3><p class="muted small">مستوى كل مغامر من مجموع نقاطه. ما فيه ترتيب: كل واحد يقارن نفسه بنفسه.</p>${levelsHTML(false)}</section>
     <section class="panel"><h3>📜 الرسائل المختومة</h3><p class="muted small">تبدأ من اللقاء ${editPlan ? `<select data-act="sealstart" aria-label="لقاء البداية">${S.meetings.map((x) => `<option value="${x.number}" ${x.number === st.start ? "selected" : ""}>${x.number}</option>`).join("")}</select>` : st.start}. كل لقاء تأخذ فيه ${st.need} قوافل نجمة يفتح الختم التالي على الشاشة، وإذا ما تحقق يبقى نفس الختم للأسبوع الجاي.</p><ol class="seals">${seals}</ol></section>`, "road");
@@ -621,6 +700,9 @@ document.addEventListener("click", async (e) => {
       const r = await guard(() => db.insert("power_cards", [{ caravan_id: car, meeting_id: meetId, slot, kind }]));
       if (r !== undefined) ui.reveal = { car, kind }; await guard(() => reload("power_cards")); return render(); }
     case "revealclose": ui.reveal = null; return render();
+    case "duty": { const car = Number(b.dataset.car); const mid = Number(b.dataset.mid) || meetId; const v = !L.dutyMastered(S, mid, car);
+      await guard(() => db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, mastered: v }], "meeting_id,caravan_id"), v ? "✅ سُجّل الإتقان" : "أُلغي الإتقان"); await guard(() => reload("duty_log")); return render(); }
+    case "doprint": return window.print();
     case "sealsave": { const n = Number(b.dataset.n); await guard(() => db.upsert("seals", [{ n, title: sel("sl-t-" + n).value.trim(), hint: sel("sl-h-" + n).value.trim(), body: sel("sl-b-" + n).value.trim(), mission: sel("sl-m-" + n).value.trim() }], "n"), "حُفظ الختم"); await guard(() => reload("seals")); return render(); }
     case "sealopen": ui.openSeal = ui.openSeal === Number(b.dataset.n) ? null : Number(b.dataset.n); return viewRoad();
     case "scrtab": ui.screenTab = b.dataset.v; return viewScreen();
@@ -681,6 +763,9 @@ document.addEventListener("click", async (e) => {
 });
 document.addEventListener("change", async (e) => {
   const t = e.target; const a = t.dataset && t.dataset.act; if (!a) return;
+  if (a === "dutyspk" || a === "dutytopic") { const mid = Number(t.dataset.mid), car = Number(t.dataset.car);
+    const row = a === "dutyspk" ? { speaker_kid: t.value || null } : { topic: t.value === "" ? null : Number(t.value) };
+    await guard(() => db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, ...row }], "meeting_id,caravan_id"), a === "dutyspk" ? "حُفظ المتحدث" : "حُفظ الموضوع"); await guard(() => reload("duty_log")); return render(); }
   if (a === "sealstart") { await guard(() => db.upsert("app_settings", [{ key: "seal_start", value: Number(t.value) }], "key"), "حُفظ لقاء البداية"); await guard(() => reload("app_settings")); return render(); }
   if (a === "meet") { meetId = Number(t.value); ui.openDed = null; return render(); }
   if (a === "kidcar") { await guard(() => db.update("kids", { id: t.dataset.id }, { caravan_id: t.value ? Number(t.value) : null }), "نُقل المغامر"); await guard(() => reload("kids")); return render(); }

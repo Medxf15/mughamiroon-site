@@ -98,7 +98,7 @@ export function leaguePtsAt(S, mid, cid) {
 
 export function teamTotals(S, I, cid) {
   let stars = 0, bal = 0;
-  for (const m of S.meetings) { const r = teamMeet(S, I, m.id, cid); stars += r.stars; bal += r.sum + r.ch; }
+  for (const m of S.meetings) { const r = teamMeet(S, I, m.id, cid); stars += r.stars + dutyStarAt(S, m.id, cid); bal += r.sum + r.ch; }
   bal += leaguePts(S, cid);
   return { stars, bal };
 }
@@ -223,10 +223,10 @@ export function currentMeeting(S) {
 // ================= طريق القوافل =================
 /** personal levels: cumulative net points, compared with yourself only (no ranking) */
 export const LEVELS = [
-  { min: 0, name: "رحّال", icon: "🎒" },
-  { min: 10, name: "دليل", icon: "🧭" },
-  { min: 20, name: "حادي", icon: "🐪" },
-  { min: 32, name: "فارس الطريق", icon: "🏇" },
+  { min: 0, name: "راكب", icon: "🎒", what: "ركب مع القافلة وبدأ الطريق" },
+  { min: 10, name: "مرافق", icon: "🤝", what: "صار يعتمد عليه رفاقه في الطريق" },
+  { min: 20, name: "خبير الدرب", icon: "🧭", what: "يعرف الطريق ويدل غيره عليه" },
+  { min: 32, name: "شيخ القافلة", icon: "🏆", what: "قدوة القافلة وكبيرها في الأخلاق" },
 ];
 export function level(total) {
   let i = 0; for (let j = 0; j < LEVELS.length; j++) if (total >= LEVELS[j].min) i = j;
@@ -238,7 +238,7 @@ export function level(total) {
 export const POWER = {
   golden: { name: "الهدف الذهبي", icon: "⚡", tier: 3, rule: "لمدة دقيقتين: أي هدف لكم يُحسب هدفين." },
   shield: { name: "الدرع", icon: "🛡️", tier: 3, rule: "لمدة دقيقتين: أول هدف يدخل عليكم لا يُحسب." },
-  extra: { name: "اللاعب الإضافي", icon: "👟", tier: 2, rule: "تلعبون بلاعبٍ زيادة لمدة دقيقتين." },
+  extra: { name: "الفزعة الكبرى", icon: "🦸", tier: 2, rule: "مشرف من اختياركم يلعب معكم لمدة دقيقتين." },
   freekick: { name: "الركلة الحرة", icon: "🎯", tier: 2, rule: "ركلة حرة مباشرة من منتصف الملعب، مرة واحدة." },
   timeout: { name: "الوقت المستقطع", icon: "⏱️", tier: 1, rule: "توقيف المباراة دقيقة كاملة لخطة القافلة." },
   kickoff: { name: "اختيار البداية", icon: "🧭", tier: 1, rule: "تختارون جهة الملعب وضربة البداية." },
@@ -253,6 +253,7 @@ export function pendingDraws(S, I, mid, cid) {
   const st = teamMeet(S, I, mid, cid).stars;
   const have = (S.power_cards || []).filter((p) => p.meeting_id === mid && p.caravan_id === cid).map((p) => p.slot);
   const out = []; for (let s = 1; s <= st; s++) if (!have.includes(s)) out.push(s);
+  if (dutyStarAt(S, mid, cid) && !have.includes(3)) out.push(3);
   return out;
 }
 export const cardsOf = (S, cid) => (S.power_cards || []).filter((p) => p.caravan_id === cid).sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
@@ -276,7 +277,7 @@ export function roadOf(S, I, cid) {
   let stars = 0; const reached = [];
   for (const m of S.meetings) {
     const before = Math.min(ROAD.length - 1, stars);
-    stars += teamMeet(S, I, m.id, cid).stars;
+    stars += teamMeet(S, I, m.id, cid).stars + dutyStarAt(S, m.id, cid);
     const after = Math.min(ROAD.length - 1, stars);
     for (let p = before + 1; p <= after; p++) reached.push({ pos: p, meeting_id: m.id });
   }
@@ -301,3 +302,84 @@ export function sealState(S, I) {
   }
   return { seals, opened, perMeet, need, start, nextSeal: seals[k] || null };
 }
+
+// ================= التكليفات =================
+export const DUTIES = [
+  { key: "musalla", name: "حُرّاس المصلى", icon: "🕌", short: "المصلى",
+    tasks: ["ترتيب المصلى قبل الأذان", "الأحذية في مكانها الصحيح ومرتبة", "تسوية الصفوف والهدوء قبل الإقامة"] },
+  { key: "kalima", name: "منبر القافلة", icon: "🎙️", short: "الكلمة",
+    tasks: ["واحد من القافلة يقدّم كلمة بعد الصلاة", "فائدة واحدة واضحة خلال 3 دقائق", "القافلة تساعده في التحضير ويحضرون معه"] },
+  { key: "food", name: "أُمناء الزاد", icon: "🍽️", short: "الإعاشة",
+    tasks: ["استلام الوجبات من المشرف", "توزيعها على الجميع بالتساوي", "إرجاع الفائض للمشرف كما هو"] },
+  { key: "clean", name: "رُوّاد النظافة", icon: "✨", short: "النظافة",
+    tasks: ["المكان نظيف بعد الوجبة", "النفايات في مكانها", "المكان أنظف مما كان قبل اللقاء"] },
+];
+/** rotation: every caravan has one duty each meeting, and tries every duty in turn */
+export function dutyOf(S, m, cid) {
+  if (!m) return null;
+  const cars = S.caravans.slice().sort((a, b) => a.sort - b.sort);
+  const ci = cars.findIndex((c) => c.id === cid); if (ci < 0) return null;
+  const i = (ci + (m.number || 1) - 1) % cars.length;
+  return DUTIES[i] || null;
+}
+export const dutyRow = (S, mid, cid) => (S.duty_log || []).find((d) => d.meeting_id === mid && d.caravan_id === cid) || null;
+export const dutyMastered = (S, mid, cid) => !!(dutyRow(S, mid, cid) || {}).mastered;
+export function dutyCount(S, cid, uptoMid) {
+  let n = 0;
+  for (const m of S.meetings) { if (dutyMastered(S, m.id, cid)) n++; if (m.id === uptoMid) break; }
+  return n;
+}
+/** every second mastered duty = one star */
+export function dutyStarAt(S, mid, cid) { return dutyMastered(S, mid, cid) && dutyCount(S, cid, mid) % 2 === 0 ? 1 : 0; }
+
+/** kalima: the caravan picks the speaker, but nobody speaks twice before everyone in the caravan has spoken; topics never repeat */
+export function speakerCounts(S, cid, exceptMid) {
+  const c = {}; for (const k of kidsOf(S, cid)) c[k.id] = 0;
+  for (const d of S.duty_log || []) if (d.caravan_id === cid && d.speaker_kid && d.meeting_id !== exceptMid && c[d.speaker_kid] != null) c[d.speaker_kid]++;
+  return c;
+}
+export function canSpeak(S, cid, kid, mid) { const c = speakerCounts(S, cid, mid); const min = Math.min(...Object.values(c)); return c[kid] === min; }
+export function usedTopics(S, exceptMid, exceptCid) { return new Set((S.duty_log || []).filter((d) => d.topic != null && !(d.meeting_id === exceptMid && d.caravan_id === exceptCid)).map((d) => d.topic)); }
+
+export const TOPICS = [
+  { t: "الابتسامة صدقة", s: "قال ﷺ: «تبسّمك في وجه أخيك لك صدقة». متى آخر مرة غيّرت ابتسامتك يوم أحد؟" },
+  { t: "أُحد: جبلٌ يحبنا ونحبه", s: "قال ﷺ عن أُحد: «جبلٌ يحبنا ونحبه». ليش جبل أُحد له مكانة عند أهل المدينة؟" },
+  { t: "مسجد قباء: أول مسجد", s: "أول مسجد بُني في الإسلام كان في حيّنا القريب. وش قصة بنائه؟" },
+  { t: "بئر رومة", s: "اشترى عثمان رضي الله عنه بئرًا وجعلها للناس مجانًا. وش نقدر نوقف للناس اليوم؟" },
+  { t: "المؤاخاة في المدينة", s: "كيف تقاسم الأنصار بيوتهم وأموالهم مع المهاجرين؟ وش نتعلم منها في القافلة؟" },
+  { t: "حفر الخندق", s: "النبي ﷺ حفر مع أصحابه بيده. ليش القائد يشتغل مع فريقه؟" },
+  { t: "إماطة الأذى عن الطريق", s: "قال ﷺ: «وتُميط الأذى عن الطريق صدقة». شيء بسيط تقدر تسويه في حيّك." },
+  { t: "لا تغضب", s: "رجل طلب نصيحة، فقال له ﷺ: «لا تغضب» وكررها. كيف تهدّي نفسك وقت الغضب؟" },
+  { t: "أفشوا السلام", s: "قال ﷺ: «أفشوا السلام بينكم». السلام يفتح قلوب الناس، جرّبها هذا الأسبوع." },
+  { t: "الطهور شطر الإيمان", s: "قال ﷺ: «الطُّهور شطر الإيمان». الطهارة والنظافة جزء من ديننا." },
+  { t: "الإتقان", s: "«إن الله يحب إذا عمل أحدكم عملًا أن يتقنه». وش الفرق بين إنك تخلّص الشغل وإنك تتقنه؟" },
+  { t: "شكر الناس", s: "«من لا يشكر الناس لا يشكر الله». مين تحتاج تشكره اليوم؟" },
+  { t: "أدب الطعام", s: "«يا غلام، سمِّ الله، وكُل بيمينك، وكُل مما يليك». ثلاث آداب سهلة." },
+  { t: "حسن الخلق", s: "«ما من شيء أثقل في الميزان من حسن الخلق». وش الأخلاق اللي تشوفها في أحسن لاعب تعرفه؟" },
+  { t: "كلكم راعٍ", s: "«كلكم راعٍ وكلكم مسؤول عن رعيته». وش الشيء اللي أنت مسؤول عنه؟" },
+  { t: "رحمة الصغير وتوقير الكبير", s: "«ليس منا من لم يرحم صغيرنا ويوقّر كبيرنا». كيف نطبقها في النادي؟" },
+  { t: "الحياء", s: "«الحياء لا يأتي إلا بخير». الحياء قوة مو ضعف." },
+  { t: "الرفق بالحيوان", s: "قصة الرجل اللي سقى كلبًا عطشانًا فغفر الله له. الرحمة تشمل كل مخلوق." },
+  { t: "الصدق ولو كان صعب", s: "الصادق يرتاح حتى لو خسر. احكِ موقف كان الصدق فيه صعب." },
+  { t: "الأمانة في الملعب", s: "اللاعب الأمين يعترف إن الكورة لمست يده. ليش البطاقة الزرقاء أغلى من الهدف؟" },
+  { t: "الكلمة الطيبة", s: "«والكلمة الطيبة صدقة». كلمة وحدة ممكن ترفع يوم زميلك." },
+  { t: "الاستئذان", s: "أدب الاستئذان قبل الدخول وقبل أخذ أغراض غيرك." },
+  { t: "بر الوالدين بأفعال صغيرة", s: "ثلاث أفعال صغيرة تفرّح أمك وأبوك اليوم." },
+  { t: "حق الجار", s: "الجار له حق. وش نقدر نسوي لجيراننا في حي الهجرة؟" },
+  { t: "عدم الإسراف", s: "«وكلوا واشربوا ولا تسرفوا». كيف نحافظ على الأكل والماء في النادي؟" },
+  { t: "نعمة الماء", s: "تخيّل يوم بدون ماء. كيف نشكر الله على هذي النعمة؟" },
+  { t: "نعمة الأمن", s: "نلعب ونتعلم ونرجع بيوتنا بأمان. كيف نحافظ على هذي النعمة؟" },
+  { t: "الصبر عند الخسارة", s: "الخسارة درس مو نهاية. وش تقول لفريقك بعد مباراة خسرتوها؟" },
+  { t: "التسامح بعد الخلاف", s: "الخلاف يصير، لكن القوي هو اللي يبدأ بالصلح." },
+  { t: "حسن الظن", s: "قبل ما تحكم على زميلك، فكّر في ثلاثة أعذار له." },
+  { t: "الوقت كنز", s: "وش ممكن تسوي بعشر دقائق كل يوم؟ (قراءة، حفظ آية، رياضة…)" },
+  { t: "النوم المبكر والنشاط", s: "اللي ينام بدري يصحى نشيط. وش علاقة النوم بأداء اللاعب؟" },
+  { t: "اشرب ماء وتحرّك", s: "جسمك أمانة. كم كوب ماء تحتاج في اليوم؟" },
+  { t: "أسامة بن زيد: القائد الشاب", s: "النبي ﷺ أمّر أسامة على جيش وهو شاب صغير. العمر مو شرط للقيادة." },
+  { t: "الخوارزمي وأصل البرمجة", s: "كلمة «خوارزمية» اللي تشغّل الروبوتات والبرامج جاية من اسم عالم مسلم." },
+  { t: "ابن الهيثم وسر الضوء", s: "عالم مسلم فهم كيف نشوف الأشياء بالضوء، وجرّب قبل ما يحكم." },
+  { t: "الشجاعة في قول الحق بأدب", s: "كيف تقول رأيك المختلف بدون ما تجرح أحد؟" },
+  { t: "الإيثار", s: "الأنصار قدّموا غيرهم على نفسهم. موقف آثرت فيه زميلك؟" },
+  { t: "الدعاء للوالدين", s: "«رب ارحمهما كما ربياني صغيرًا». دعوة قصيرة تحفظها اليوم." },
+  { t: "متى حسّيت إن فريقك يحتاجك؟", s: "احكِ موقف واحد حسّيت فيه إن وجودك فرق مع قافلتك." },
+];
