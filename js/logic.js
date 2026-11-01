@@ -24,7 +24,7 @@ export const TESTS = {
   endurance: { name: "التحمّل", unit: "مرة", lowerBetter: false, how: "قفز جانبي 30 ثانية" },
 };
 export const ROLES = [["duty", "مسؤول التكليف"], ["timer", "ضابط الوقت"], ["scribe", "الموثّق"], ["tools", "مسؤول الأدوات"], ["cheer", "المشجّع"]];
-export const ROAD = ["حي الهجرة", "قُباء", "العوالي", "العقيق", "سَلْع", "الحرّة", "عَيْر", "سيد الشهداء", "قمة أُحد"];
+export const ROAD = ["حي الهجرة", "قُباء", "العوالي", "حرّة واقم", "سَلْع", "القبلتين", "العقيق", "جبل الرماة", "قمة أُحد"];
 
 export function index(S) {
   const I = {};
