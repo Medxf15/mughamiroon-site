@@ -8,7 +8,7 @@ const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(
 if (q.has("board")) {
   root.innerHTML = `<div class="board"><div class="bar"><a href="film.html">▶︎ تشغيل الفيلم</a><a href="index.html#home">→ المنصة</a></div>
     <h1>طريق الحادي · الحلقة صفر — لوحة المشاهد</h1><p class="sub">${SCENES.length} مشاهد · ${fmt(DURATION)} · كل صورة هي لقطة من المشهد عند لحظته الأهم.</p>
-    <div class="grid">${SCENES.map((s, i) => `<article class="sc"><canvas width="${W}" height="${H}" data-i="${i}"></canvas><div><small>${i + 1} · ${fmt(s.a)}–${fmt(s.b)}</small><h2>${s.title}</h2><p>${s.vo}</p></div></article>`).join("")}</div></div>`;
+    <div class="grid">${SCENES.map((s, i) => `<article class="sc"><canvas width="${W}" height="${H}" data-i="${i}"></canvas><div><small>المشهد ${i + 1} · <bdi dir="ltr">${fmt(s.a)}–${fmt(s.b)}</bdi></small><h2>${s.title}</h2><p>${s.vo}</p></div></article>`).join("")}</div></div>`;
   const draw = () => document.querySelectorAll("canvas[data-i]").forEach((c) => drawAt(c.getContext("2d"), SCENES[+c.dataset.i].key, logo));
   draw(); logo.onload = draw;
 } else {
