@@ -1,4 +1,5 @@
-import { W, H, SEGMENTS, SEG, ORDER, LINEAR_DURATION, drawSeg, POWER_DECK } from "./film.js";
+import { W, H, SEGMENTS, SEG, ORDER, LINEAR_DURATION, drawSeg, POWER_DECK, ALL_LINES } from "./film.js";
+import { storage } from "./api.js";
 const root = document.getElementById("root");
 const logo = new Image(); logo.src = "assets/mahara.png";
 const q = new URLSearchParams(location.search);
@@ -25,17 +26,21 @@ if (q.has("board")) {
 } else {
   root.innerHTML = `<div class="stage"><canvas width="${W}" height="${H}"></canvas><div id="ia" class="ia" hidden></div></div>
     <div class="start" id="start"><div><i id="go">▶︎</i><b>طريق الحادي</b><span>الحلقة صفر · فيلم تفاعلي</span>
-      <p id="vstat" class="vstat"></p><button id="test" class="testbtn">🔊 جرّب الصوت أول</button>
+      <p id="vstat" class="vstat"></p><button id="test" class="testbtn">🔊 جرّب الصوت أول</button><p class="keys">💡 شغّل الفيلم من متصفح Chrome أو Edge على اللابتوب المتصل بالتلفاز، وتأكد إن صوت ويندوز والتلفاز مرفوع.</p>
       <p class="keys">مسافة = تشغيل/التالي · 1 و2 = الاختيار · 1–4 = هتاف القوافل · ← → = المقطع التالي/السابق</p></div></div>
     <div class="hud"><button id="pp">⏸</button><button id="prev">⏮</button><button id="next">⏭</button><span id="seg"></span><button id="fs">⛶</button><a href="film.html?board">لوحة المشاهد</a></div>`;
   const cv = root.querySelector("canvas"), ctx = cv.getContext("2d"), ia = document.getElementById("ia");
   const audio = makeAudio(), narr = makeNarrator();
   const st = { drawn: [], cheer: new Set(), level: [0, 0, 0, 0] }; const mic = makeMic();
   let segId = ORDER[0], t = 0, last = null, playing = false, waiting = false, fired = new Set(), spoke = new Set();
-  narr.ready.then((v) => { const el = document.getElementById("vstat"); if (el) el.textContent = v ? (v.natural ? `🎙️ صوت الراوي: ${v.name} (طبيعي)` : `🎙️ صوت الراوي: ${v.name} — للصوت الأوضح افتح الفيلم في Microsoft Edge`) : "🔇 ما فيه صوت عربي للراوي في هذا الجهاز: المؤثرات تشتغل، والكلام يظهر نصًّا"; });
+  const recs = storage.list("film-voice").then((xs) => new Set((xs || []).map((x) => x.name.replace(/\.\w+$/, "")))).catch(() => new Set());
+  Promise.all([narr.ready, recs]).then(([v, have]) => { const n = ALL_LINES.filter((l) => have.has(l.id)).length; const el = document.getElementById("vstat"); if (!el) return;
+    if (n) { el.textContent = `🎙️ التعليق الصوتي المسجّل: ${n} من ${ALL_LINES.length} جملة${n < ALL_LINES.length ? " (الباقي بصوت الجهاز)" : " ✓"}`; return; }
+    el.innerHTML = (v ? `🎙️ ما فيه تسجيل صوتي بعد، الراوي بصوت الجهاز (${v.name}).` : "🔇 ما فيه تسجيل صوتي ولا صوت عربي في الجهاز.") + ` <a href="index.html#studio">سجّل التعليق من الاستوديو</a>`; });
+  narr.ready.then((v) => { const el = null; if (el) el.textContent = v ? (v.natural ? `🎙️ صوت الراوي: ${v.name} (طبيعي)` : `🎙️ صوت الراوي: ${v.name} — للصوت الأوضح افتح الفيلم في Microsoft Edge`) : "🔇 ما فيه صوت عربي للراوي في هذا الجهاز: المؤثرات تشتغل، والكلام يظهر نصًّا"; });
 
   function enter(id) {
-    segId = id; t = 0; waiting = false; fired = new Set(); spoke = new Set(); narr.stop(); ia.hidden = true; ia.innerHTML = "";
+    segId = id; t = 0; waiting = false; fired = new Set(); spoke = new Set(); narr.stop(); audio.stopVoice(); ia.hidden = true; ia.innerHTML = "";
     audio.ambience(SEG[id].amb); document.getElementById("seg").textContent = SEG[id].title;
   }
   function nextLinear() { const i = ORDER.indexOf(segId); if (segId === "leave") return; if (i >= 0 && i < ORDER.length - 1) enter(ORDER[i + 1]); else { playing = false; audio.ambience(null); } }
@@ -50,7 +55,7 @@ if (q.has("board")) {
   }
   function choose(i) { const s = SEG[segId]; if (!waiting || s.interact.type !== "choice") return; audio.play("whoosh", 0.6); enter(s.interact.next[i]); }
   function drawCard() { if (!waiting || SEG[segId].interact.type !== "draw") return; const card = POWER_DECK[Math.floor(Math.random() * POWER_DECK.length)]; st.drawn.push({ card, at: t });
-    audio.play("flip", 1); setTimeout(() => audio.play(card.tier === "أسطورية" ? "reveal" : "star", card.tier === "أسطورية" ? 0.9 : 0.6), 700); setTimeout(() => narr.say(card.name + "!", { rate: 0.95, pitch: 1.05 }), 1000); }
+    audio.play("flip", 1); setTimeout(() => audio.play(card.tier === "أسطورية" ? "reveal" : "star", card.tier === "أسطورية" ? 0.9 : 0.6), 700); setTimeout(() => say(card.name + "!", { id: "card-" + card.k, rate: 0.95, pitch: 1.05 }), 1000); }
   function cheer(i) { if (!waiting || SEG[segId].interact.type !== "cheer") return; audio.play("beat", 0.8); audio.play("flag", 0.6);
     if (mic.on) { st.level[i] = 0; st.cheer.delete(i); mic.listen(3500, (lv) => { st.level[i] = Math.max(st.level[i], lv); if (st.level[i] > 0.35) st.cheer.add(i); }); }
     else { st.cheer.has(i) ? st.cheer.delete(i) : st.cheer.add(i); st.level[i] = st.cheer.has(i) ? 1 : 0; } }
@@ -62,15 +67,18 @@ if (q.has("board")) {
     last = now; const s = SEG[segId];
     if (playing && !waiting) {
       for (const [at, name, vol] of s.sfx || []) { const k = at + name; if (t >= at && !fired.has(k)) { fired.add(k); name === "steps" ? audio.steps(s.dur - at) : audio.play(name, vol ?? 0.8); } }
-      s.vo.forEach((v, i) => { if (t >= v.t && t - v.t < 1.2 && !spoke.has(i)) { spoke.add(i); narr.say(v.s, v); } });
-      if (t >= s.dur) { if (s.interact) { t = s.dur; finish(); } else nextLinear(); }
+      const busy = audio.voiceBusy() || narr.busy();
+      if (!busy) { const i = s.vo.findIndex((v, k) => !spoke.has(k) && t >= v.t); if (i >= 0) { spoke.add(i); say(s.vo[i].s, s.vo[i]); } }
+      const pending = s.vo.some((v, k) => !spoke.has(k));
+      if (t >= s.dur && !busy && !pending) { if (s.interact) { t = s.dur; finish(); } else nextLinear(); }
     }
-    drawSeg(ctx, segId, t, st, logo); requestAnimationFrame(frame);
+    drawSeg(ctx, segId, waiting || SEG[segId].interact ? t : Math.min(t, SEG[segId].dur - 0.32), st, logo); requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  async function start() { document.getElementById("start")?.remove(); try { await document.documentElement.requestFullscreen(); } catch (x) {} await audio.start(); playing = true; enter(ORDER[0]); }
+  async function start() { document.getElementById("start")?.remove(); try { await document.documentElement.requestFullscreen(); } catch (x) {} await audio.start(); await audio.loadVoices(await recs); playing = true; enter(ORDER[0]); }
+  const say = (text, cue) => { if (cue && cue.id && audio.playVoice(cue.id)) return; narr.say(text, cue || {}); };
   document.getElementById("go").onclick = start; document.getElementById("start").onclick = (e) => { if (e.target.id !== "test") start(); };
-  document.getElementById("test").onclick = async (e) => { e.stopPropagation(); await audio.start(); audio.play("reveal", 0.9); narr.say("جاهزين؟ يلا نبدأ الطريق!", { rate: 0.95 }); };
+  document.getElementById("test").onclick = async (e) => { e.stopPropagation(); await audio.start(); await audio.loadVoices(await recs); audio.play("reveal", 0.9); say("جاهزين؟", { id: "end-3", rate: 0.95 }); };
   document.getElementById("pp").onclick = () => { playing = !playing; if (!playing) narr.stop(); audio.mute(!playing); document.getElementById("pp").textContent = playing ? "⏸" : "▶︎"; };
   document.getElementById("next").onclick = () => { const i = ORDER.indexOf(segId); enter(ORDER[Math.min(ORDER.length - 1, (i < 0 ? ORDER.indexOf("fazaa") - 1 : i) + 1)]); };
   document.getElementById("prev").onclick = () => { const i = ORDER.indexOf(segId); enter(ORDER[Math.max(0, (i < 0 ? ORDER.indexOf("problem") + 1 : i) - 1)]); };
@@ -97,9 +105,15 @@ function makeAudio() {
     ambience(kind) { if (!ac) return; if (stepsTimer) { clearInterval(stepsTimer); stepsTimer = null; }
       const target = kind === "wind" ? 0.45 : kind === "night" ? 0.14 : kind === "storm" ? 0.2 : 0;
       if (!amb && buf.wind) { amb = ac.createBufferSource(); amb.buffer = buf.wind; amb.loop = true; ambGain = ac.createGain(); ambGain.gain.value = 0; amb.connect(ambGain).connect(master); amb.start(); }
-      if (ambGain) ambGain.gain.setTargetAtTime(target, ac.currentTime, 0.6); },
+      this._amb = target; if (ambGain) ambGain.gain.setTargetAtTime(target, ac.currentTime, 0.6); },
     steps(dur) { if (stepsTimer) clearInterval(stepsTimer); const end = Date.now() + dur * 1000; stepsTimer = setInterval(() => { if (Date.now() > end) { clearInterval(stepsTimer); stepsTimer = null; return; } this.play("step", 0.5); }, 620); },
     mute(m) { if (master) master.gain.setTargetAtTime(m ? 0 : 1, ac.currentTime, 0.1); },
+    async loadVoices(ids) { if (!ac || this._vloaded) return; this._vloaded = true; this.vbuf = {};
+      await Promise.all([...ids].map(async (id) => { try { const r = await fetch(storage.publicUrl("film-voice", id + ".wav") + "?v=" + Date.now()); if (r.ok) this.vbuf[id] = await ac.decodeAudioData(await r.arrayBuffer()); } catch (e) { console.warn("voice", id, e); } })); },
+    playVoice(id) { if (!ac || !this.vbuf || !this.vbuf[id]) return false; this.stopVoice(); const s = ac.createBufferSource(); s.buffer = this.vbuf[id]; const g = ac.createGain(); g.gain.value = 1.6; s.connect(g).connect(master); s.start(); this._vsrc = s; this._vend = ac.currentTime + s.buffer.duration + 0.25;
+      if (ambGain) { ambGain.gain.setTargetAtTime(0.06, ac.currentTime, 0.15); setTimeout(() => ambGain && ambGain.gain.setTargetAtTime(this._amb || 0.14, ac.currentTime, 0.5), s.buffer.duration * 1000); } return true; },
+    stopVoice() { try { this._vsrc && this._vsrc.stop(); } catch (e) {} this._vsrc = null; this._vend = 0; },
+    voiceBusy() { return !!(ac && this._vend && ac.currentTime < this._vend); },
   };
 }
 
@@ -115,6 +129,7 @@ function makeNarrator() {
     say(text, o = {}) { if (!synth || !voice) return; const u = new SpeechSynthesisUtterance(text); u.voice = voice; u.lang = voice.lang; u.rate = o.rate || 0.9; u.pitch = o.pitch || 0.95; u.volume = 1;
       if (synth.speaking || synth.pending) { synth.cancel(); setTimeout(() => synth.speak(u), 60); } else synth.speak(u); },
     stop() { if (synth && (synth.speaking || synth.pending)) synth.cancel(); },
+    busy() { return !!(synth && voice && (synth.speaking || synth.pending)); },
   };
 }
 

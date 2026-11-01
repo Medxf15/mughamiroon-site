@@ -1,4 +1,5 @@
-import { auth, db, ApiError } from "./api.js";
+import { auth, db, ApiError, storage } from "./api.js";
+import { ALL_LINES } from "./film.js";
 import * as L from "./logic.js";
 
 // ---------------- state ----------------
@@ -84,7 +85,7 @@ const NAV = [
   ["kids", "المغامرون", "🎒", () => true, false],
   ["admin", "الإدارة", "⚙️", () => true, true],
 ];
-const SECTION = { kid: "kids", caravan: "caravans", reports: "admin", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", kit: "home" };
+const SECTION = { studio: "admin", kid: "kids", caravan: "caravans", reports: "admin", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", kit: "home" };
 
 let screenTimer = null;
 async function render() {
@@ -102,7 +103,7 @@ async function render() {
   if (me.status !== "approved") return viewPending();
   if (!S) { $app().innerHTML = shell('<div class="empty">جاري تحميل البيانات…</div>'); await guard(loadAll); if (!S) return; if (isOwner()) await guard(loadAccounts); }
   else if (r.name === "accounts" && isOwner()) await guard(loadAccounts);
-  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint };
+  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint, studio: viewStudio };
   const fn = views[r.name] || viewToday;
   if (r.name === "live" && !can("points")) return go("home");
   if (r.name === "accounts" && !isOwner()) return go("home");
@@ -665,6 +666,36 @@ function viewSeals() {
     ${pageHead("📜 الرسائل المختومة", "عند كل محطة رسالة مختومة. كل نجمة تقدّم جمل القافلة خطوة، ولما توصل القافلة محطة تنفتح رسالتها على الشاشة. كل قافلة على طريقها، ما لها دخل بغيرها.")}
     <ol class="seals">${seals}</ol>`, "seals");
 }
+// ---------------- voice studio ----------------
+async function loadVoices() { const xs = await storage.list("film-voice"); ui.voiceHave = new Set((xs || []).map((x) => x.name.replace(/\.\w+$/, ""))); }
+function viewStudio() {
+  if (!can("plan")) return go("admin");
+  if (!ui.voiceHave) { $app().innerHTML = shell('<div class="empty">جاري تحميل التسجيلات…</div>', "studio"); guard(loadVoices).then(() => { if (parseRoute().name === "studio") viewStudio(); }); return; }
+  const have = ui.voiceHave; const done = ALL_LINES.filter((l) => have.has(l.id)).length;
+  const groups = []; for (const l of ALL_LINES) { const g = groups[groups.length - 1]; if (g && g.title === l.title) g.lines.push(l); else groups.push({ title: l.title, lines: [l] }); }
+  let n = 0;
+  $app().innerHTML = shell(`
+    <a class="back" href="#admin">→ الإدارة</a>
+    ${pageHead("🎙️ استوديو التعليق الصوتي", "سجّل صوت الراوي للفيلم جملة جملة. الفيلم يشغّل صوتك تلقائيًا، وأي جملة ما سجّلتها تطلع بصوت الجهاز.", `<a class="btn ghost sm" href="film.html" target="_blank">🎬 افتح الفيلم</a>`)}
+    <section class="panel studio-tips"><div class="st-prog"><div class="prog"><i style="width:${Math.round((done / ALL_LINES.length) * 100)}%"></i></div><b class="num">${done} / ${ALL_LINES.length}</b></div>
+      <ul><li>غرفة هادية، والجوال أو اللابتوب على بعد شبر من فمك.</li><li>اضغط <b>🔴 سجّل</b>، اقرأ الجملة، ثم <b>⏹ وقّف</b>. الصمت قبل وبعد ينقص تلقائيًا.</li><li>اقرأ الملاحظة تحت كل جملة: هي طريقة الأداء. والنقاط «…» يعني وقفة.</li><li>ما عجبك؟ سجّلها مرة ثانية وتنكتب فوق القديمة.</li></ul></section>
+    ${groups.map((g) => `<section class="panel"><h3>${esc(g.title)}</h3><div class="lines">${g.lines.map((l) => { n++; const rec = ui.rec && ui.rec.id === l.id; const ok = have.has(l.id);
+      return `<div class="line ${ok ? "ok" : ""} ${rec ? "rec" : ""}"><span class="ln num">${n}</span><div class="lt"><p>${esc(l.s)}</p>${l.n ? `<small>🎭 ${esc(l.n)}</small>` : ""}</div>
+        <div class="la">${rec ? `<button class="btn danger sm" data-act="rec" data-id="${l.id}">⏹ وقّف</button>` : `<button class="btn sm ${ok ? "ghost" : ""}" data-act="rec" data-id="${l.id}" ${ui.rec ? "disabled" : ""}>🔴 ${ok ? "أعد التسجيل" : "سجّل"}</button>`}
+        ${ok ? `<button class="btn ghost sm" data-act="recplay" data-id="${l.id}">▶ اسمع</button><button class="x" data-act="recdel" data-id="${l.id}" aria-label="حذف التسجيل">×</button>` : ""}</div></div>`; }).join("")}</div></section>`).join("")}`, "studio");
+}
+/** trim silence, normalise and encode as 16-bit mono WAV */
+async function cleanClip(blob) {
+  const ac = new (window.AudioContext || window.webkitAudioContext)(); const buf = await ac.decodeAudioData(await blob.arrayBuffer()); const d = buf.getChannelData(0); const sr = buf.sampleRate;
+  let peak = 0; for (const v of d) peak = Math.max(peak, Math.abs(v)); const th = Math.max(0.02, peak * 0.08);
+  let a = 0, b = d.length - 1; while (a < b && Math.abs(d[a]) < th) a++; while (b > a && Math.abs(d[b]) < th) b--;
+  a = Math.max(0, a - Math.round(sr * 0.08)); b = Math.min(d.length - 1, b + Math.round(sr * 0.25));
+  const g = peak > 0 ? 0.9 / peak : 1; const out = d.subarray(a, b + 1); const n = out.length;
+  const wav = new DataView(new ArrayBuffer(44 + n * 2)); const w = (o, str) => [...str].forEach((c, i) => wav.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); wav.setUint32(4, 36 + n * 2, true); w(8, "WAVE"); w(12, "fmt "); wav.setUint32(16, 16, true); wav.setUint16(20, 1, true); wav.setUint16(22, 1, true); wav.setUint32(24, sr, true); wav.setUint32(28, sr * 2, true); wav.setUint16(32, 2, true); wav.setUint16(34, 16, true); w(36, "data"); wav.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) wav.setInt16(44 + i * 2, Math.max(-1, Math.min(1, out[i] * g)) * 32767, true);
+  ac.close(); return new Blob([wav], { type: "audio/wav" });
+}
 function viewAdmin() {
   const pend = isOwner() ? accounts.filter((a) => a.status === "pending").length : 0;
   const tile = (href, icon, title, sub, badge) => `<a class="admin-tile" href="${href}"><span class="at-ic">${icon}</span><b>${title}${badge ? ` <b class="dot-n">${badge}</b>` : ""}</b><small>${sub}</small></a>`;
@@ -678,6 +709,7 @@ function viewAdmin() {
       ${tile("#print/set", "🖨️", "الطباعة", "مجموعة البطاقات الثابتة")}
       ${tile("#screen", "📺", "شاشة التلفاز", "القوافل والمستويات والختم والدوري")}
       ${tile("film.html", "🎬", "فيلم طريق الحادي", "الحلقة صفر · يُعرض على التلفاز بملء الشاشة")}
+      ${can("plan") ? tile("#studio", "🎙️", "استوديو التعليق الصوتي", "سجّل صوت الراوي للفيلم، جملة جملة") : ""}
       ${isOwner() ? tile("#accounts", "👥", "الحسابات", "الموافقات والصلاحيات", pend) : ""}
       ${tile("#profile", "🙂", "حسابي", "الاسم وتسجيل الخروج")}
     </div>`, "admin");
@@ -795,6 +827,18 @@ document.addEventListener("click", async (e) => {
       if (r !== undefined) { ui.reveal = { car, kind }; const nid = first(r).id; toast("انسحبت البطاقة", "ok", async () => { await db.remove("power_cards", { id: nid }); ui.reveal = null; await reload("power_cards"); }); }
       await guard(() => reload("power_cards")); return render(); }
     case "revealclose": ui.reveal = null; return render();
+    case "rec": {
+      if (ui.rec && ui.rec.id === id) { ui.rec.recorder.stop(); return; }
+      if (ui.rec) return;
+      try { ui.micStream = ui.micStream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); } catch (x) { return toast("ما قدرنا نوصل للمايك. اسمح للمتصفح باستخدامه.", "err"); }
+      const recorder = new MediaRecorder(ui.micStream); const chunks = []; ui.rec = { id, recorder };
+      recorder.ondataavailable = (ev) => ev.data.size && chunks.push(ev.data);
+      recorder.onstop = async () => { const rid = ui.rec.id; ui.rec = null; viewStudio();
+        await guard(async () => { const clean = await cleanClip(new Blob(chunks, { type: recorder.mimeType })); await storage.upload("film-voice", rid + ".wav", clean); ui.voiceHave.add(rid); }, "✓ انحفظ التسجيل"); viewStudio(); };
+      recorder.start(); return viewStudio(); }
+    case "recplay": { const a = new Audio(storage.publicUrl("film-voice", id + ".wav") + "?v=" + Date.now()); a.play().catch(() => toast("ما اشتغل الصوت", "err")); return; }
+    case "recdel": if (ui.armed !== key) { ui.armed = key; b.textContent = "حذف؟"; setTimeout(() => (ui.armed = null), 3000); return; }
+      await guard(async () => { await storage.remove("film-voice", id + ".wav"); ui.voiceHave.delete(id); }, "حُذف التسجيل"); return viewStudio();
     case "stepdone": { const kk = `mgh.step.${b.dataset.mid}.${k}`; try { localStorage.getItem(kk) === "1" ? localStorage.removeItem(kk) : localStorage.setItem(kk, "1"); } catch (x) {} return render(); }
     case "present_mode": ui.present = !ui.present; try { localStorage.setItem("mgh.present", ui.present ? "1" : "0"); } catch (x) {} toast(ui.present ? "وضع العرض: ملاحظاتك الخاصة مخفية" : "ملاحظاتك الخاصة ظاهرة"); return render();
     case "carddrawdel": if (ui.armed !== key) { ui.armed = key; b.textContent = "حذف؟"; setTimeout(() => (ui.armed = null), 3000); return; }

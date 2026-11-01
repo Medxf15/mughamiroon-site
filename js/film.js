@@ -378,13 +378,14 @@ export const SEGMENTS = [
       caption(ctx, "الحادي… مو أنا.", t, 0.4, 3.6, H * 0.14, 78); caption(ctx, "كل خميس… واحد منكم.", t, 6, 9.5, H * 0.14, 78); caption(ctx, "يمكن تكون أنت… اللي يجمع قافلته.", t, 9.6, 14, H * 0.14, 72);
       vignette(ctx, 0.45);
     } },
-  { id: "end", title: "النهاية", dur: 11, key: 8, amb: "night", sfx: [[0.2, "whoosh", 0.6], [5, "reveal", 0.6]],
-    vo: [{ t: 0.6, s: "الخميس، الساعة خمسة." }, { t: 2.6, s: "أول نجمة… أول خطوة… أول رسالة." }, { t: 6.4, s: "أتحدّى… وأتعاون.", rate: 0.85 }],
+  { id: "end", title: "الإعلان الحين", dur: 11, key: 8.5, amb: "night", sfx: [[0.2, "whoosh", 0.6], [5.6, "reveal", 0.7]],
+    vo: [{ t: 0.6, s: "والحين… مشرفكم عنده الإعلان." }, { t: 3.0, s: "قوافلكم… وقادتكم… وبطاقاتكم." }, { t: 6.0, s: "جاهزين؟", pitch: 1.1, rate: 0.9 }, { t: 7.6, s: "أتحدّى… وأتعاون.", rate: 0.85 }],
     draw(ctx, t, st, img) {
       ctx.fillStyle = "#060918"; ctx.fillRect(0, 0, W, H); stars(ctx, t, 0.7);
-      text(ctx, "الخميس · 5:00", W / 2, H * 0.22, 110, { alpha: fadeIO(t, 0.5, 11, 0.8), color: GLOW });
-      text(ctx, "أول نجمة… أول خطوة… أول رسالة", W / 2, H * 0.36, 64, { alpha: fadeIO(t, 2.5, 11, 0.8) });
-      const k = span(t, 5, 6.5); if (img && img.complete && img.naturalWidth) { ctx.save(); ctx.globalAlpha = k; const w = 620, h = w * img.naturalHeight / img.naturalWidth; ctx.drawImage(img, W / 2 - w / 2, H * 0.6 - h / 2, w, h); ctx.restore(); }
+      text(ctx, "الإعلان… الحين", W / 2, H * 0.2, 100, { alpha: fadeIO(t, 0.5, 11, 0.8), color: GLOW });
+      text(ctx, "قوافلكم · قادتكم · بطاقاتكم", W / 2, H * 0.34, 64, { alpha: fadeIO(t, 2.9, 11, 0.8) });
+      const j = span(t, 5.6, 6.2); text(ctx, "جاهزين؟", W / 2, H * 0.5, 120 * (1 + 0.15 * (1 - j)), { alpha: j * (1 - span(t, 7.2, 7.6)), color: "#ffd34d" });
+      const k = span(t, 7.4, 8.4); if (img && img.complete && img.naturalWidth) { ctx.save(); ctx.globalAlpha = k; const w = 620, h = w * img.naturalHeight / img.naturalWidth; ctx.drawImage(img, W / 2 - w / 2, H * 0.6 - h / 2, w, h); ctx.restore(); }
       text(ctx, "أتحدى وأتعاون", W / 2, H * 0.84, 64, { alpha: k, color: "#ffe7a8", weight: 600 });
       ctx.save(); dunes(ctx, H * 0.97, 14, 0, "#0b1030"); ctx.fillStyle = "#141c4c"; const cx = W + 200 - t * 70; for (let i = 0; i < 5; i++) camel(ctx, cx + i * 70, H * 0.955, 0.32, t + i); ctx.restore();
     } },
@@ -397,3 +398,22 @@ export function drawSeg(ctx, id, t, st, img) {
   const s = SEG[id]; ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; s.draw(ctx, t, st || { drawn: [], cheer: new Set() }, img); ctx.restore();
   const edge = Math.min(t, s.interact ? 99 : s.dur - t); if (edge < 0.3) { ctx.fillStyle = `rgba(0,0,0,${1 - edge / 0.3})`; ctx.fillRect(0, 0, W, H); }
 }
+
+// ---------- voice lines: ids + delivery notes (for the recording studio) ----------
+const NOTES = {
+  "storm-1": "صرخة قلق وسط الريح، قصيرة وعالية", "hadi-1": "هادئ وعميق، وقفة بعد «قافلة»", "hadi-2": "دافئ، كأنك تحكي حكاية",
+  "order-1": "ثابت وواثق، شدّ على «إيقاع واحد»", "lantern-1": "كلّمهم مباشرة، نبرة قريبة", "lantern-2": "كلمة وحدة واضحة، نبرة صاعدة", "lantern-3": "كلمة وحدة واضحة، نبرة صاعدة",
+  "lantern-4": "كلمة وحدة واضحة، نبرة صاعدة", "lantern-5": "كلمة وحدة واضحة، نبرة صاعدة", "lantern-6": "كلمة وحدة واضحة، نبرة صاعدة", "lantern-7": "ببطء، همس قوي",
+  "star-1": "متدرج، كأنك تكشف سر", "star-2": "تشويق، علّق آخر الجملة", "star-3": "حماس وفرحة!", "star-4": "راوي مغامرة", "star-5": "غموض خفيف",
+  "problem-1": "رحيم، بدون لوم", "problem-2": "جدي وأبطأ", "problem-3": "ثقيل، ووقفة بعدها",
+  "leave-1": "سؤال حقيقي، بدون سخرية", "leave-2": "هادئ", "leave-3": "كل كلمة لحالها", "leave-4": "حكمة هادئة",
+  "fazaa-1": "دافئ ومتحمس", "fazaa-2": "فرحة", "fazaa-3": "ببطء… أهم جملة في الفيلم", "fazaa-4": "أبطأ، وابتسامة في الصوت",
+  "you-1": "كأنك تكلم كل واحد بعينه", "you-2": "أقوى وأوضح", "duty-1": "عادي واضح", "duty-2": "تشويق", "duty-3": "حماس ثم هدوء في آخرها",
+  "recap-1": "ملخّص سريع", "recap-2": "واضح وبطيء شوي", "recap-3": "حماس!", "cards-1": "حماس معلّق رياضي", "cards-2": "تحدّي، كأنك تدعوهم",
+  "banners-1": "فخر", "banners-2": "بصوت عالي!", "reveal-1": "صوت الحادي: أعمق وأبطأ", "reveal-2": "أعمق… وقفة بعد «خميس»", "reveal-3": "تتحول لابتسامة",
+  "end-1": "إعلان مهم، نبرة رسمية حماسية", "end-2": "كل كلمة بوقفة", "end-3": "سؤال حماسي!", "end-4": "شعار، بفخر",
+};
+SEGMENTS.forEach((sg) => sg.vo.forEach((v, i) => { v.id = `${sg.id}-${i + 1}`; v.n = NOTES[v.id] || ""; }));
+/** the card names are spoken when a card is drawn live */
+export const CARD_LINES = POWER_DECK.map((c) => ({ id: "card-" + c.k, s: c.name + "!", n: "حماس معلّق رياضي", seg: "cards" }));
+export const ALL_LINES = [...SEGMENTS.flatMap((sg) => sg.vo.map((v) => ({ ...v, seg: sg.id, title: sg.title }))), ...CARD_LINES.map((c) => ({ ...c, title: "أسماء البطاقات" }))];
