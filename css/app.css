@@ -713,3 +713,4 @@ body.is-screen .tabbar,body.is-print .tabbar{display:none!important}
 .pl-motto{margin:0 5mm;text-align:center;font-size:3.4mm;background:color-mix(in srgb,var(--ld) 10%,#fff);border:.3mm solid var(--ld);border-radius:2mm;padding:1.8mm}
 .pp-lead .pl-name{margin:0 5mm;font-size:3mm;color:#5d6590;border-bottom:none;min-height:auto}
 .car-hero h1{line-height:1.2;margin-top:4px}
+.toast{z-index:80}

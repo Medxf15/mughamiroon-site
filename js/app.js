@@ -764,6 +764,13 @@ function viewProfile() {
 
 // ---------------- actions ----------------
 const sel = (id) => document.getElementById(id);
+/** write a duty row, and remove it when it no longer carries anything */
+async function saveDuty(mid, car, patch) {
+  const cur = L.dutyRow(S, mid, car) || { mastered: false, speaker_kid: null, topic: null };
+  const next = { ...cur, ...patch };
+  if (!next.mastered && !next.speaker_kid && next.topic == null) return db.remove("duty_log", { meeting_id: mid, caravan_id: car });
+  return db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, mastered: !!next.mastered, speaker_kid: next.speaker_kid || null, topic: next.topic ?? null }], "meeting_id,caravan_id");
+}
 async function setPoint(kid, patch) {
   const key = meetId + "|" + kid; const prev = I.pts[key] ? { ...I.pts[key] } : null;
   const row = { meeting_id: meetId, kid_id: kid, ...(prev ? {} : {}), ...patch };
@@ -772,7 +779,8 @@ async function setPoint(kid, patch) {
   const ix = S.points.findIndex((p) => p.meeting_id === meetId && p.kid_id === kid);
   if (ix >= 0) S.points[ix] = local; else S.points.push(local);
   I = L.index(S); render();
-  const ok = await guard(() => db.upsert("points", [row], "meeting_id,kid_id"));
+  const ok = await guard(() => (L.meaningful(local) ? db.upsert("points", [row], "meeting_id,kid_id") : db.remove("points", { meeting_id: meetId, kid_id: kid })));
+  if (ok !== undefined && !L.meaningful(local)) { S.points = S.points.filter((p) => !(p.meeting_id === meetId && p.kid_id === kid)); I = L.index(S); render(); }
   if (ok === undefined) { if (prev) S.points[S.points.findIndex((p) => p.meeting_id === meetId && p.kid_id === kid)] = prev; else S.points = S.points.filter((p) => !(p.meeting_id === meetId && p.kid_id === kid)); I = L.index(S); render(); }
 }
 const busy = new Set();
@@ -800,7 +808,8 @@ document.addEventListener("click", async (e) => {
     case "matchdel": if (ui.armed !== key) { ui.armed = key; b.textContent = "متأكد؟"; setTimeout(() => (ui.armed = null), 3000); return; }
       ui.openMatch = null; await guard(() => db.remove("matches", { id }), "حُذفت المباراة"); await guard(() => reload("matches", "goals", "cards", "power_cards")); return render();
     case "duty": { const car = Number(b.dataset.car); const mid = Number(b.dataset.mid) || meetId; const v = !L.dutyMastered(S, mid, car);
-      return doUndoable(v ? "✅ سُجّل الإتقان" : "أُلغي الإتقان", () => db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, mastered: v }], "meeting_id,caravan_id"), () => db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, mastered: !v }], "meeting_id,caravan_id"), ["duty_log"]); }
+      const before = L.dutyRow(S, mid, car);
+      return doUndoable(v ? "✅ سُجّل الإتقان" : "أُلغي الإتقان", () => saveDuty(mid, car, { mastered: v }), () => (before ? db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, mastered: before.mastered, speaker_kid: before.speaker_kid, topic: before.topic }], "meeting_id,caravan_id") : db.remove("duty_log", { meeting_id: mid, caravan_id: car })), ["duty_log"]); }
     case "doprint": return window.print();
     case "sealsave": { const n = Number(b.dataset.n); const o = S.seals.find((x) => x.n === n) || {}; const prev = { n, title: o.title || "", hint: o.hint || "", body: o.body || "", mission: o.mission || "" };
       return doUndoable("حُفظ الختم", () => db.upsert("seals", [{ n, title: sel("sl-t-" + n).value.trim(), hint: sel("sl-h-" + n).value.trim(), body: sel("sl-b-" + n).value.trim(), mission: sel("sl-m-" + n).value.trim() }], "n"), () => db.upsert("seals", [prev], "n"), ["seals"]); }
@@ -818,7 +827,8 @@ document.addEventListener("click", async (e) => {
       const ix = S.team_challenge.findIndex((x) => x.meeting_id === meetId && x.caravan_id === car); const prev = ix >= 0 ? S.team_challenge[ix].points : null;
       if (ix >= 0) S.team_challenge[ix] = { ...S.team_challenge[ix], points: v }; else S.team_challenge.push({ meeting_id: meetId, caravan_id: car, points: v });
       I = L.index(S); render();
-      const r = await guard(() => db.upsert("team_challenge", [{ meeting_id: meetId, caravan_id: car, points: v }], "meeting_id,caravan_id"));
+      const r = await guard(() => (v ? db.upsert("team_challenge", [{ meeting_id: meetId, caravan_id: car, points: v }], "meeting_id,caravan_id") : db.remove("team_challenge", { meeting_id: meetId, caravan_id: car })));
+      if (r !== undefined && !v) { S.team_challenge = S.team_challenge.filter((x) => !(x.meeting_id === meetId && x.caravan_id === car)); I = L.index(S); render(); }
       if (r === undefined) { await guard(() => reload("team_challenge")); render(); } return; }
     case "carsave": { const cid = Number(id); const old = I.car[cid]; const prev = { name: old.name, color: old.color, chant: old.chant, charter: old.charter }; const patch = { name: sel("cn-" + cid).value.trim() || old.name, color: sel("cc-" + cid).value, chant: sel("ch-" + cid).value.trim(), charter: sel("ct-" + cid).value.trim() };
       return doUndoable("حُفظت القافلة", () => db.update("caravans", { id: cid }, patch), () => db.update("caravans", { id: cid }, prev), ["caravans"]); }
@@ -871,7 +881,8 @@ document.addEventListener("change", async (e) => {
   const t = e.target; const a = t.dataset && t.dataset.act; if (!a) return;
   if (a === "dutyspk" || a === "dutytopic") { const mid = Number(t.dataset.mid), car = Number(t.dataset.car);
     const row = a === "dutyspk" ? { speaker_kid: t.value || null } : { topic: t.value === "" ? null : Number(t.value) };
-    await guard(() => db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, ...row }], "meeting_id,caravan_id"), a === "dutyspk" ? "حُفظ المتحدث" : "حُفظ الموضوع"); await guard(() => reload("duty_log")); return render(); }
+    const before = L.dutyRow(S, mid, car);
+    return doUndoable(a === "dutyspk" ? "حُفظ المتحدث" : "حُفظ الموضوع", () => saveDuty(mid, car, row), () => (before ? db.upsert("duty_log", [{ meeting_id: mid, caravan_id: car, mastered: before.mastered, speaker_kid: before.speaker_kid, topic: before.topic }], "meeting_id,caravan_id") : db.remove("duty_log", { meeting_id: mid, caravan_id: car })), ["duty_log"]); }
   if (a === "carlead") { const car = Number(t.dataset.car), f = t.dataset.f; const prev = I.car[car][f] || null; const v = t.value || null;
     const others = { leader_kid: "القائد", deputy_kid: "النائب" }; if (v && f !== "captain_kid" && ["leader_kid", "deputy_kid"].some((g) => g !== f && I.car[car][g] === v)) { toast("نفس الطفل ما يكون قائد ونائب.", "err"); return render(); }
     return doUndoable("حُفظت القيادة", () => db.update("caravans", { id: car }, { [f]: v }), () => db.update("caravans", { id: car }, { [f]: prev }), ["caravans"]); }

@@ -37,6 +37,10 @@ export function index(S) {
   for (const d of S.deductions) (I.ded[d.meeting_id + "|" + d.kid_id] ||= []).push(d);
   I.tc = {};
   for (const t of S.team_challenge) I.tc[t.meeting_id + "|" + t.caravan_id] = t.points;
+  // a meeting is "taken" once anything real was recorded in it (a mark, an absence, a deduction)
+  I.started = new Set();
+  for (const p of S.points) if (meaningful(p)) I.started.add(p.meeting_id);
+  for (const d of S.deductions) I.started.add(d.meeting_id);
   return I;
 }
 
@@ -45,15 +49,24 @@ export const kidsOf = (S, cid) => activeKids(S).filter((k) => k.caravan_id === c
   .sort((a, b) => (a.created_at || "").localeCompare(b.created_at || "") || a.first_name.localeCompare(b.first_name, "ar"));
 export const kidName = (k) => (k ? (k.first_name + " " + (k.family_name || "")).trim() : "—");
 
+/** a points row that carries information (not just the default "present, nothing earned") */
+export function meaningful(p) { return !!p && (p.present === false || CATS.some((c) => p[c[0]]) || !!p.fazaa || !!p.home); }
 export function row(I, mid, kid) { return I.pts[mid + "|" + kid] || null; }
 export function present(I, mid, kid) { const r = row(I, mid, kid); return r ? r.present !== false : true; }
-export function earned(I, mid, kid) { const r = row(I, mid, kid); if (!r) return 0; return CATS.reduce((n, c) => n + (r[c[0]] ? 1 : 0), 0); }
+/** an absent kid earns nothing that day, but his marks are kept so a mistaken "absent" can be undone */
+export function earned(I, mid, kid) { const r = row(I, mid, kid); if (!r || r.present === false) return 0; return CATS.reduce((n, c) => n + (r[c[0]] ? 1 : 0), 0); }
 export function deds(I, mid, kid) { return (I.ded[mid + "|" + kid] || []).slice().sort((a, b) => (a.created_at || "").localeCompare(b.created_at || "")); }
-export function minus(I, mid, kid) { return Math.min(DED_CAP, deds(I, mid, kid).reduce((n, d) => n + (d.value || 0), 0)); }
+export function minus(I, mid, kid) { if (!present(I, mid, kid)) return 0; return Math.min(DED_CAP, deds(I, mid, kid).reduce((n, d) => n + (d.value || 0), 0)); }
 export function warned(I, mid, kid) { return deds(I, mid, kid).some((d) => d.value === 0); }
 export function net(I, mid, kid) { return earned(I, mid, kid) - minus(I, mid, kid); }
-/** a meeting "counts" for a kid when something was recorded for it */
-export function recorded(I, mid, kid) { return !!row(I, mid, kid) || deds(I, mid, kid).length > 0; }
+/** attendance counts for a kid once the meeting was taken, unless he joined after that meeting */
+export function recorded(I, mid, kid) {
+  if (!I.started || !I.started.has(mid)) return false;
+  if (row(I, mid, kid) || deds(I, mid, kid).length) return true;
+  const k = I.kid[kid], m = I.meet[mid];
+  return !(k && m && k.created_at && m.meet_date && k.created_at.slice(0, 10) > m.meet_date);
+}
+export const meetingTaken = (I, mid) => !!(I.started && I.started.has(mid));
 
 export function teamMeet(S, I, mid, cid) {
   const ks = kidsOf(S, cid).filter((k) => present(I, mid, k.id));
