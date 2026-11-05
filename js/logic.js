@@ -249,30 +249,36 @@ export function level(total) {
   return { i, ...LEVELS[i], next: nx, toNext: nx ? nx.min - total : 0, pct: nx ? Math.round(((total - LEVELS[i].min) / (nx.min - LEVELS[i].min)) * 100) : 100 };
 }
 
-/** power cards: every star = one draw (gold = two). Used in a league match, one per team per match. */
+/** power cards v2: tiers like FIFA (bronze → legendary). Drawn by luck whenever the supervisor decides, then given to a caravan. */
 export const POWER = {
-  golden: { name: "الهدف الذهبي", icon: "⚡", tier: 3, rule: "لمدة دقيقتين: أي هدف لكم يُحسب هدفين." },
-  shield: { name: "الدرع", icon: "🛡️", tier: 3, rule: "لمدة دقيقتين: أول هدف يدخل عليكم لا يُحسب." },
-  extra: { name: "الفزعة الكبرى", icon: "🦸", tier: 2, rule: "مشرف من اختياركم يلعب معكم لمدة دقيقتين." },
-  freekick: { name: "الركلة الحرة", icon: "🎯", tier: 2, rule: "ركلة حرة مباشرة من منتصف الملعب، مرة واحدة." },
-  timeout: { name: "الوقت المستقطع", icon: "⏱️", tier: 1, rule: "توقيف المباراة دقيقة كاملة لخطة القافلة." },
-  kickoff: { name: "اختيار البداية", icon: "🧭", tier: 1, rule: "تختارون جهة الملعب وضربة البداية." },
+  kickoff: { name: "اختيار البداية", icon: "🧭", svg: "compass", tier: 1, rule: "تختارون جهة الملعب وضربة البداية." },
+  freekick: { name: "الركلة الحرة", icon: "🎯", svg: "target", tier: 1, rule: "ركلة حرة مباشرة من منتصف الملعب." },
+  penalty: { name: "ضربة الجزاء", icon: "🥅", svg: "penalty", tier: 2, rule: "ضربة جزاء فورية، يسددها لاعب تختارونه." },
+  block: { name: "التعطيل", icon: "⛔", svg: "block", tier: 2, rule: "تلغي بطاقة الخصم لحظة إعلانها." },
+  extra: { name: "الفزعة الكبرى", icon: "🦸", svg: "hero", tier: 3, rule: "مشرف تختارونه يلعب معكم دقيقتين." },
+  loan: { name: "استعارة لاعب", icon: "🔁", svg: "swap", tier: 3, rule: "لاعب من قافلة ثانية يلعب معكم شوطًا كاملًا." },
+  shield: { name: "الدرع", icon: "🛡️", svg: "shield", tier: 3, rule: "دقيقتين: أول هدف عليكم ما ينحسب." },
+  golden: { name: "الهدف الذهبي", icon: "⚡", svg: "bolt", tier: 4, rule: "دقيقتين: كل هدف لكم بهدفين." },
+  mirror: { name: "المرآة", icon: "🪞", svg: "mirror", tier: 4, rule: "تلغي بطاقة الخصم وتاخذون مفعولها لكم." },
 };
-export const TIER = { 1: "عادية", 2: "نادرة", 3: "أسطورية" };
-const WEIGHTS = [["kickoff", 20], ["timeout", 20], ["extra", 18], ["freekick", 17], ["golden", 13], ["shield", 12]];
-/** r in [0,1) */
-export function drawKind(r) { let x = r * 100; for (const [k, w] of WEIGHTS) { if (x < w) return k; x -= w; } return "kickoff"; }
-
-/** slots the caravan earned in a meeting but has not drawn yet */
-export function pendingDraws(S, I, mid, cid) {
-  const st = teamMeet(S, I, mid, cid).stars;
-  const have = (S.power_cards || []).filter((p) => p.meeting_id === mid && p.caravan_id === cid).map((p) => p.slot);
-  const out = []; for (let s = 1; s <= st; s++) if (!have.includes(s)) out.push(s);
-  if (dutyStarAt(S, mid, cid) && !have.includes(3)) out.push(3);
-  return out;
+export const TIER = { 1: "برونزية", 2: "فضية", 3: "ذهبية", 4: "أسطورية" };
+export const TIER_W = { 1: 40, 2: 30, 3: 20, 4: 10 };
+/** how many printed copies of each kind */
+export const DECK = { kickoff: 4, freekick: 4, penalty: 3, block: 3, extra: 3, loan: 3, shield: 3, golden: 2, mirror: 2 };
+/** r1 picks the tier by weight, r2 picks a kind inside it (both in [0,1)) */
+export function drawCard(r1, r2) {
+  let x = r1 * 100, tier = 1;
+  for (const t of [1, 2, 3, 4]) { if (x < TIER_W[t]) { tier = t; break; } x -= TIER_W[t]; tier = t; }
+  const ks = Object.keys(POWER).filter((k) => POWER[k].tier === tier);
+  return ks[Math.min(ks.length - 1, Math.floor(r2 * ks.length))];
 }
+export function drawKind(r) { return drawCard(r, (r * 7919) % 1); }
+
+/** no automatic draws any more: the supervisor decides when a caravan gets a card */
+export function pendingDraws() { return []; }
+export const cardUsed = (p) => !!(p.used_match_id || p.used_at);
 export const cardsOf = (S, cid) => (S.power_cards || []).filter((p) => p.caravan_id === cid).sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
-export const freeCards = (S, cid) => cardsOf(S, cid).filter((p) => !p.used_match_id);
+export const freeCards = (S, cid) => cardsOf(S, cid).filter((p) => !cardUsed(p));
 export const cardFor = (S, matchId, cid) => (S.power_cards || []).find((p) => p.used_match_id === matchId && p.caravan_id === cid) || null;
 
 /** stations: each ROAD stop unlocks a free privilege for the next meeting */

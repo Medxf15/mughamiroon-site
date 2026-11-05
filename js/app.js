@@ -1,6 +1,7 @@
 import { auth, db, ApiError, storage } from "./api.js";
 import { ALL_LINES } from "./film.js";
 import * as L from "./logic.js";
+import { planFor, toMin, fmt12 } from "./plans.js";
 
 // ---------------- state ----------------
 const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings", "duty_log"];
@@ -85,7 +86,7 @@ const NAV = [
   ["kids", "المغامرون", "🎒", () => true, false],
   ["admin", "الإدارة", "⚙️", () => true, true],
 ];
-const SECTION = { studio: "admin", kid: "kids", caravan: "caravans", reports: "admin", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", kit: "home" };
+const SECTION = { plan: "home", cards: "league", studio: "admin", kid: "kids", caravan: "caravans", reports: "admin", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", kit: "home" };
 
 let screenTimer = null;
 async function render() {
@@ -103,7 +104,7 @@ async function render() {
   if (me.status !== "approved") return viewPending();
   if (!S) { $app().innerHTML = shell('<div class="empty">جاري تحميل البيانات…</div>'); await guard(loadAll); if (!S) return; if (isOwner()) await guard(loadAccounts); }
   else if (r.name === "accounts" && isOwner()) await guard(loadAccounts);
-  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint, studio: viewStudio };
+  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint, studio: viewStudio, plan: viewPlan, cards: viewCards };
   const fn = views[r.name] || viewToday;
   if (r.name === "live" && !can("points")) return go("home");
   if (r.name === "accounts" && !isOwner()) return go("home");
@@ -236,8 +237,8 @@ function viewToday() {
     { key: "meal", time: "الوجبة", icon: "🍽️", title: "الوجبة والنظافة", auto: null, body: `${dutyRow("food")}${dutyRow("clean")}` },
     { key: "league", time: "الميدان", icon: "⚽", title: "الدوري", auto: todayMatches.length ? todayMatches.every((x) => x.played) : null,
       body: `${todayMatches.length ? `<div class="mini-matches">${todayMatches.map((x) => `<a href="#league" class="mm ${x.played ? "done" : ""}"><span style="${carStyle(I.car[x.home_id])}">${esc(carName(x.home_id))}</span><b class="num">${x.played ? x.home_goals + " – " + x.away_goals : "ضد"}</b><span style="${carStyle(I.car[x.away_id])}">${esc(carName(x.away_id))}</span></a>`).join("")}</div>` : '<p class="muted">ما فيه مباريات في هذا اللقاء.</p>'}
-        ${pend.length ? `<p>🎴 سحبات تنتظر: ${pend.map(([c, p]) => `<b>${esc(c.name)}</b> (${p.length})`).join("، ")} · <a href="#live">اسحب من التحضير</a></p>` : ""}
-        ${drawn.length ? `<p class="small">سلّم البطاقات المطبوعة: ${drawn.map((p) => `${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)} ← ${esc(carName(p.caravan_id))}`).join("، ")}</p>` : ""}
+        <p>🎴 <a href="#cards">بطاقات القوة: اسحب أو سجّل المستخدمة</a></p>
+        ${drawn.length ? `<p class="small">سلّم البطاقات المطبوعة: ${drawn.map((p) => `${esc(L.POWER[p.kind].name)} ← ${esc(carName(p.caravan_id))}`).join("، ")}</p>` : ""}
         <p class="small muted">قبل الصافرة: كل قافلة تعلن بطاقتها، والكابتن يمثلها.</p>` },
     { key: "close", time: "9:45", icon: "🌙", title: "الختام", auto: null,
       body: `<div class="close-stars">${S.caravans.map((c) => { const t = L.teamMeet(S, I, m.id, c.id); return `<span style="${carStyle(c)}">${esc(c.name)} ${t.stars === 2 ? "🌟" : t.stars ? "⭐" : `<small class="num">${t.ready}/${t.n}</small>`}</span>`; }).join("")}</div>
@@ -257,6 +258,7 @@ function viewToday() {
         <div class="hero-chips"><span>👥 <b class="num">${recN ? presN + "/" + act.length : "—"}</b> حضور</span><span>⭐ <b class="num">${totStars}</b> نجوم اليوم</span><span>📜 <b class="num">${sealsToday.length}</b> رسائل انفتحت</span></div></div>
       <div class="hero-side">${meetPicker()}<div class="hero-prog"><div class="prog"><i style="width:${Math.round((doneN / steps.length) * 100)}%"></i></div><small class="num">${doneN} من ${steps.length} محطات</small></div></div>
     </section>
+    ${planFor(m.number) ? `<a class="plan-banner" href="#plan/${m.number}"><span>📋</span><div><b>دليل اللقاء: ${esc(planFor(m.number).title)}</b><small>كل فقرة بالدقيقة، واللي تقوله، ومهام المساعد والقادة</small></div><i>←</i></a>` : ""}
     ${isOwner() && accounts.some((a) => a.status === "pending") ? `<a class="notice" href="#accounts">${accounts.filter((a) => a.status === "pending").length} حساب ينتظر موافقتك</a>` : ""}
     <ol class="day">${steps.map((st, i) => `<li class="day-step ${st.done ? "done" : ""} ${i === nowIdx ? "now" : ""}">
       <div class="ds-rail"><span class="ds-dot">${st.done ? "✓" : st.icon}</span></div>
@@ -313,9 +315,11 @@ function liveCaravan(c, m) {
 // ---------------- screen (TV) ----------------
 function viewScreen() {
   const m = I.meet[meetId];
-  const tabs = [["caravans", "القوافل"], ["levels", "المستويات"], ["power", "بطاقات القوة"], ["seal", "الختم"], ["league", "الدوري"]];
+  const tabs = [["announce", "الإعلان"], ["caravans", "القوافل"], ["levels", "المستويات"], ["power", "بطاقات القوة"], ["seal", "الختم"], ["league", "الدوري"]];
   let body = "";
-  if (ui.screenTab === "caravans") {
+  if (ui.screenTab === "announce") {
+    body = announceHTML();
+  } else if (ui.screenTab === "caravans") {
     body = `<div class="tv-cars">${S.caravans.map((c) => {
       const t = L.teamTotals(S, I, c.id); const r = m ? L.teamMeet(S, I, m.id, c.id) : { stars: 0, ready: 0, n: 0 };
       const rd = L.roadOf(S, I, c.id); const pos = rd.pos; const fresh = rd.last && m && rd.last.meeting_id === m.id ? L.PERKS[rd.last.pos] : null;
@@ -332,8 +336,8 @@ function viewScreen() {
     body = levelsHTML(true);
   } else if (ui.screenTab === "power") {
     body = `<div class="tv-power">${S.caravans.map((c) => { const f = L.freeCards(S, c.id); const used = L.cardsOf(S, c.id).length - f.length;
-      return `<section class="tv-pw" style="${carStyle(c)}"><header><h2>${esc(c.name)}</h2><span>🎴 <b class="num">${f.length}</b></span></header><div class="pc-row">${f.map((p) => pcardHTML(p.kind)).join("") || '<p class="muted">لا بطاقات بعد. كل نجمة = سحبة.</p>'}</div>${used ? `<small>استُخدمت <b class="num">${used}</b></small>` : ""}</section>`; }).join("")}</div>
-      <p class="tv-legend"><span>⭐ نجمة = سحبة</span><span>🌟 ذهبية = سحبتان</span><span>بطاقة واحدة لكل قافلة في المباراة، تُعلن قبل البداية</span></p>`;
+      return `<section class="tv-pw" style="${carStyle(c)}"><header><h2>${esc(c.name)}</h2><span>🎴 <b class="num">${f.length}</b></span></header><div class="pc-row">${f.map((p) => pcardHTML(p.kind)).join("") || '<p class="muted">لا بطاقات بعد.</p>'}</div>${used ? `<small>استُخدمت <b class="num">${used}</b></small>` : ""}</section>`; }).join("")}</div>
+      <p class="tv-legend">${[1, 2, 3, 4].map((t) => `<span class="tl t${t}">${L.TIER[t]}</span>`).join("")}<span>بطاقة وحدة لكل قافلة في المباراة، يعلنها الكابتن قبل البداية</span></p>`;
   } else if (ui.screenTab === "seal") {
     body = sealHTML(m, true);
   } else {
@@ -354,7 +358,8 @@ function viewScreen() {
     ${ui.tvReveal ? revealHTML(ui.tvReveal, false) : ""}
     <p class="tv-legend">${L.CATS.map((c) => `<span><i class="dot" style="--c:${c[2]}"></i>${c[1]}</span>`).join("")}<span>⭐ كل القافلة ${L.NC - 1} نقاط فأكثر</span><span>🌟 كل القافلة ${L.NC}</span></p>
   </div>`;
-  screenTimer = setInterval(async () => { if (parseRoute().name !== "screen") return; try { await reload("points", "deductions", "team_challenge", "matches", "goals", "cards", "kids", "caravans", "league_rounds", "power_cards", "seals", "app_settings", "duty_log"); viewScreen(); } catch (e) {} }, 10000);
+  if (ui.screenTab === "announce") return;
+  screenTimer = setInterval(async () => { if (parseRoute().name !== "screen") return; if (ui.screenTab === "announce") return; try { await reload("points", "deductions", "team_challenge", "matches", "goals", "cards", "kids", "caravans", "league_rounds", "power_cards", "seals", "app_settings", "duty_log"); viewScreen(); } catch (e) {} }, 10000);
 }
 
 // ---------------- caravans ----------------
@@ -372,6 +377,7 @@ function viewCaravans() {
   $app().innerHTML = shell(`
     ${pageHead("القوافل", "اضغط على أي قافلة تشوف قيادتها وأعضاءها وطريقها وبطاقاتها.", meetPicker())}
     <div class="car-cards">${cards}</div>
+    ${edit ? drawPanel() : ""}
     ${edit ? `<details class="panel tools-box" ${plan ? "open" : ""}><summary><h3>⚖️ أدوات التوزيع المتوازن</h3></summary><p class="muted small">قاعدة العدالة: <b>الحارس الثابت ميزة، والعدد الأكبر ميزة، وما تجتمع الميزتان في قافلة وحدة.</b> كل قافلة تاخذ حارس ثابت واحد إذا توفر، والقافلة اللي بدون حارس ثابت (يتناوبون على المرمى) تاخذ اللاعب الزايد إذا العدد ما انقسم بالتساوي. بعدها يتوزع الدفاع والوسط والهجوم بأقل فرق ممكن بين القوافل، ويُفصل من يحملون نفس اسم العائلة، ويبقى الطفل في قافلته الحالية إذا تساوت الخيارات. تراجعه قبل الاعتماد، وتقدر تغيّر أي طفل بعدها.</p>${(() => { const gk = L.activeKids(S).filter((k) => k.position === "gk").length; return gk < S.caravans.length ? `<p class="alert">عندك ${gk} حراس لـ${S.caravans.length} قوافل، فـ${S.caravans.length - gk} قافلة بتلعب بحارس متناوب، ولها الأفضلية في العدد إذا ما انقسم بالتساوي.</p>` : ""; })()}
       ${plan ? `<table class="tbl"><thead><tr><th>المغامر</th><th>المركز</th><th>الحرف</th><th>الحالية</th><th>المقترحة</th></tr></thead><tbody>${L.activeKids(S).slice().sort((a, b) => String(plan[a.id]).localeCompare(String(plan[b.id]))).map((k) => `<tr class="${plan[k.id] !== k.caravan_id ? "chg" : ""}"><td>${esc(L.kidName(k))}</td><td>${esc(L.POSITIONS[k.position] || "—")}</td><td>${esc(k.trait || "—")}</td><td>${esc(carName(k.caravan_id))}</td><td><b>${esc(carName(plan[k.id]))}</b></td></tr>`).join("")}</tbody></table>
         <div class="tbl-wrap"><table class="tbl"><thead><tr><th>القافلة</th><th>العدد</th><th>الحارس الثابت</th><th>دفاع</th><th>وسط</th><th>هجوم</th><th>بدون مركز</th></tr></thead><tbody>${L.balanceSummary(S, plan).map((x) => `<tr><td><span class="sw" style="${carStyle(x.c)}"></span>${esc(x.c.name)}</td><td class="num"><b>${x.size}</b></td><td>${x.gk ? esc(L.kidName(x.gk)) : "<b>حارس متناوب</b>"}</td><td class="num">${x.def}</td><td class="num">${x.mid}</td><td class="num">${x.fwd}</td><td class="num">${x.none}</td></tr>`).join("")}</tbody></table></div>
@@ -399,7 +405,7 @@ function viewCaravan(id) {
         return `<tr><td><a href="#kid/${k.id}">${esc(L.kidName(k))}</a> ${tags}${k.position ? ` <small class="muted">${esc(L.POSITIONS[k.position])}</small>` : ""}</td><td>${ro ? esc(ro[1]) : "—"}</td><td>${lv.icon} ${esc(lv.name)}</td><td class="num">${tot}</td></tr>`; }).join("") || '<tr><td colspan="4" class="muted">لا يوجد أعضاء</td></tr>'}
       </tbody></table></div></section>
     <section class="panel"><h3>الطريق</h3><div class="road big-road">${road}</div><p>📍 <b>${esc(L.ROAD[rd.pos])}</b>${rd.last ? ` · 🎁 آخر مكافأة: <b>${esc(L.PERKS[rd.last.pos].name)}</b>: ${esc(L.PERKS[rd.last.pos].what)}` : ""}</p>${nx ? `<p class="muted small">المحطة القادمة «${esc(L.ROAD[rd.pos + 1])}» تفتح: ${esc(nx.name)}</p>` : ""}</section>
-    <section class="panel"><h3>🎴 بطاقات القوة</h3><div class="pc-row">${L.freeCards(S, c.id).map((p) => pcardHTML(p.kind)).join("") || '<span class="muted">لا بطاقات حاليًا. كل نجمة = سحبة.</span>'}</div></section>
+    <section class="panel"><h3>🎴 بطاقات القوة</h3><div class="pc-row">${L.freeCards(S, c.id).map((p) => pcardHTML(p.kind)).join("") || '<span class="muted">لا بطاقات حاليًا.</span>'}</div><p><a class="btn sm ghost" href="#cards">إدارة البطاقات</a></p></section>
     <section class="panel"><h3>هوية القافلة</h3>${edit ? `<div class="cform"><label>الاسم<input id="cn-${c.id}" value="${esc(c.name)}" maxlength="20"></label><label>اللون<input id="cc-${c.id}" type="color" value="${esc(c.color)}"></label>
         <label class="wide">الصيحة<input id="ch-${c.id}" value="${esc(c.chant || "")}" maxlength="60" placeholder="3 كلمات"></label>
         <label class="wide">الميثاق<textarea id="ct-${c.id}" rows="2" maxlength="300" placeholder="3 قواعد اتفقت عليها القافلة">${esc(c.charter || "")}</textarea></label>
@@ -522,7 +528,7 @@ function matchCard(m, edit) {
   return `<div class="match ${m.played ? "done" : ""}">
     <button class="mhead" data-act="mopen" data-id="${m.id}" aria-expanded="${open}">
       <span class="team" style="${carStyle(h)}">${esc(h.name)}${m.fair_home ? " ✓" : ""}</span><span class="score">${scoreTxt}</span><span class="team" style="${carStyle(a)}">${esc(a.name)}${m.fair_away ? " ✓" : ""}</span></button>
-    <div class="mmeta">${side(m.home_id).concat(side(m.away_id)).map((g) => `⚽ ${esc(I.kid[g.kid_id].first_name)}`).join(" · ")}${cards.length ? " " + cards.map((c) => `${c.color === "blue" ? "🟦" : c.color === "yellow" ? "🟨" : "🟥"} ${esc(I.kid[c.kid_id] ? I.kid[c.kid_id].first_name : "")}`).join(" · ") : ""}${m.spirit_kid && I.kid[m.spirit_kid] ? ` · 🏅 ${esc(I.kid[m.spirit_kid].first_name)}` : ""}${(S.power_cards || []).filter((p) => p.used_match_id === m.id).map((p) => ` · ${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)} (${esc(carName(p.caravan_id))})`).join("")}</div>
+    <div class="mmeta">${side(m.home_id).concat(side(m.away_id)).map((g) => `⚽ ${esc(I.kid[g.kid_id].first_name)}`).join(" · ")}${cards.length ? " " + cards.map((c) => `${c.color === "blue" ? "🟦" : c.color === "yellow" ? "🟨" : "🟥"} ${esc(I.kid[c.kid_id] ? I.kid[c.kid_id].first_name : "")}`).join(" · ") : ""}${m.spirit_kid && I.kid[m.spirit_kid] ? ` · 🏅 ${esc(I.kid[m.spirit_kid].first_name)}` : ""}${(S.power_cards || []).filter((p) => p.used_match_id === m.id).map((p) => ` · ${esc(L.POWER[p.kind].name)} (${esc(carName(p.caravan_id))})`).join("")}</div>
     ${open && edit ? `<div class="medit">
       <div class="grid2"><label>الفريق الأول<select id="mth-${m.id}">${S.caravans.map((c) => `<option value="${c.id}" ${c.id === m.home_id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label><label>الفريق الثاني<select id="mta-${m.id}">${S.caravans.map((c) => `<option value="${c.id}" ${c.id === m.away_id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label></div>
       <div class="grid2"><label>الجولة<input id="mr-${m.id}" type="number" min="1" max="20" value="${m.round}"></label><label>اللقاء<select id="mm-${m.id}">${S.meetings.map((x) => `<option value="${x.id}" ${x.id === m.meeting_id ? "selected" : ""}>اللقاء ${x.number} · ${fmtDate(x.meet_date)}</option>`).join("")}</select></label></div>
@@ -530,7 +536,7 @@ function matchCard(m, edit) {
       <div class="grid2"><label>حارس ${esc(h.name)}<select id="mkh-${m.id}">${kidOpt(L.kidsOf(S, m.home_id), m.home_keeper)}</select></label><label>حارس ${esc(a.name)}<select id="mka-${m.id}">${kidOpt(L.kidsOf(S, m.away_id), m.away_keeper)}</select></label></div>
       <div class="grid2"><label class="chk"><input id="mfh-${m.id}" type="checkbox" ${m.fair_home ? "checked" : ""}> لعب نظيف لـ${esc(h.name)} (+1)</label><label class="chk"><input id="mfa-${m.id}" type="checkbox" ${m.fair_away ? "checked" : ""}> لعب نظيف لـ${esc(a.name)} (+1)</label></div>
       <div class="grid2">${[[h, "mph"], [a, "mpa"]].map(([cc, pid]) => { const cur = L.cardFor(S, m.id, cc.id); const opts = (cur ? [cur] : []).concat(L.freeCards(S, cc.id));
-        return `<label>🎴 بطاقة قوة ${esc(cc.name)}<select id="${pid}-${m.id}"><option value="">بدون</option>${opts.map((p) => `<option value="${p.id}" ${cur && cur.id === p.id ? "selected" : ""}>${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)}</option>`).join("")}</select></label>`; }).join("")}</div>
+        return `<label>🎴 بطاقة قوة ${esc(cc.name)}<select id="${pid}-${m.id}"><option value="">بدون</option>${opts.map((p) => `<option value="${p.id}" ${cur && cur.id === p.id ? "selected" : ""}>${esc(L.POWER[p.kind].name)}</option>`).join("")}</select></label>`; }).join("")}</div>
       <label>🏅 لاعب الروح الرياضية في المباراة<select id="msp-${m.id}">${kidOpt(both, m.spirit_kid)}</select></label>
       <div class="row-btns"><button class="btn" data-act="msave" data-id="${m.id}">حفظ النتيجة</button><button class="btn danger sm" data-act="matchdel" data-id="${m.id}">حذف المباراة</button></div>
       <div class="sub"><h4>الأهداف</h4><ul class="mini-list">${goals.map((g) => `<li>⚽ ${esc(L.kidName(I.kid[g.kid_id]))}<button class="x" data-act="goaldel" data-id="${g.id}" aria-label="حذف الهدف">×</button></li>`).join("") || '<li class="muted">لا أهداف</li>'}</ul>
@@ -544,17 +550,17 @@ function matchCard(m, edit) {
 // ---------------- طريق القوافل ----------------
 function pcardHTML(kind, big) {
   const p = L.POWER[kind]; if (!p) return "";
-  return `<div class="pcard t${p.tier} ${big ? "big" : ""}"><span class="pc-tier">${L.TIER[p.tier]}</span><span class="pc-ic">${p.icon}</span><b>${esc(p.name)}</b>${big ? `<p>${esc(p.rule)}</p>` : ""}</div>`;
+  return `<div class="pcard t${p.tier} ${big ? "big" : ""}"><span class="pc-tier">${L.TIER[p.tier]}</span><span class="pc-ic">${picon(kind)}</span><b>${esc(p.name)}</b>${big ? `<p>${esc(p.rule)}</p>` : ""}</div>`;
 }
 function revealHTML(rv, closable) {
   const c = I.car[rv.car];
-  return `<div class="reveal" style="${carStyle(c)}" ${closable ? 'data-act="revealclose"' : ""} role="dialog" aria-label="بطاقة قوة جديدة"><div class="reveal-in"><p class="reveal-k">بطاقة قوة جديدة لقافلة</p><h2>${esc(c ? c.name : "")}</h2><div class="flip">${pcardHTML(rv.kind, true)}</div>${closable ? '<button class="btn ghost">تم</button>' : ""}</div></div>`;
+  return `<div class="reveal" style="${carStyle(c)}" ${closable ? 'data-act="revealclose"' : ""} role="dialog" aria-label="بطاقة قوة جديدة"><div class="reveal-in"><p class="reveal-k">بطاقة قوة جديدة لقافلة</p><h2>${esc(c ? c.name : "")}</h2>${drawStage(rv.kind, false)}${closable ? '<button class="btn ghost">تم</button>' : ""}</div></div>`;
 }
 function powerBar(c, m) {
-  const pend = L.pendingDraws(S, I, m.id, c.id); const free = L.freeCards(S, c.id);
-  if (!pend.length && !free.length) return "";
-  return `<div class="pw-bar"><span class="pw-have">🎴 بطاقات القافلة: ${free.length ? free.map((p) => `<span class="pw-chip t${L.POWER[p.kind].tier}">${L.POWER[p.kind].icon} ${esc(L.POWER[p.kind].name)}${p.meeting_id === m.id && can("points") ? ` <button class="x" data-act="carddrawdel" data-id="${p.id}" aria-label="حذف السحبة">×</button>` : ""}</span>`).join("") : '<span class="muted">لا شيء</span>'}</span>
-    ${pend.length && can("points") ? `<button class="btn sm pw-draw" data-act="draw" data-car="${c.id}" data-slot="${pend[0]}">🎴 اسحب بطاقة القوة${pend.length > 1 ? ` <span class="num">(${pend.length})</span>` : ""}</button>` : ""}</div>`;
+  const free = L.freeCards(S, c.id);
+  if (!free.length) return "";
+  return `<div class="pw-bar"><span class="pw-have">🎴 بطاقات القافلة: ${free.length ? free.map((p) => `<span class="pw-chip t${L.POWER[p.kind].tier}">${esc(L.POWER[p.kind].name)}${p.meeting_id === m.id && can("points") ? ` <button class="x" data-act="carddrawdel" data-id="${p.id}" aria-label="حذف السحبة">×</button>` : ""}</span>`).join("") : '<span class="muted">لا شيء</span>'}</span>
+    <a class="btn sm ghost" href="#cards">🎴 البطاقات</a></div>`;
 }
 function kalimaPick(c, m) {
   const d = L.dutyRow(S, m.id, c.id) || {}; const used = L.usedTopics(S, m.id, c.id);
@@ -581,10 +587,10 @@ const DUTY_TONE = { musalla: "#1fa865", kalima: "#0a63e6", food: "#ef8a33", clea
 const LVL_TONE = ["#6b7cff", "#1fa865", "#0a63e6", "#ef8a33", "#e7297a", "#d4a106"];
 function printCards() {
   const pc = (kind) => { const p = L.POWER[kind]; return `<div class="pp-card pw t${p.tier}"><div class="pw-frame">
-      <header class="pw-top"><span class="pw-gems">${"◆".repeat(p.tier)}${"◇".repeat(3 - p.tier)}</span><span class="pw-tier">${L.TIER[p.tier]}</span></header>
-      <div class="pw-medal"><span>${p.icon}</span></div>
+      <header class="pw-top"><span class="pw-gems">${"◆".repeat(p.tier)}${"◇".repeat(4 - p.tier)}</span><span class="pw-tier">${L.TIER[p.tier]}</span></header>
+      <div class="pw-medal">${picon(kind)}</div>
       <h3>${esc(p.name)}</h3><p class="pw-rule">${esc(p.rule)}</p>
-      <footer class="pw-foot"><span>بطاقة قوة</span><i></i><span>تُعلن قبل الصافرة</span></footer></div></div>`; };
+      <footer class="pw-foot"><span>بطاقة قوة</span><i></i><span>يعلنها الكابتن</span></footer></div></div>`; };
   const duty = (d) => `<div class="pp-duty" style="--dt:${DUTY_TONE[d.key]}"><header class="pd-head"><small>تكليف القافلة</small><h3>${esc(d.name)}</h3></header><div class="pd-medal">${d.icon}</div>
       <div class="pd-body"><p class="pd-k">الإتقان يعني</p><ul>${d.tasks.map((t) => `<li><i></i>${esc(t)}</li>`).join("")}</ul></div>
       <footer class="pd-f"><b>⭐</b> كل إتقانين = نجمة للقافلة</footer></div>`;
@@ -602,7 +608,12 @@ function printCards() {
 function viewPrint(arg) {
   const m = I.meet[meetId]; const { pc, duty, lvl, topic, lead } = printCards();
   let title, guide, sheets;
-  if (arg === "meet" && m) {
+  const deck = Object.entries(L.DECK).flatMap(([k, n]) => Array(n).fill(k));
+  if (arg === "deck") {
+    title = "بطاقات القوة";
+    guide = `<li><b>${deck.length} بطاقة</b> في ${Math.ceil(deck.length / 9)} صفحات: برونزية ×4 لكل نوع، فضية وذهبية ×3، أسطورية ×2.</li><li>ورق مقوّى 250–300 جرام، A4، الهوامش «بلا»، وفعّل «رسومات الخلفية».</li><li>قصّها على الخطوط، وخلها في ظرف معك. البطاقة تُسلّم للقائد بعد السحب، وترجع لك بعد المباراة.</li>`;
+    sheets = `<div class="sheet cards">${deck.map(pc).join("")}</div>`;
+  } else if (arg === "meet" && m) {
     const nx = nextMeeting(m); const kalNext = nx && S.caravans.find((c) => (L.dutyOf(S, nx, c.id) || {}).key === "kalima");
     const kd = kalNext && L.dutyRow(S, nx.id, kalNext.id);
     const lv = newLevels(m);
@@ -614,13 +625,13 @@ function viewPrint(arg) {
   } else {
     title = "مجموعة الطباعة الثابتة";
     const blanks = [[1, 8], [2, 6], [3, 5], [4, 3], [5, 2]];
-    guide = `<li><b>بطاقات القوة:</b> 4 نسخ من كل بطاقة = 24 بطاقة (3 صفحات). تُسترد بعد كل مباراة وتُعاد للصندوق.</li>
+    guide = `<li><b>بطاقات القوة:</b> ${deck.length} بطاقة (3 صفحات): برونزية ×4، فضية وذهبية ×3، أسطورية ×2. تُسترد بعد كل مباراة.</li>
       <li><b>بطاقات التكليف:</b> نسختان من كل تكليف = 8 بطاقات (صفحتان). تُسلّم في الانطلاقة وتُسترد في الختام.</li>
       <li><b>بطاقات القيادة:</b> 4 قائد + 4 نائب (صفحتان). يحملها القائد والنائب، وفيها مسؤولياتهم ومبدأ «القيادة مشورة».</li>
       <li><b>بطاقات المستويات الفارغة:</b> 24 بطاقة (${blanks.map(([i, n]) => n + " " + L.LEVELS[i].name).join("، ")}) لكتابة الاسم بخط اليد احتياطًا.</li>
       <li><b>بنك مواضيع الكلمة:</b> 40 بطاقة (7 صفحات): 26 قيم ومبادئ، و14 عن المدينة المنورة.</li>
       <li>الورق: مقوّى 250–300 جرام في المطبعة، أو A4 عادي في البيت. في نافذة الطباعة: الحجم A4، الهوامش «بلا»، وفعّل «رسومات الخلفية». القص على الخطوط المتقطعة.</li>`;
-    sheets = `<h2 class="pp-h">بطاقات القوة</h2><div class="sheet cards">${Object.keys(L.POWER).flatMap((k) => [k, k, k, k]).map(pc).join("")}</div>
+    sheets = `<h2 class="pp-h">بطاقات القوة</h2><div class="sheet cards">${deck.map(pc).join("")}</div>
       <h2 class="pp-h">بطاقات التكليف</h2><div class="sheet duties">${L.DUTIES.concat(L.DUTIES).map(duty).join("")}</div>
       <h2 class="pp-h">بطاقات القيادة</h2><div class="sheet topics">${[0, 0, 0, 0, 1, 1, 1, 1].map((x) => lead(!!x)).join("")}</div>
       <h2 class="pp-h">بطاقات المستويات</h2><div class="sheet lvls">${blanks.flatMap(([i, n]) => Array(n).fill(i)).map((i) => lvl(L.level(L.LEVELS[i].min))).join("")}</div>
@@ -826,6 +837,25 @@ document.addEventListener("click", async (e) => {
       if (r !== undefined) { ui.reveal = { car, kind }; const nid = first(r).id; toast("انسحبت البطاقة", "ok", async () => { await db.remove("power_cards", { id: nid }); ui.reveal = null; await reload("power_cards"); }); }
       await guard(() => reload("power_cards")); return render(); }
     case "revealclose": ui.reveal = null; return render();
+    case "draw2": ui.drawn = { kind: drawCardKind() }; return render();
+    case "drawcancel": ui.drawn = null; return render();
+    case "drawgive": { const car = Number(b.dataset.car); const kind = ui.drawn && ui.drawn.kind; if (!kind) return;
+      const r = await guard(() => db.insert("power_cards", [{ caravan_id: car, meeting_id: meetId, slot: 0, kind }])); ui.drawn = null;
+      if (r !== undefined) { const nid = first(r).id; toast(`${L.POWER[kind].name} ← ${carName(car)}`, "ok", async () => { await db.remove("power_cards", { id: nid }); await reload("power_cards"); }); }
+      await guard(() => reload("power_cards")); return render(); }
+    case "cardused": { const p = S.power_cards.find((x) => String(x.id) === String(id)); if (!p) return; const prev = p.used_at || null; const v = prev ? null : new Date().toISOString();
+      return doUndoable(v ? "سُجّلت مستخدمة" : "رجعت البطاقة", () => db.update("power_cards", { id: p.id }, { used_at: v }), () => db.update("power_cards", { id: p.id }, { used_at: prev }), ["power_cards"]); }
+    case "ptstart": ui.ptimer = { label: b.dataset.l, end: Date.now() + Number(b.dataset.m) * 60000 }; return;
+    case "ptstop": ui.ptimer = null; { const el = document.getElementById("plan-now"); if (el) el.querySelector(".pt-timer")?.remove(); } return;
+    case "copy": try { await navigator.clipboard.writeText(b.dataset.v); toast("تم النسخ ✓"); } catch (e2) { toast("ما قدرت أنسخ، انسخه يدويًا", "err"); } return;
+    case "drawrun": ui.drawPlan = computeDraw(); return render();
+    case "drawcancel2": ui.drawPlan = null; return render();
+    case "drawapply": { const plan = ui.drawPlan; if (!plan) return; const prev = L.activeKids(S).map((k) => ({ id: k.id, caravan_id: k.caravan_id })); const chg = prev.filter((x) => plan[x.id] !== x.caravan_id);
+      ui.drawPlan = null; ui.drawOpen = true;
+      return doUndoable(`اعتُمدت القرعة (${chg.length} تغيير)`, async () => { for (const x of chg) await db.update("kids", { id: x.id }, { caravan_id: plan[x.id] }); return chg; }, async (c) => { for (const x of c) await db.update("kids", { id: x.id }, { caravan_id: x.caravan_id }); }, ["kids"]); }
+    case "anngo": ui.screenTab = "announce"; ui.ann = 0; return;
+    case "annnext": ui.ann = Math.min(annSteps().length - 1, (ui.ann || 0) + 1); return viewScreen();
+    case "annprev": ui.ann = Math.max(0, (ui.ann || 0) - 1); return viewScreen();
     case "rec": {
       if (ui.rec && ui.rec.id === id) { ui.rec.recorder.stop(); return; }
       if (ui.rec) return;
@@ -928,6 +958,16 @@ document.addEventListener("change", async (e) => {
   if (a === "reportstart") { await guard(() => db.upsert("app_settings", [{ key: "report_start", value: Number(t.value) }], "key"), "حُفظت بداية التقارير"); await guard(() => reload("app_settings")); return render(); }
   if (a === "sealstart") { await guard(() => db.upsert("app_settings", [{ key: "seal_start", value: Number(t.value) }], "key"), "حُفظ لقاء البداية"); await guard(() => reload("app_settings")); return render(); }
   if (a === "meet") { meetId = Number(t.value); ui.openDed = null; return render(); }
+  if (a === "kidpin") { const k = I.kid[t.dataset.k]; ui.drawOpen = true; return doUndoable(t.checked ? "ثُبّت" : "أُلغي التثبيت", () => db.update("kids", { id: k.id }, { pinned: t.checked }), () => db.update("kids", { id: k.id }, { pinned: k.pinned }), ["kids"]); }
+  if (a === "kidpincar") { const k = I.kid[t.dataset.k]; const prev = { caravan_id: k.caravan_id, pinned: k.pinned }; const v = t.value ? Number(t.value) : null; ui.drawOpen = true;
+    const roles = S.caravans.filter((c) => c.leader_kid === k.id || c.deputy_kid === k.id).map((c) => ({ id: c.id, leader_kid: c.leader_kid, deputy_kid: c.deputy_kid }));
+    return doUndoable("حُفظت القافلة", async () => { await db.update("kids", { id: k.id }, { caravan_id: v, pinned: true }); for (const c of roles) await db.update("caravans", { id: c.id }, { leader_kid: c.leader_kid === k.id ? null : c.leader_kid, deputy_kid: c.deputy_kid === k.id ? null : c.deputy_kid }); return true; },
+      async () => { await db.update("kids", { id: k.id }, prev); for (const c of roles) await db.update("caravans", { id: c.id }, { leader_kid: c.leader_kid, deputy_kid: c.deputy_kid }); }, ["kids", "caravans"]); }
+  if (a === "kidrole") { const k = I.kid[t.dataset.k]; const car = I.car[k.caravan_id]; if (!car) return; ui.drawOpen = true;
+    const before = S.caravans.map((c) => ({ id: c.id, leader_kid: c.leader_kid, deputy_kid: c.deputy_kid }));
+    const patch = {}; if (car.leader_kid === k.id) patch.leader_kid = null; if (car.deputy_kid === k.id) patch.deputy_kid = null;
+    if (t.value === "leader") patch.leader_kid = k.id; if (t.value === "deputy") patch.deputy_kid = k.id;
+    return doUndoable("حُفظ الدور", async () => { await db.update("caravans", { id: car.id }, patch); await db.update("kids", { id: k.id }, { pinned: true }); return true; }, async () => { for (const c of before) await db.update("caravans", { id: c.id }, { leader_kid: c.leader_kid, deputy_kid: c.deputy_kid }); }, ["caravans", "kids"]); }
   if (a === "kidcar") { await guard(() => db.update("kids", { id: t.dataset.id }, { caravan_id: t.value ? Number(t.value) : null }), "نُقل المغامر"); await guard(() => reload("kids")); return render(); }
   if (a === "kidpos") { await guard(() => db.update("kids", { id: t.dataset.id }, { position: t.value || null }), "حُفظ المركز"); await guard(() => reload("kids")); return; }
   if (a === "kidtrait") { await guard(() => db.update("kids", { id: t.dataset.id }, { trait: t.value || null }), "حُفظ"); await guard(() => reload("kids")); return; }
@@ -936,6 +976,173 @@ document.addEventListener("change", async (e) => {
     await guard(() => reload("measures")); return render(); }
   if (a === "roundspirit") { await guard(() => db.upsert("league_rounds", [{ round: Number(t.dataset.r), spirit_kid: t.value || null }], "round"), "حُفظ لاعب الجولة"); await guard(() => reload("league_rounds")); return render(); }
   if (a === "perm") { const acc = accounts.find((x) => x.id === t.dataset.id); const perms = { ...(acc.perms || {}), [t.dataset.p]: t.checked }; await guard(() => db.rpc("decide_account", { target: acc.id, decision: "perms", new_perms: perms }), "حُفظت الصلاحية"); await guard(loadAccounts); return; }
+});
+
+
+// ---------------- أيقونات بطاقات القوة ----------------
+const PSVG = {
+  compass: '<circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="7"/><path d="M50 18 62 50 50 82 38 50z" fill="currentColor"/><circle cx="50" cy="50" r="6" fill="#0b1230"/>',
+  target: '<circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="7"/><circle cx="50" cy="50" r="24" fill="none" stroke="currentColor" stroke-width="7"/><circle cx="50" cy="50" r="9" fill="currentColor"/>',
+  penalty: '<path d="M10 30h80v44" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round"/><path d="M10 30v44" stroke="currentColor" stroke-width="7"/><path d="M22 42h56M22 56h56M36 30v44M64 30v44" stroke="currentColor" stroke-width="2.5" opacity=".55"/><circle cx="50" cy="86" r="9" fill="currentColor"/>',
+  block: '<circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="9"/><path d="M24 76 76 24" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>',
+  hero: '<circle cx="50" cy="22" r="13" fill="currentColor"/><path d="M50 38c-15 0-23 10-25 27l12 3 3 26h20l3-26 12-3c-2-17-10-27-25-27z" fill="currentColor"/><path d="M70 40l20-22" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>',
+  swap: '<path d="M18 36h56l-14-14M82 64H26l14 14" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>',
+  shield: '<path d="M50 8 16 22v26c0 24 16 40 34 46 18-6 34-22 34-46V22z" fill="currentColor"/><path d="M50 22 28 31v17c0 15 9 26 22 31z" fill="#fff" opacity=".35"/>',
+  bolt: '<path d="M58 6 20 56h26l-8 38 42-54H54z" fill="currentColor" stroke-linejoin="round"/>',
+  mirror: '<ellipse cx="50" cy="40" rx="26" ry="32" fill="none" stroke="currentColor" stroke-width="7"/><path d="M38 28c4-6 10-9 16-9" stroke="currentColor" stroke-width="5" stroke-linecap="round" opacity=".7"/><path d="M50 72v20M38 92h24" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>',
+};
+const picon = (kind) => { const p = L.POWER[kind]; return p ? `<svg class="pico" viewBox="0 0 100 100" aria-hidden="true">${PSVG[p.svg] || ""}</svg>` : ""; };
+
+// ---------------- دليل اللقاء ----------------
+const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+let planTimer = null;
+function planNow(P, m) {
+  const d = new Date(); const live = m.meet_date === isoLocal(d); const now = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+  if (!live) return { live: false, cur: -1 };
+  let cur = P.segs.findIndex((s) => now >= toMin(s.from) && now < toMin(s.to));
+  const next = P.segs.findIndex((s) => toMin(s.from) > now);
+  return { live: true, cur, next, now };
+}
+function planNowHTML(P, m) {
+  const st = planNow(P, m); const tm = ui.ptimer;
+  const tleft = tm ? Math.max(0, Math.ceil((tm.end - Date.now()) / 1000)) : 0;
+  const timer = tm ? `<div class="pt-timer ${tleft === 0 ? "done" : ""}"><span>${esc(tm.label)}</span><b class="num">${String(Math.floor(tleft / 60)).padStart(2, "0")}:${String(tleft % 60).padStart(2, "0")}</b><button class="btn ghost sm" data-act="ptstop">إيقاف</button></div>` : "";
+  if (!st.live) return timer + `<p class="muted small">الدليل يمشي مع الساعة يوم اللقاء (${fmtDate(m.meet_date)}). افتح أي فقرة تحت.</p>`;
+  const s = P.segs[st.cur]; const n = P.segs[st.next];
+  const left = s ? Math.max(0, Math.round(toMin(s.to) - st.now)) : 0;
+  return timer + (s ? `<div class="pn-cur"><small>الحين · باقي <b class="num">${left}</b> د</small><h3>${esc(s.title)}</h3><p>${esc(s.place)} · ${esc(s.who)}</p></div>` : `<div class="pn-cur"><small>بين الفقرات</small><h3>${n ? "القادم: " + esc(n.title) : "انتهى اللقاء"}</h3></div>`)
+    + (n && s ? `<div class="pn-next"><small>بعدها ${fmt12(n.from)}</small><b>${esc(n.title)}</b></div>` : "");
+}
+function viewPlan(arg) {
+  const m = arg ? S.meetings.find((x) => x.number === Number(arg)) : I.meet[meetId];
+  const P = m && planFor(m.number);
+  if (!P) return ($app().innerHTML = shell(pageHead("دليل اللقاء", m ? `خطة اللقاء ${m.number} ما تجهزت بعد.` : "اختر لقاء.", meetPicker()), "plan"));
+  const st = planNow(P, m);
+  const list = (arr, cls) => (arr && arr.length ? `<ul class="${cls}">${arr.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "");
+  const seg = (s, i) => {
+    const on = i === st.cur; const open = on || (ui.planOpen ? ui.planOpen.has(i) : s.key);
+    const timers = (s.timers || []).map(([lb, mn]) => `<button class="btn sm ghost" data-act="ptstart" data-l="${esc(lb)}" data-m="${mn}">⏱ ${esc(lb)} ${mn} د</button>`).join("");
+    return `<details class="pseg k-${s.kind} ${on ? "now" : ""}" data-i="${i}" ${open ? "open" : ""}>
+      <summary><span class="ps-time num">${fmt12(s.from)}<small>${fmt12(s.to)}</small></span><span class="ps-t"><b>${esc(s.title)}</b><small>${esc(s.place)} · ${esc(s.who)}</small></span>${on ? '<span class="ds-now">الحين</span>' : ""}</summary>
+      <div class="ps-body">
+        ${s.aim ? `<p class="ps-aim">🎯 ${esc(s.aim)}</p>` : ""}
+        ${s.rule ? `<div class="ps-rule"><b>بطاقة القاعدة</b><p>${esc(s.rule)}</p>${s.why ? `<p class="muted small">ليش؟ ${esc(s.why)}</p>` : ""}</div>` : ""}
+        ${s.levels ? `<div class="ps-lv">${s.levels.map(([a, b]) => `<div><b>${esc(a)}</b><span>${esc(b)}</span></div>`).join("")}</div>` : ""}
+        ${timers ? `<div class="ps-timers">${timers}</div>` : ""}
+        ${s.steps ? `<ol class="ps-steps">${s.steps.map(([t, d]) => { const live = st.live && st.now >= toMin(t) && on; return `<li class="${live ? "past" : ""}"><span class="num">${fmt12(t).replace(/ [صم]$/, "")}</span><p>${esc(d)}</p></li>`; }).join("")}</ol>` : ""}
+        ${s.say && s.say.length ? `<div class="ps-say"><b>🗣️ تقول</b>${s.say.map((x) => `<q>${esc(x)}</q>`).join("")}</div>` : ""}
+        <div class="ps-roles">${s.asst ? `<div><b>🧑‍🤝‍🧑 المساعد</b>${list(s.asst)}</div>` : ""}${s.leaders ? `<div><b>🎖️ القادة</b>${list(s.leaders)}</div>` : ""}</div>
+        ${s.tools ? `<div class="ps-mini"><b>🧰 الأدوات</b>${list(s.tools)}</div>` : ""}
+        ${s.safety ? `<div class="ps-mini safe"><b>🛟 السلامة</b>${list(s.safety)}</div>` : ""}
+        ${s.points ? `<p class="ps-pts">⭐ ${esc(s.points)}</p>` : ""}
+        ${s.alt ? `<p class="ps-alt">↺ البديل: ${esc(s.alt)}</p>` : ""}
+      </div></details>`;
+  };
+  const O = P.official || {};
+  const ofl = [["هدف اللقاء", O.goal || P.goal], ["كيف تعيش الفئة القيمة", O.live || P.live], ["فعالية الفئة 1", O.ev1], ["دور الفئة في الديوان", O.diwan], ["فعالية الفئة 2", O.ev2], ["الضيافة", O.meal], ["مع المختص", O.station], ["كرة القدم", O.football], ["رياضة وألعاب حركية", O.sport], ["الأدوات", (P.tools || []).join("\n")], ["دور المساعد", P.assistant], ["رابط التحضير", P.prepLink]].filter((x) => x[1]);
+  $app().innerHTML = shell(`
+    <section class="plan-hero"><div><p class="muted">اللقاء ${m.number} · الخميس ${fmtDate(m.meet_date)}</p><h1>${esc(P.title)}</h1><p>${esc(P.tagline)}</p>
+      <div class="plan-chips"><span>💎 القيمة <b>${esc(P.value)}</b></span><span>👂 الديوان <b>${esc(P.diwanSkill)}</b></span><span>🥋 المحطة <b>${esc(P.station)}</b></span><span>⚽ الميدان <b>${esc(P.field)}</b></span></div></div>
+      <div class="plan-now" id="plan-now">${planNowHTML(P, m)}</div></section>
+    <section class="panel plan-goal"><p><b>هدف اللقاء:</b> ${esc(P.goal)}</p><p><b>كيف نعيش القيمة:</b> ${esc(P.live)}</p>
+      <div class="plan-duty">${Object.entries(P.duties || {}).map(([c, d]) => `<span><b>${esc(c)}</b> ${esc(d)}</span>`).join("")}</div></section>
+    <div class="psegs">${P.segs.map(seg).join("")}</div>
+    <section class="panel"><h3>🧰 أدوات الليلة</h3>${list(P.tools, "checks")}<p><b>المساعد:</b> ${esc(P.assistant)}</p><p><b>سؤال التأمل:</b> ${esc(P.reflect)}</p><p><b>التحدي المنزلي:</b> ${esc(P.home)}</p></section>
+    <details class="panel staff"><summary><h3>📤 نص المنصة الرسمية</h3></summary><p class="muted small">نفس الحقول اللي في «خطة الفئة للقاء». اضغط على أي حقل ينسخ.</p>
+      <div class="ofl">${ofl.map(([k, v]) => `<button class="ofl-f" data-act="copy" data-v="${esc(v)}"><small>${esc(k)}</small><span>${esc(v)}</span></button>`).join("")}</div>
+      <p><a href="${esc(P.prepLink)}" target="_blank" rel="noopener">صفحة التحضير العامة ↗</a></p></details>`, "plan");
+  clearInterval(planTimer);
+  planTimer = setInterval(() => { if (parseRoute().name !== "plan") return clearInterval(planTimer); const el = document.getElementById("plan-now"); if (el) el.innerHTML = planNowHTML(P, m);
+    const s2 = planNow(P, m); document.querySelectorAll(".pseg").forEach((d) => d.classList.toggle("now", Number(d.dataset.i) === s2.cur));
+    if (ui.ptimer && Date.now() >= ui.ptimer.end && !ui.ptimer.rang) { ui.ptimer.rang = true; try { navigator.vibrate && navigator.vibrate([300, 150, 300]); } catch (e) {} } }, 1000);
+}
+document.addEventListener("toggle", (e) => { const d = e.target; if (!d.classList || !d.classList.contains("pseg")) return; ui.planOpen = ui.planOpen || new Set([...document.querySelectorAll(".pseg[open]")].map((x) => Number(x.dataset.i))); if (d.open) ui.planOpen.add(Number(d.dataset.i)); else ui.planOpen.delete(Number(d.dataset.i)); }, true);
+
+// ---------------- بطاقات القوة: السحب بالحظ ----------------
+function drawCardKind() { const r = crypto.getRandomValues(new Uint32Array(2)); return L.drawCard(r[0] / 4294967296, r[1] / 4294967296); }
+function bigCard(kind, cls = "") {
+  const p = L.POWER[kind]; if (!p) return "";
+  return `<div class="bcard t${p.tier} ${cls}"><div class="bc-in"><header><span class="bc-tier">${L.TIER[p.tier]}</span><span class="bc-gems">${"◆".repeat(p.tier)}</span></header><div class="bc-ic">${picon(kind)}</div><h3>${esc(p.name)}</h3><p>${esc(p.rule)}</p><footer>بطاقة قوة · المغامرون</footer></div></div>`;
+}
+function drawStage(kind, assign) {
+  const p = L.POWER[kind];
+  return `<div class="dstage t${p.tier}" role="dialog" aria-label="سحب بطاقة قوة"><div class="ds-glow"></div>
+    <div class="ds-flip"><div class="ds-back"><div class="ds-q">؟</div></div><div class="ds-front">${bigCard(kind)}</div></div>
+    <p class="ds-tier">${L.TIER[p.tier]}!</p>
+    ${assign ? `<div class="ds-give"><p>لمين تروح البطاقة؟</p><div>${S.caravans.map((c) => `<button class="btn" style="${carStyle(c)}" data-act="drawgive" data-car="${c.id}">${esc(c.name)}</button>`).join("")}</div><button class="btn ghost sm" data-act="drawcancel">ألغِ السحبة</button></div>` : ""}</div>`;
+}
+function viewCards() {
+  const ed = can("points");
+  const tiers = [1, 2, 3, 4].map((t) => `<div class="tier-k t${t}"><b>${L.TIER[t]}</b><span class="num">${L.TIER_W[t]}%</span><small>${Object.keys(L.POWER).filter((k) => L.POWER[k].tier === t).map((k) => esc(L.POWER[k].name)).join("، ")}</small></div>`).join("");
+  const cars = S.caravans.map((c) => { const all = L.cardsOf(S, c.id); const free = all.filter((p) => !L.cardUsed(p)); const used = all.filter((p) => L.cardUsed(p));
+    return `<section class="panel cardcar" style="${carStyle(c)}"><header><h3>${esc(c.name)}</h3><span>🎴 <b class="num">${free.length}</b></span></header>
+      <div class="cc-list">${free.map((p) => `<div class="cc-item t${L.POWER[p.kind].tier}">${picon(p.kind)}<span><b>${esc(L.POWER[p.kind].name)}</b><small>${L.TIER[L.POWER[p.kind].tier]}</small></span>${ed ? `<button class="chip" data-act="cardused" data-id="${p.id}">✓ استُخدمت</button><button class="x" data-act="carddrawdel" data-id="${p.id}" aria-label="حذف">×</button>` : ""}</div>`).join("") || '<p class="muted small">ما عندها بطاقات.</p>'}</div>
+      ${used.length ? `<p class="muted small">استُخدمت: ${used.map((p) => `${esc(L.POWER[p.kind].name)}${ed && p.used_at && !p.used_match_id ? ` <button class="x" data-act="cardused" data-id="${p.id}" aria-label="رجّعها">↩︎</button>` : ""}`).join("، ")}</p>` : ""}</section>`; }).join("");
+  $app().innerHTML = shell(`
+    ${pageHead("بطاقات القوة", "تسحب بالحظ متى ما قررت، وتختار القافلة اللي تروح لها.", ed ? `<button class="btn pw-draw" data-act="draw2">🎲 اسحب بطاقة</button>` : "")}
+    <div class="tier-keys">${tiers}</div>
+    <div class="cardcars">${cars}</div>
+    <section class="panel"><h3>القواعد في الملعب</h3><ul><li>كل قافلة تلعب بطاقة وحدة بالمباراة، يعلنها الكابتن للحكم قبل البداية أو بين الشوطين.</li><li>المرآة والتعطيل تنلعب ردًّا لحظة ما الخصم يعلن بطاقته.</li><li>بعد المباراة البطاقة ترجع لك، وتسجّلها «استُخدمت».</li></ul>
+      <div class="pc-row">${Object.keys(L.POWER).map((k) => bigCard(k, "sm")).join("")}</div><p><a class="btn ghost sm" href="#print/deck">🖨️ اطبع البطاقات (${Object.values(L.DECK).reduce((a, b) => a + b, 0)} بطاقة)</a></p></section>
+    ${ui.drawn ? drawStage(ui.drawn.kind, true) : ""}`, "cards");
+}
+
+// ---------------- القرعة ----------------
+function computeDraw() {
+  const kids = L.activeKids(S); const cars = S.caravans.slice().sort((a, b) => a.sort - b.sort);
+  const lockCar = {}; cars.forEach((c) => { [c.leader_kid, c.deputy_kid].forEach((id) => { if (id) lockCar[id] = c.id; }); });
+  const plan = {}; const size = Object.fromEntries(cars.map((c) => [c.id, 0])); const fam = Object.fromEntries(cars.map((c) => [c.id, new Set()]));
+  const put = (k, cid) => { plan[k.id] = cid; size[cid]++; if (k.family_name) fam[cid].add(k.family_name.trim()); };
+  kids.forEach((k) => { const cid = lockCar[k.id] || (k.pinned && k.caravan_id ? k.caravan_id : null); if (cid && size[cid] != null) put(k, cid); });
+  const rest = kids.filter((k) => plan[k.id] == null); const rnd = crypto.getRandomValues(new Uint32Array(rest.length + cars.length * 4));
+  rest.forEach((k, i) => (k._r = rnd[i])); rest.sort((a, b) => a._r - b._r);
+  let j = rest.length;
+  for (const k of rest) {
+    const min = Math.min(...cars.map((c) => size[c.id]));
+    let opts = cars.filter((c) => size[c.id] === min);
+    const nf = opts.filter((c) => !(k.family_name && fam[c.id].has(k.family_name.trim()))); if (nf.length) opts = nf;
+    put(k, opts[rnd[j++ % rnd.length] % opts.length].id);
+  }
+  return plan;
+}
+function drawPanel() {
+  const kids = L.activeKids(S).slice().sort((a, b) => L.kidName(a).localeCompare(L.kidName(b), "ar")); const plan = ui.drawPlan;
+  const roleOf = (k) => { const c = S.caravans.find((x) => x.leader_kid === k.id || x.deputy_kid === k.id); return c ? (c.leader_kid === k.id ? "leader" : "deputy") : ""; };
+  const pinnedN = kids.filter((k) => k.pinned || roleOf(k)).length;
+  const rows = kids.map((k) => { const r = roleOf(k); const pin = k.pinned || !!r;
+    return `<tr class="${pin ? "pinrow" : ""}"><td>${esc(L.kidName(k))}</td>
+      <td><label class="pin"><input type="checkbox" data-act="kidpin" data-k="${k.id}" ${pin ? "checked" : ""} ${r ? "disabled" : ""}> مثبّت</label></td>
+      <td><select data-act="kidpincar" data-k="${k.id}" ${pin ? "" : "disabled"}><option value="">—</option>${S.caravans.map((c) => `<option value="${c.id}" ${k.caravan_id === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></td>
+      <td><select data-act="kidrole" data-k="${k.id}" ${pin && k.caravan_id ? "" : "disabled"}><option value="">عضو</option><option value="leader" ${r === "leader" ? "selected" : ""}>🎖️ قائد</option><option value="deputy" ${r === "deputy" ? "selected" : ""}>🔰 نائب</option></select></td></tr>`; }).join("");
+  const preview = plan ? `<div class="draw-prev">${S.caravans.map((c) => { const ks = kids.filter((k) => plan[k.id] === c.id);
+      return `<section style="${carStyle(c)}"><h4>${esc(c.name)} <span class="num">${ks.length}</span></h4><ul>${ks.map((k) => { const r = roleOf(k); return `<li class="${k.pinned || r ? "pin" : ""}">${r === "leader" ? "🎖️ " : r === "deputy" ? "🔰 " : k.pinned ? "📌 " : ""}${esc(L.kidName(k))}</li>`; }).join("")}</ul></section>`; }).join("")}</div>
+      <div class="row-btns"><button class="btn" data-act="drawapply">اعتمد القرعة</button><button class="btn ghost" data-act="drawrun">اسحب من جديد</button><button class="btn ghost" data-act="drawcancel2">إلغاء</button></div>` : "";
+  return `<details class="panel tools-box" ${ui.drawOpen || plan ? "open" : ""} data-box="draw"><summary><h3>🎲 قرعة القوافل</h3></summary>
+    <p class="muted small">ثبّت اللي تبيهم في قافلة معيّنة (والقائد والنائب ثابتين تلقائيًا)، والباقي ينسحب بالحظ بحيث القوافل تتساوى بالعدد، ويتفرق الإخوة إذا أمكن. تشوف النتيجة قبل ما تعتمدها، وبعدها تعلنها من الشاشة ← «الإعلان».</p>
+    <p><b class="num">${pinnedN}</b> مثبّت من <b class="num">${kids.length}</b></p>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>المغامر</th><th>تثبيت</th><th>القافلة</th><th>الدور</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${plan ? preview : `<div class="row-btns"><button class="btn" data-act="drawrun">🎲 اسحب الباقي</button><a class="btn ghost" href="#screen" data-act="anngo">📺 شاشة الإعلان</a></div>`}</details>`;
+}
+
+// ---------------- شاشة الإعلان ----------------
+function annSteps() { const out = []; S.caravans.forEach((c) => { out.push({ c, ph: "name" }, { c, ph: "lead" }, { c, ph: "all" }); }); out.push({ ph: "grid" }); return out; }
+function announceHTML() {
+  const steps = annSteps(); const i = Math.max(0, Math.min(steps.length - 1, ui.ann || 0)); const s = steps[i];
+  const nm = (id) => (id && I.kid[id] ? esc(L.kidName(I.kid[id])) : "—");
+  let body;
+  if (s.ph === "grid") body = `<div class="ann-grid">${S.caravans.map((c) => `<section style="${carStyle(c)}"><h2>${esc(c.name)}</h2><p>🎖️ ${nm(c.leader_kid)} · 🔰 ${nm(c.deputy_kid)}</p><ul>${L.kidsOf(S, c.id).filter((k) => k.id !== c.leader_kid && k.id !== c.deputy_kid).map((k) => `<li>${esc(k.first_name)}</li>`).join("")}</ul></section>`).join("")}</div>`;
+  else {
+    const c = s.c; const mem = L.kidsOf(S, c.id).filter((k) => k.id !== c.leader_kid && k.id !== c.deputy_kid);
+    body = `<div class="ann-car ph-${s.ph}" style="${carStyle(c)}"><p class="ann-k">قافلة</p><h2 class="ann-name">${esc(c.name.replace(/[\u064B-\u0652]/g, ""))}</h2>
+      ${s.ph !== "name" ? `<div class="ann-lead"><div><small>🎖️ القائد</small><b>${nm(c.leader_kid)}</b></div><div><small>🔰 النائب</small><b>${nm(c.deputy_kid)}</b></div></div>` : ""}
+      ${s.ph === "all" ? `<ul class="ann-mem">${mem.map((k, j) => `<li style="animation-delay:${0.25 + j * 0.35}s">${esc(L.kidName(k))}</li>`).join("")}</ul>` : ""}</div>`;
+  }
+  return `<div class="ann">${body}<nav class="ann-nav"><button data-act="annprev" aria-label="السابق">→</button><span class="num">${i + 1}/${steps.length}</span><button data-act="annnext" aria-label="التالي">←</button></nav></div>`;
+}
+document.addEventListener("keydown", (e) => {
+  if (parseRoute().name !== "screen" || ui.screenTab !== "announce") return;
+  if ([" ", "Enter", "ArrowLeft", "PageDown"].includes(e.key)) { e.preventDefault(); ui.ann = Math.min(annSteps().length - 1, (ui.ann || 0) + 1); viewScreen(); }
+  if (["ArrowRight", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); ui.ann = Math.max(0, (ui.ann || 0) - 1); viewScreen(); }
 });
 
 // ---------------- boot ----------------
