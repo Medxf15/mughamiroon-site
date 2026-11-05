@@ -96,3 +96,25 @@ export function powerBack() {
     <path d="M178 612V404C178 318 246 266 315 232 384 266 452 318 452 404V612Z" fill="none" stroke="#ffd24a" stroke-width="2.5" opacity=".7"/></svg>
     <div class="pb-t"><b>بطاقة قوة</b><small>المغامرون · نادي مهارة</small></div></div>`;
 }
+
+// ---------------- بطاقة اللاعب (عرض القوافل) ----------------
+const ROLE = {
+  leader: { t: "القائد", line: "يشاور قبل ما يقرر", ic: '<path d="M12 2l2.9 6.2 6.6.7-5 4.5 1.4 6.6L12 16.8 6.1 20l1.4-6.6-5-4.5 6.6-.7z" fill="currentColor"/>' },
+  deputy: { t: "النائب", line: "ما أحد من القافلة يُترك", ic: '<path d="M12 2 4 5v6c0 6 4 9.5 8 11 4-1.5 8-5 8-11V5z" fill="currentColor"/>' },
+  captain: { t: "الكابتن", line: "قائد القافلة في الملعب", ic: '<rect x="3" y="7" width="18" height="10" rx="3" fill="currentColor"/><text x="12" y="15.6" text-anchor="middle" font-size="8" font-weight="700" font-family="Readex Pro,sans-serif" fill="#000">C</text>' },
+  member: { t: "مغامر", line: "انضباطي = قوة قافلتي", ic: '<circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7.5l3.8 2.8-1.5 4.4H9.7l-1.5-4.4z" fill="#000" opacity=".75"/>' },
+};
+const POS = { gk: "حارس", def: "دفاع", mid: "وسط", fwd: "هجوم" };
+/** kid: {first_name, family_name, position}; role: leader|deputy|captain|member; car: {name, color} */
+export function playerCard(kid, role, car) {
+  const r = ROLE[role] || ROLE.member;
+  return `<div class="plc r-${role}" style="--tc:${car.color}"><div class="plc-rays"></div>
+    <div class="plc-rib"><span class="plc-role"><svg viewBox="0 0 24 24" aria-hidden="true">${r.ic}</svg>${r.t}</span><span class="plc-car">${car.name.replace(/[ً-ْ]/g, "")}</span></div>
+    <div class="plc-mono">${(kid.first_name || "?").trim().charAt(0)}</div>
+    <div class="plc-plate"><b>${kid.first_name}</b><small>${kid.family_name || ""}</small></div>
+    <div class="plc-foot">${kid.position && POS[kid.position] ? `<span class="plc-pos">${POS[kid.position]}</span>` : ""}<span class="plc-line">${r.line}</span></div></div>`;
+}
+/** ظهر البكج قبل الفتح */
+export function packBack(car, label = "؟") {
+  return `<div class="plc pack" style="--tc:${car.color}"><div class="plc-rays"></div><div class="pk-in"><b>${label}</b><small>قافلة ${car.name.replace(/[ً-ْ]/g, "")}</small></div></div>`;
+}

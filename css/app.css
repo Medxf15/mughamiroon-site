@@ -925,3 +925,53 @@ ul.checks{list-style:none;padding:0;display:grid;gap:4px}ul.checks li::before{co
 .lead-rule,.ann-rule{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:rgba(242,193,78,.12);border:1px solid rgba(242,193,78,.45);color:#ffe7a8;font-weight:600}
 .ann-rule{text-align:center;font-size:clamp(16px,1.6vw,26px);margin:18px auto 0;max-width:1100px}
 .pl-rule{font-size:2.8mm;color:#8a5a00;margin:1.5mm 0 0;font-weight:700}
+
+/* ================= بطاقة اللاعب + فتح البكجات (شاشة الإعلان) ================= */
+.plc{--w:min(30vh,300px);width:var(--w);aspect-ratio:63/88;position:relative;overflow:hidden;border-radius:calc(var(--w)*.06);container-type:inline-size;--u:calc(var(--w)/100);color:#fff;text-align:center;
+  background:radial-gradient(120% 80% at 50% 30%,color-mix(in srgb,var(--tc) 80%,#fff 20%),var(--tc) 45%,color-mix(in srgb,var(--tc) 45%,#000) 100%);
+  box-shadow:inset 0 0 0 calc(var(--u)*2.2) #fff,inset 0 0 0 calc(var(--u)*3.4) color-mix(in srgb,var(--tc) 60%,#000),0 30px 60px -20px rgba(0,0,0,.8)}
+.plc-rays{position:absolute;inset:-30%;background:repeating-conic-gradient(from 0deg at 50% 42%,rgba(255,255,255,.22) 0 4deg,transparent 4deg 15deg);opacity:.55}
+.plc.r-leader{background:radial-gradient(120% 80% at 50% 30%,#4a3a18,#141210 55%,#000);box-shadow:inset 0 0 0 calc(var(--u)*2.6) #ffd24a,inset 0 0 0 calc(var(--u)*3.8) #000,0 0 80px -10px rgba(255,210,74,.7)}
+.plc.r-leader .plc-rays{background:repeating-conic-gradient(from 0deg at 50% 42%,rgba(255,201,51,.35) 0 4deg,transparent 4deg 15deg);animation:plcSpin 30s linear infinite}
+.plc.r-deputy,.plc.r-captain{box-shadow:inset 0 0 0 calc(var(--u)*2.6) #ffd24a,inset 0 0 0 calc(var(--u)*3.8) color-mix(in srgb,var(--tc) 50%,#000),0 0 60px -10px rgba(255,210,74,.55)}
+.plc-rib{position:absolute;top:5cqw;left:5cqw;right:5cqw;display:flex;justify-content:space-between;align-items:center;gap:2cqw;z-index:2}
+.plc-role{display:flex;align-items:center;gap:1.6cqw;background:#0e1633;color:#fff;border-radius:99px;padding:1.4cqw 3.6cqw 1.8cqw 3cqw;font:700 6cqw/1 "IBM Plex Sans Arabic",sans-serif}
+.plc-role svg{width:6.5cqw;height:6.5cqw;color:var(--tc)}
+.plc.r-leader .plc-role,.plc.r-deputy .plc-role,.plc.r-captain .plc-role{background:#ffd24a;color:#000}.plc.r-leader .plc-role svg,.plc.r-deputy .plc-role svg,.plc.r-captain .plc-role svg{color:#000}
+.plc-car{font:400 7cqw/1 Lalezar,var(--display);color:#fff;text-shadow:0 .6cqw 0 rgba(0,0,0,.5)}
+.plc-mono{position:absolute;top:14cqw;left:0;right:0;font:400 62cqw/1 Lalezar,var(--display);color:#fff;text-shadow:0 1.4cqw 0 rgba(0,0,0,.35),0 0 8cqw rgba(0,0,0,.25);z-index:1}
+.plc.r-leader .plc-mono{color:#ffd24a}
+.plc-plate{position:absolute;left:-5%;right:-5%;top:88cqw;background:#0e1633;transform:rotate(-4deg);padding:2cqw 0 3cqw;display:grid;z-index:2;box-shadow:0 -1cqw 0 color-mix(in srgb,var(--tc) 70%,#fff),0 1cqw 0 color-mix(in srgb,var(--tc) 70%,#fff)}
+.plc.r-leader .plc-plate{background:#000;box-shadow:0 -1cqw 0 #ffd24a,0 1cqw 0 #ffd24a}
+.plc-plate b{font:400 14cqw/1.15 Lalezar,var(--display);color:#fff}.plc.r-leader .plc-plate b{color:#ffd24a}
+.plc-plate small{font:600 5.6cqw/1.2 "IBM Plex Sans Arabic",sans-serif;color:#c9d2ff}
+.plc-foot{position:absolute;bottom:5cqw;left:5cqw;right:5cqw;display:grid;gap:1.8cqw;justify-items:center;z-index:2}
+.plc-pos{background:#fff;color:#0e1633;border-radius:99px;padding:.8cqw 4cqw 1.2cqw;font:700 5.4cqw/1.2 "IBM Plex Sans Arabic",sans-serif}
+.plc-line{font:700 5.2cqw/1.3 "IBM Plex Sans Arabic",sans-serif;color:#fff;text-shadow:0 .5cqw 0 rgba(0,0,0,.45)}
+.plc.pack{background:linear-gradient(135deg,color-mix(in srgb,var(--tc) 70%,#000),var(--tc) 40%,color-mix(in srgb,var(--tc) 60%,#fff) 50%,var(--tc) 60%,color-mix(in srgb,var(--tc) 70%,#000));box-shadow:inset 0 0 0 calc(var(--u)*2.2) #fff,0 30px 60px -20px rgba(0,0,0,.8)}
+.pk-in{position:absolute;inset:0;display:grid;place-content:center;gap:2cqw}.pk-in b{font:400 60cqw/1 Lalezar,var(--display);color:#fff;text-shadow:0 1.4cqw 0 rgba(0,0,0,.35)}.pk-in small{font:700 7cqw "IBM Plex Sans Arabic",sans-serif}
+@keyframes plcSpin{to{transform:rotate(360deg)}}
+/* مراحل الفتح */
+.opn{position:relative;display:grid;place-items:center;perspective:1400px}
+.opn .pack{animation:pkShake 1.3s ease-in-out both,pkGone .25s 1.3s ease-in forwards}
+.opn .plc:not(.pack){position:absolute;opacity:0;animation:plcRise .9s 1.35s cubic-bezier(.2,.9,.2,1.1) forwards}
+.opn .flash{position:absolute;width:160%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#fff,color-mix(in srgb,var(--tc) 70%,transparent) 30%,transparent 65%);opacity:0;animation:pkFlash .9s 1.2s ease-out forwards;pointer-events:none}
+.opn.r-leader .flash{background:radial-gradient(circle,#fff6c9,rgba(255,201,51,.8) 30%,transparent 65%)}
+@keyframes pkShake{0%{transform:scale(.6) rotate(0)}20%{transform:scale(1) rotate(0)}40%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}60%{transform:rotate(-6deg)}70%{transform:rotate(7deg) scale(1.05)}85%{transform:rotate(-8deg) scale(1.08)}100%{transform:rotate(0) scale(1.12)}}
+@keyframes pkGone{to{transform:scale(1.4);opacity:0}}
+@keyframes pkFlash{0%{opacity:0;transform:scale(.3)}30%{opacity:1}100%{opacity:0;transform:scale(1.3)}}
+@keyframes plcRise{0%{opacity:0;transform:translateY(25%) rotateY(180deg) scale(.7)}60%{opacity:1}100%{opacity:1;transform:none}}
+.ann-role{font:400 clamp(2rem,5vw,4.2rem)/1 Lalezar,var(--display);color:#ffd24a;opacity:0;animation:annIn .6s 2.1s ease both;margin-top:10px}
+.opn .plc-rays{z-index:0}.plc>*{position:absolute}.plc>.plc-rays{z-index:0}
+/* الأعضاء: كل واحد ينقلب ورا الثاني */
+.ann-fan{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(10px,1.4vw,22px);max-width:96vw}
+.ann-fan .plc{--w:min(21vh,190px)}
+.fl{position:relative;perspective:1000px}
+.fl .plc:not(.pack){animation:flFront .7s var(--d) cubic-bezier(.2,.9,.2,1.1) both}
+.fl .pack{position:absolute;inset:0;animation:flBack .7s var(--d) ease-in both}
+@keyframes flFront{0%{transform:rotateY(180deg);opacity:0}49%{opacity:0}50%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes flBack{0%{transform:none;opacity:1}49%{opacity:1}50%{opacity:0;transform:rotateY(-90deg)}100%{opacity:0}}
+.ann-line{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:96vw}.ann-line .plc{--w:min(19vh,150px)}
+.ann-grid .plc{--w:100%}.ann-grid .gl{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+@media (prefers-reduced-motion:reduce){.opn .pack,.fl .pack{display:none}.opn .plc,.fl .plc,.ann-role,.plc-rays{animation:none!important;opacity:1}.opn .flash{display:none}}
+.opn .plc{--w:min(50vh,420px)}

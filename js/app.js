@@ -2,7 +2,7 @@ import { auth, db, ApiError, storage } from "./api.js";
 import { ALL_LINES } from "./film.js";
 import * as L from "./logic.js";
 import { planFor, toMin, fmt12 } from "./plans.js";
-import { powerCard, powerIcon, powerBack } from "./pcard.js";
+import { powerCard, powerIcon, powerBack, playerCard, packBack } from "./pcard.js";
 
 // ---------------- state ----------------
 const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings", "duty_log"];
@@ -1122,17 +1122,25 @@ function drawPanel() {
 }
 
 // ---------------- شاشة الإعلان ----------------
-function annSteps() { const out = []; S.caravans.forEach((c) => { out.push({ c, ph: "name" }, { c, ph: "lead" }, { c, ph: "all" }); }); out.push({ ph: "grid" }); return out; }
+function annSteps() { const out = []; S.caravans.forEach((c) => { out.push({ c, ph: "name" }); ["leader", "deputy", "captain"].forEach((r) => { if (c[r + "_kid"]) out.push({ c, ph: r }); }); out.push({ c, ph: "members" }, { c, ph: "line" }); }); out.push({ ph: "grid" }); return out; }
+const annKid = (k) => ({ first_name: esc(k.first_name), family_name: esc(k.family_name || ""), position: k.position });
+const roleOf = (c, k) => (k.id === c.leader_kid ? "leader" : k.id === c.deputy_kid ? "deputy" : k.id === c.captain_kid ? "captain" : "member");
 function announceHTML() {
   const steps = annSteps(); const i = Math.max(0, Math.min(steps.length - 1, ui.ann || 0)); const s = steps[i];
   const nm = (id) => (id && I.kid[id] ? esc(L.kidName(I.kid[id])) : "—");
+  const ROLE_T = { leader: "القائد", deputy: "النائب", captain: "الكابتن" };
   let body;
-  if (s.ph === "grid") body = `<div class="ann-grid">${S.caravans.map((c) => `<section style="${carStyle(c)}"><h2>${esc(c.name)}</h2><p>🎖️ ${nm(c.leader_kid)} · 🔰 ${nm(c.deputy_kid)} · ⚽ ${nm(c.captain_kid)}</p><ul>${L.kidsOf(S, c.id).filter((k) => ![c.leader_kid, c.deputy_kid, c.captain_kid].includes(k.id)).map((k) => `<li>${esc(k.first_name)}</li>`).join("")}</ul></section>`).join("")}</div><p class="ann-rule">${esc(L.LEAD.rule)}</p>`;
+  if (s.ph === "grid") body = `<div class="ann-grid">${S.caravans.map((c) => `<section style="${carStyle(c)}"><h2>${esc(c.name)}</h2><p>🎖️ ${nm(c.leader_kid)}<br>🔰 ${nm(c.deputy_kid)}<br>⚽ ${nm(c.captain_kid)}</p><ul>${L.kidsOf(S, c.id).filter((k) => ![c.leader_kid, c.deputy_kid, c.captain_kid].includes(k.id)).map((k) => `<li>${esc(k.first_name)}</li>`).join("")}</ul></section>`).join("")}</div><p class="ann-rule">${esc(L.LEAD.rule)}</p>`;
   else {
-    const c = s.c; const mem = L.kidsOf(S, c.id).filter((k) => ![c.leader_kid, c.deputy_kid, c.captain_kid].includes(k.id));
-    body = `<div class="ann-car ph-${s.ph}" style="${carStyle(c)}"><p class="ann-k">قافلة</p><h2 class="ann-name">${esc(c.name.replace(/[\u064B-\u0652]/g, ""))}</h2>
-      ${s.ph !== "name" ? `<div class="ann-lead"><div><small>🎖️ القائد</small><b>${nm(c.leader_kid)}</b></div><div><small>🔰 النائب</small><b>${nm(c.deputy_kid)}</b></div><div><small>⚽ الكابتن</small><b>${nm(c.captain_kid)}</b></div></div>` : ""}
-      ${s.ph === "all" ? `<ul class="ann-mem">${mem.map((k, j) => `<li style="animation-delay:${0.25 + j * 0.35}s">${esc(L.kidName(k))}</li>`).join("")}</ul>` : ""}</div>`;
+    const c = s.c; const cname = esc(c.name.replace(/[\u064B-\u0652]/g, ""));
+    const car = { name: cname, color: c.color };
+    if (s.ph === "name") body = `<div class="ann-car ph-name" style="${carStyle(c)}"><p class="ann-k">قافلة</p><h2 class="ann-name">${cname}</h2><p class="ann-k">${L.kidsOf(S, c.id).length} مغامرين</p></div>`;
+    else if (ROLE_T[s.ph]) { const k = I.kid[c[s.ph + "_kid"]];
+      body = `<div class="ann-car" style="${carStyle(c)}"><p class="ann-k">قافلة ${cname} · ${ROLE_T[s.ph]}</p><div class="opn r-${s.ph}" style="${carStyle(c)}"><div class="flash"></div>${packBack(car, "؟")}${playerCard(annKid(k), s.ph, car)}</div><p class="ann-role">${ROLE_T[s.ph]} ${esc(k.first_name)}</p></div>`; }
+    else if (s.ph === "members") { const mem = L.kidsOf(S, c.id).filter((k) => roleOf(c, k) === "member");
+      body = `<div class="ann-car" style="${carStyle(c)}"><p class="ann-k">مغامرين قافلة ${cname}</p><div class="ann-fan">${mem.map((k, j) => `<div class="fl" style="--d:${0.6 + j * 0.7}s">${packBack(car, "؟")}${playerCard(annKid(k), "member", car)}</div>`).join("")}</div></div>`; }
+    else { const all = L.kidsOf(S, c.id).slice().sort((a, b) => ["leader", "deputy", "captain", "member"].indexOf(roleOf(c, a)) - ["leader", "deputy", "captain", "member"].indexOf(roleOf(c, b)));
+      body = `<div class="ann-car" style="${carStyle(c)}"><h2 class="ann-name" style="font-size:clamp(2.6rem,7vw,5.5rem)">${cname}</h2><div class="ann-line">${all.map((k) => playerCard(annKid(k), roleOf(c, k), car)).join("")}</div></div>`; }
   }
   return `<div class="ann">${body}<nav class="ann-nav"><button data-act="annprev" aria-label="السابق">→</button><span class="num">${i + 1}/${steps.length}</span><button data-act="annnext" aria-label="التالي">←</button></nav></div>`;
 }
