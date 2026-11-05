@@ -399,7 +399,7 @@ function viewCaravan(id) {
     <section class="panel"><h3>القيادة</h3>
       <div class="lead-slots">${slot("leader_kid", "🎖️", "قائد القافلة", "ثابت، ويتغير بقرارك")}${slot("deputy_kid", "🔰", "نائب القائد", "يساند القائد ويقوم مقامه")}${slot("captain_kid", "⚽", "كابتن الدوري", "يمثل القافلة في الملعب")}</div>
       <div class="lead-creed"><p class="lc-verse">${L.LEAD.verse}</p><p class="lc-motto">${esc(L.LEAD.motto)}</p>
-        <div class="grid2"><div><b>🎖️ القائد</b><ul>${L.LEAD.leader.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div><div><b>🔰 النائب</b><ul>${L.LEAD.deputy.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div></div></section>
+        <div class="grid2"><div><b>🎖️ القائد</b><ul>${L.LEAD.leader.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div><div><b>🔰 النائب</b><ul>${L.LEAD.deputy.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div><div><b>⚽ الكابتن</b><ul>${L.LEAD.captain.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div><p class="lead-rule">⚠️ ${esc(L.LEAD.rule)}</p></div></section>
     ${m ? `<section class="panel"><h3>هذا اللقاء</h3><div class="this-meet"><span>${r.stars === 2 ? "🌟 نجمة ذهبية" : r.stars ? "⭐ نجمة" : `جاهزون للنجمة <b class="num">${r.ready}/${r.n}</b>`}</span>${d ? `<span>${d.icon} ${esc(d.name)} ${L.dutyMastered(S, m.id, c.id) ? "✅" : ""}</span>` : ""}<span>إتقان التكليف <b class="num">${L.dutyCount(S, c.id, m.id) % 2}/2</b> للنجمة</span></div></section>` : ""}
     <section class="panel"><h3>الأعضاء</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th>المغامر</th><th>دوره هذا اللقاء</th><th>المستوى</th><th>المجموع</th></tr></thead><tbody>
       ${ks.map((k) => { const ro = m ? L.roleOf(S, k, m.number) : null; const tot = L.kidTotal(S, I, k.id); const lv = L.level(tot); const tags = L.leaderOf(S, k.id).map((x) => `<span class="ltag ${x[0]}">${x[1]} ${x[2]}</span>`).join(" ");
@@ -599,7 +599,7 @@ function printCards() {
       <footer class="pt-f"><span>🎙️ منبر القافلة · ⏱️ 3 دقائق</span><span class="pt-who">${who ? esc(who) : "المتحدث: ............"}</span></footer></div>`; };
   const lead = (dep) => `<div class="pp-lead ${dep ? "dep" : ""}"><header><span class="pl-badge">${dep ? "🔰" : "🎖️"}</span><div><small>طريق القوافل</small><h3>${dep ? "نائب القائد" : "قائد القافلة"}</h3></div></header>
       <ul>${(dep ? L.LEAD.deputy : L.LEAD.leader).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
-      <p class="pl-motto">${L.LEAD.verse}<br><b>${esc(L.LEAD.motto)}</b></p><div class="pl-name"><span>قافلة: ............ · الاسم: ............</span></div></div>`;
+      <p class="pl-motto">${L.LEAD.verse}<br><b>${esc(L.LEAD.motto)}</b></p><p class="pl-rule">${esc(L.LEAD.rule)}</p><div class="pl-name"><span>قافلة: ............ · الاسم: ............</span></div></div>`;
   return { pc, duty, lvl, topic, lead };
 }
 function viewPrint(arg) {
@@ -656,7 +656,7 @@ function viewGuide() {
     ${pageHead("دليل طريق القوافل", "قواعد النظام كاملة. تقدر تعرضها للمغامرين في وضع العرض.")}
     <section class="panel guide-hero"><p>الانضباط <b>وقود القافلة</b>: كل نجمة تقدّم الجمل محطة وتعطي القافلة سحبة بطاقة قوة، ولما تاخذ نصف القوافل نجمة ينفتح ختم الأسبوع.</p>
       <div class="g-rules"><span>⭐ كل الحاضرين ${L.NC - 1} نقاط فأكثر</span><span>🌟 الكل ${L.NC} نقاط</span><span>⭐ كل إتقانين للتكليف</span></div></section>
-    <section class="panel"><h3>🎖️ القيادة: مشورة لا تسلّط</h3><p class="lc-verse">${L.LEAD.verse}</p><p><b>${esc(L.LEAD.motto)}</b></p><div class="grid2"><div><b>القائد</b><ul>${L.LEAD.leader.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div><div><b>النائب</b><ul>${L.LEAD.deputy.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div></section>
+    <section class="panel"><h3>🎖️ القيادة: مشورة لا تسلّط</h3><p class="lc-verse">${L.LEAD.verse}</p><p><b>${esc(L.LEAD.motto)}</b></p><div class="grid2"><div><b>القائد</b><ul>${L.LEAD.leader.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div><div><b>النائب</b><ul>${L.LEAD.deputy.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div><div><b>الكابتن</b><ul>${L.LEAD.captain.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div><p class="lead-rule">⚠️ ${esc(L.LEAD.rule)}</p></section>
     <section class="panel"><h3>🧭 التكليفات</h3><p class="muted small">كل قافلة لها تكليف كل لقاء، ويتبدّل تلقائيًا. الكلمة: القافلة تختار المتحدث، وما يتكرر نفس الشخص قبل ما يتكلم الكل، وما يتكرر الموضوع.</p>
       <div class="duty-grid">${L.DUTIES.map((d) => `<div class="duty-card"><b>${d.icon} ${esc(d.name)}</b><ul>${d.tasks.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("")}</div>
       ${m ? `<p class="small">هذا اللقاء: ${S.caravans.map((c) => { const d = L.dutyOf(S, m, c.id); return `<span class="nowrap"><i class="sw" style="${carStyle(c)}"></i>${esc(c.name)}: ${d ? d.icon + " " + esc(d.short) : "—"}</span>`; }).join(" · ")}</p>` : ""}</section>
@@ -1127,11 +1127,11 @@ function announceHTML() {
   const steps = annSteps(); const i = Math.max(0, Math.min(steps.length - 1, ui.ann || 0)); const s = steps[i];
   const nm = (id) => (id && I.kid[id] ? esc(L.kidName(I.kid[id])) : "—");
   let body;
-  if (s.ph === "grid") body = `<div class="ann-grid">${S.caravans.map((c) => `<section style="${carStyle(c)}"><h2>${esc(c.name)}</h2><p>🎖️ ${nm(c.leader_kid)} · 🔰 ${nm(c.deputy_kid)}</p><ul>${L.kidsOf(S, c.id).filter((k) => k.id !== c.leader_kid && k.id !== c.deputy_kid).map((k) => `<li>${esc(k.first_name)}</li>`).join("")}</ul></section>`).join("")}</div>`;
+  if (s.ph === "grid") body = `<div class="ann-grid">${S.caravans.map((c) => `<section style="${carStyle(c)}"><h2>${esc(c.name)}</h2><p>🎖️ ${nm(c.leader_kid)} · 🔰 ${nm(c.deputy_kid)} · ⚽ ${nm(c.captain_kid)}</p><ul>${L.kidsOf(S, c.id).filter((k) => ![c.leader_kid, c.deputy_kid, c.captain_kid].includes(k.id)).map((k) => `<li>${esc(k.first_name)}</li>`).join("")}</ul></section>`).join("")}</div><p class="ann-rule">${esc(L.LEAD.rule)}</p>`;
   else {
-    const c = s.c; const mem = L.kidsOf(S, c.id).filter((k) => k.id !== c.leader_kid && k.id !== c.deputy_kid);
+    const c = s.c; const mem = L.kidsOf(S, c.id).filter((k) => ![c.leader_kid, c.deputy_kid, c.captain_kid].includes(k.id));
     body = `<div class="ann-car ph-${s.ph}" style="${carStyle(c)}"><p class="ann-k">قافلة</p><h2 class="ann-name">${esc(c.name.replace(/[\u064B-\u0652]/g, ""))}</h2>
-      ${s.ph !== "name" ? `<div class="ann-lead"><div><small>🎖️ القائد</small><b>${nm(c.leader_kid)}</b></div><div><small>🔰 النائب</small><b>${nm(c.deputy_kid)}</b></div></div>` : ""}
+      ${s.ph !== "name" ? `<div class="ann-lead"><div><small>🎖️ القائد</small><b>${nm(c.leader_kid)}</b></div><div><small>🔰 النائب</small><b>${nm(c.deputy_kid)}</b></div><div><small>⚽ الكابتن</small><b>${nm(c.captain_kid)}</b></div></div>` : ""}
       ${s.ph === "all" ? `<ul class="ann-mem">${mem.map((k, j) => `<li style="animation-delay:${0.25 + j * 0.35}s">${esc(L.kidName(k))}</li>`).join("")}</ul>` : ""}</div>`;
   }
   return `<div class="ann">${body}<nav class="ann-nav"><button data-act="annprev" aria-label="السابق">→</button><span class="num">${i + 1}/${steps.length}</span><button data-act="annnext" aria-label="التالي">←</button></nav></div>`;
