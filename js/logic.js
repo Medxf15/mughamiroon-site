@@ -251,15 +251,15 @@ export function level(total) {
 
 /** power cards v2: tiers like FIFA (bronze → legendary). Drawn by luck whenever the supervisor decides, then given to a caravan. */
 export const POWER = {
-  kickoff: { name: "اختيار البداية", icon: "🧭", svg: "compass", tier: 1, rule: "تختارون جهة الملعب وضربة البداية." },
-  freekick: { name: "الركلة الحرة", icon: "🎯", svg: "target", tier: 1, rule: "ركلة حرة مباشرة من منتصف الملعب." },
-  penalty: { name: "ضربة الجزاء", icon: "🥅", svg: "penalty", tier: 2, rule: "ضربة جزاء فورية، يسددها لاعب تختارونه." },
-  block: { name: "التعطيل", icon: "⛔", svg: "block", tier: 2, rule: "تلغي بطاقة الخصم لحظة إعلانها." },
-  extra: { name: "الفزعة الكبرى", icon: "🦸", svg: "hero", tier: 3, rule: "مشرف تختارونه يلعب معكم دقيقتين." },
-  loan: { name: "استعارة لاعب", icon: "🔁", svg: "swap", tier: 3, rule: "لاعب من قافلة ثانية يلعب معكم شوطًا كاملًا." },
-  shield: { name: "الدرع", icon: "🛡️", svg: "shield", tier: 3, rule: "دقيقتين: أول هدف عليكم ما ينحسب." },
-  golden: { name: "الهدف الذهبي", icon: "⚡", svg: "bolt", tier: 4, rule: "دقيقتين: كل هدف لكم بهدفين." },
-  mirror: { name: "المرآة", icon: "🪞", svg: "mirror", tier: 4, rule: "تلغي بطاقة الخصم وتاخذون مفعولها لكم." },
+  kickoff: { name: "اختيار البداية", icon: "🧭", svg: "compass", tier: 1, cls: "tac", hit: "البداية لكم", sub: "تختارون جهة الملعب وضربة البداية.", dur: "مرة", when: "قبل البداية", rule: "تختارون جهة الملعب وضربة البداية." },
+  freekick: { name: "الركلة الحرة", icon: "🎯", svg: "target", tier: 1, cls: "att", hit: "تسديدة مباشرة من النص", sub: "ركلة حرة مباشرة على المرمى.", dur: "ركلة وحدة", when: "قبل أي شوط", rule: "ركلة حرة مباشرة من منتصف الملعب." },
+  penalty: { name: "ضربة الجزاء", icon: "🥅", svg: "penalty", tier: 2, cls: "att", hit: "جزائية لكم الحين", sub: "يسددها لاعب تختارونه.", dur: "ركلة وحدة", when: "قبل أي شوط", rule: "ضربة جزاء فورية، يسددها لاعب تختارونه." },
+  block: { name: "التعطيل", icon: "⛔", svg: "block", tier: 2, cls: "def", hit: "بطاقتهم تنلغي", sub: "تلعبونها لحظة ما يعلن الخصم بطاقته.", dur: "فوري", when: "ردًّا", rule: "تلغي بطاقة الخصم لحظة إعلانها." },
+  extra: { name: "الفزعة الكبرى", icon: "🦸", svg: "hero", tier: 3, cls: "tac", hit: "مشرف يلعب معكم", sub: "تختارون المشرف، وينضم لقافلتكم.", dur: "دقيقتين", when: "قبل أي شوط", rule: "مشرف تختارونه يلعب معكم دقيقتين." },
+  loan: { name: "استعارة لاعب", icon: "🔁", svg: "swap", tier: 3, cls: "tac", hit: "لاعب من قافلة ثانية", sub: "تختارونه، ويلعب معكم بقميصكم.", dur: "شوط كامل", when: "قبل أي شوط", rule: "لاعب من قافلة ثانية يلعب معكم شوطًا كاملًا." },
+  shield: { name: "الدرع", icon: "🛡️", svg: "shield", tier: 3, cls: "def", hit: "هدفهم الأول ما ينحسب", sub: "يصد أول هدف يدخل مرماكم.", dur: "دقيقتين", when: "قبل أي شوط", rule: "دقيقتين: أول هدف عليكم ما ينحسب." },
+  golden: { name: "الهدف الذهبي", icon: "⚡", svg: "bolt", tier: 4, cls: "att", hit: "هدفكم بهدفين", sub: "كل هدف تسجلونه ينحسب هدفين.", dur: "دقيقتين", when: "قبل أي شوط", rule: "دقيقتين: كل هدف لكم بهدفين." },
+  mirror: { name: "المرآة", icon: "🪞", svg: "mirror", tier: 4, cls: "def", hit: "بطاقتهم صارت لكم", sub: "تلغون بطاقة الخصم وتاخذون مفعولها.", dur: "فوري", when: "ردًّا", rule: "تلغي بطاقة الخصم وتاخذون مفعولها لكم." },
 };
 export const TIER = { 1: "برونزية", 2: "فضية", 3: "ذهبية", 4: "أسطورية" };
 export const TIER_W = { 1: 40, 2: 30, 3: 20, 4: 10 };

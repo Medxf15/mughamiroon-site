@@ -2,6 +2,7 @@ import { auth, db, ApiError, storage } from "./api.js";
 import { ALL_LINES } from "./film.js";
 import * as L from "./logic.js";
 import { planFor, toMin, fmt12 } from "./plans.js";
+import { powerCard, powerIcon, powerBack } from "./pcard.js";
 
 // ---------------- state ----------------
 const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings", "duty_log"];
@@ -550,7 +551,7 @@ function matchCard(m, edit) {
 // ---------------- طريق القوافل ----------------
 function pcardHTML(kind, big) {
   const p = L.POWER[kind]; if (!p) return "";
-  return `<div class="pcard t${p.tier} ${big ? "big" : ""}"><span class="pc-tier">${L.TIER[p.tier]}</span><span class="pc-ic">${picon(kind)}</span><b>${esc(p.name)}</b>${big ? `<p>${esc(p.rule)}</p>` : ""}</div>`;
+  return powerCard(kind, big ? "md" : "sm");
 }
 function revealHTML(rv, closable) {
   const c = I.car[rv.car];
@@ -586,11 +587,7 @@ function newLevels(m) {
 const DUTY_TONE = { musalla: "#1fa865", kalima: "#0a63e6", food: "#ef8a33", clean: "#e7297a" };
 const LVL_TONE = ["#6b7cff", "#1fa865", "#0a63e6", "#ef8a33", "#e7297a", "#d4a106"];
 function printCards() {
-  const pc = (kind) => { const p = L.POWER[kind]; return `<div class="pp-card pw t${p.tier}"><div class="pw-frame">
-      <header class="pw-top"><span class="pw-gems">${"◆".repeat(p.tier)}${"◇".repeat(4 - p.tier)}</span><span class="pw-tier">${L.TIER[p.tier]}</span></header>
-      <div class="pw-medal">${picon(kind)}</div>
-      <h3>${esc(p.name)}</h3><p class="pw-rule">${esc(p.rule)}</p>
-      <footer class="pw-foot"><span>بطاقة قوة</span><i></i><span>يعلنها الكابتن</span></footer></div></div>`; };
+  const pc = (kind) => `<div class="pp-cell">${powerCard(kind)}</div>`;
   const duty = (d) => `<div class="pp-duty" style="--dt:${DUTY_TONE[d.key]}"><header class="pd-head"><small>تكليف القافلة</small><h3>${esc(d.name)}</h3></header><div class="pd-medal">${d.icon}</div>
       <div class="pd-body"><p class="pd-k">الإتقان يعني</p><ul>${d.tasks.map((t) => `<li><i></i>${esc(t)}</li>`).join("")}</ul></div>
       <footer class="pd-f"><b>⭐</b> كل إتقانين = نجمة للقافلة</footer></div>`;
@@ -611,8 +608,8 @@ function viewPrint(arg) {
   const deck = Object.entries(L.DECK).flatMap(([k, n]) => Array(n).fill(k));
   if (arg === "deck") {
     title = "بطاقات القوة";
-    guide = `<li><b>${deck.length} بطاقة</b> في ${Math.ceil(deck.length / 9)} صفحات: برونزية ×4 لكل نوع، فضية وذهبية ×3، أسطورية ×2.</li><li>ورق مقوّى 250–300 جرام، A4، الهوامش «بلا»، وفعّل «رسومات الخلفية».</li><li>قصّها على الخطوط، وخلها في ظرف معك. البطاقة تُسلّم للقائد بعد السحب، وترجع لك بعد المباراة.</li>`;
-    sheets = `<div class="sheet cards">${deck.map(pc).join("")}</div>`;
+    guide = `<li><b>${deck.length} بطاقة</b> في ${Math.ceil(deck.length / 9)} صفحات: برونزية ×4 لكل نوع، فضية وذهبية ×3، أسطورية ×2.</li><li>ورق مقوّى 250–300 جرام لامع أو مطفي، A4، الهوامش «بلا»، وفعّل «رسومات الخلفية».</li><li>الصفحة الأخيرة ظهر البطاقات (اختياري): اطبعها على ظهر الصفحات الثلاث إذا الطابعة تطبع وجهين.</li><li>قصّها على الخطوط، وخلها في ظرف معك. البطاقة تُسلّم للقائد بعد السحب، وترجع لك بعد المباراة.</li>`;
+    sheets = `<div class="sheet cards">${deck.map(pc).join("")}</div><div class="sheet cards backs">${Array(9).fill(0).map(() => `<div class="pp-cell">${powerBack()}</div>`).join("")}</div>`;
   } else if (arg === "meet" && m) {
     const nx = nextMeeting(m); const kalNext = nx && S.caravans.find((c) => (L.dutyOf(S, nx, c.id) || {}).key === "kalima");
     const kd = kalNext && L.dutyRow(S, nx.id, kalNext.id);
@@ -991,7 +988,7 @@ const PSVG = {
   bolt: '<path d="M58 6 20 56h26l-8 38 42-54H54z" fill="currentColor" stroke-linejoin="round"/>',
   mirror: '<ellipse cx="50" cy="40" rx="26" ry="32" fill="none" stroke="currentColor" stroke-width="7"/><path d="M38 28c4-6 10-9 16-9" stroke="currentColor" stroke-width="5" stroke-linecap="round" opacity=".7"/><path d="M50 72v20M38 92h24" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>',
 };
-const picon = (kind) => { const p = L.POWER[kind]; return p ? `<svg class="pico" viewBox="0 0 100 100" aria-hidden="true">${PSVG[p.svg] || ""}</svg>` : ""; };
+const picon = (kind) => powerIcon(kind);
 
 // ---------------- دليل اللقاء ----------------
 const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1062,12 +1059,12 @@ document.addEventListener("toggle", (e) => { const d = e.target; if (!d.classLis
 function drawCardKind() { const r = crypto.getRandomValues(new Uint32Array(2)); return L.drawCard(r[0] / 4294967296, r[1] / 4294967296); }
 function bigCard(kind, cls = "") {
   const p = L.POWER[kind]; if (!p) return "";
-  return `<div class="bcard t${p.tier} ${cls}"><div class="bc-in"><header><span class="bc-tier">${L.TIER[p.tier]}</span><span class="bc-gems">${"◆".repeat(p.tier)}</span></header><div class="bc-ic">${picon(kind)}</div><h3>${esc(p.name)}</h3><p>${esc(p.rule)}</p><footer>بطاقة قوة · المغامرون</footer></div></div>`;
+  return powerCard(kind, cls || "md");
 }
 function drawStage(kind, assign) {
   const p = L.POWER[kind];
   return `<div class="dstage t${p.tier}" role="dialog" aria-label="سحب بطاقة قوة"><div class="ds-glow"></div>
-    <div class="ds-flip"><div class="ds-back"><div class="ds-q">؟</div></div><div class="ds-front">${bigCard(kind)}</div></div>
+    <div class="ds-flip"><div class="ds-back">${powerBack()}<div class="ds-q">؟</div></div><div class="ds-front">${bigCard(kind)}</div></div>
     <p class="ds-tier">${L.TIER[p.tier]}!</p>
     ${assign ? `<div class="ds-give"><p>لمين تروح البطاقة؟</p><div>${S.caravans.map((c) => `<button class="btn" style="${carStyle(c)}" data-act="drawgive" data-car="${c.id}">${esc(c.name)}</button>`).join("")}</div><button class="btn ghost sm" data-act="drawcancel">ألغِ السحبة</button></div>` : ""}</div>`;
 }
