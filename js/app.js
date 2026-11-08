@@ -3,9 +3,10 @@ import { ALL_LINES } from "./film.js";
 import * as L from "./logic.js";
 import { planFor, toMin, fmt12 } from "./plans.js";
 import { powerCard, powerIcon, powerBack, playerCard, packBack } from "./pcard.js";
+import { initField } from "./field.js";
 
 // ---------------- state ----------------
-const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings", "duty_log"];
+const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings", "duty_log", "field_events"];
 let S = null, I = null, me = null, accounts = [];
 let meetId = null;
 let ui = { present: (() => { try { return localStorage.getItem("mgh.present") === "1"; } catch (e) { return false; } })(), seenCards: new Set(), liveCar: "all", kidsQ: "", kidsCar: "all", leagueTab: "matches", screenTab: "caravans", openDed: null, openMatch: null, armed: null };
@@ -75,24 +76,24 @@ async function loadAccounts() { accounts = isOwner() ? await db.select("profiles
 // ---------------- routing ----------------
 function parseRoute() {
   const h = location.hash.replace(/^#/, "");
-  const [name, arg] = h.split("/");
-  return { name: name || "home", arg };
+  const [name, arg, arg2] = h.split("/");
+  return { name: name || "home", arg, arg2 };
 }
 // [route, label, icon, visible, mobile tab]
 const NAV = [
   ["home", "اليوم", "🗓️", () => true, true],
-  ["live", "التحضير والنقاط", "✅", () => can("points"), true],
+  ["field", "الملعب", "⚽", () => true, true],
   ["caravans", "القوافل", "🐪", () => true, true],
-  ["league", "الدوري", "⚽", () => true, true],
-  ["kids", "المغامرون", "🎒", () => true, false],
-  ["admin", "الإدارة", "⚙️", () => true, true],
+  ["admin", "المزيد", "☰", () => true, true],
 ];
-const SECTION = { plan: "home", cards: "league", studio: "admin", kid: "kids", caravan: "caravans", reports: "admin", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", kit: "home" };
+const SECTION = { plan: "home", live: "home", kit: "home", league: "field", cards: "field", gather: "field", game: "field", match: "field", studio: "admin", kids: "admin", kid: "admin", caravan: "caravans", reports: "admin", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", sheets: "admin" };
 
 let screenTimer = null;
 async function render() {
   clearInterval(screenTimer); screenTimer = null;
   const r = parseRoute();
+  if (r.name !== "match" && r.name !== "f") field.leave();
+  if (r.name === "f") { document.body.classList.remove("is-screen", "is-print"); return field.viewLink(r.arg, r.arg2); }
   document.body.classList.toggle("is-screen", r.name === "screen");
   document.body.classList.toggle("is-print", r.name === "print");
   document.body.classList.toggle("present", !!ui.present);
@@ -105,7 +106,7 @@ async function render() {
   if (me.status !== "approved") return viewPending();
   if (!S) { $app().innerHTML = shell('<div class="empty">جاري تحميل البيانات…</div>'); await guard(loadAll); if (!S) return; if (isOwner()) await guard(loadAccounts); }
   else if (r.name === "accounts" && isOwner()) await guard(loadAccounts);
-  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint, studio: viewStudio, plan: viewPlan, cards: viewCards };
+  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint, studio: viewStudio, plan: viewPlan, cards: viewCards, field: field.viewField, match: field.viewMatch, gather: field.viewGather, game: field.viewGame };
   const fn = views[r.name] || viewToday;
   if (r.name === "live" && !can("points")) return go("home");
   if (r.name === "accounts" && !isOwner()) return go("home");
@@ -120,7 +121,7 @@ function shell(inner, active) {
   const items = NAV.filter((n) => n[3]());
   const badge = (n) => (n[0] === "admin" && pend ? ` <b class="dot-n">${pend}</b>` : "");
   const nav = items.map((n) => `<a href="#${n[0]}" class="${n[0] === sec ? "on" : ""}">${n[1]}${badge(n)}</a>`).join("");
-  const tabs = items.filter((n) => n[4]).map((n) => `<a href="#${n[0]}" class="${n[0] === sec ? "on" : ""}"><span class="ti">${n[2]}</span><span>${n[0] === "live" ? "التحضير" : n[1]}</span>${badge(n)}</a>`).join("");
+  const tabs = items.filter((n) => n[4]).map((n) => `<a href="#${n[0]}" class="${n[0] === sec ? "on" : ""}"><span class="ti">${n[2]}</span><span>${n[1]}</span>${badge(n)}</a>`).join("");
   return `
   <header class="top">
     <div class="wrap top-in">
@@ -237,7 +238,7 @@ function viewToday() {
       body: `${dutyRow("musalla")}${dutyRow("kalima")}${kalC ? `<p class="small">${kd && kd.speaker_kid ? `🎙️ المتحدث: <b>${esc(L.kidName(I.kid[kd.speaker_kid]))}</b>${kd.topic != null ? " · " + esc(L.TOPICS[kd.topic].t) : ""}` : ed ? `<span class="alert">اختر متحدث وموضوع ${esc(kalC.name)}:</span>` : ""}</p>${ed && !(kd && kd.speaker_kid && kd.topic != null) ? `<div class="duty-kal">${kalimaPick(kalC, m)}</div>` : ""}` : ""}` },
     { key: "meal", time: "الوجبة", icon: "🍽️", title: "الوجبة والنظافة", auto: null, body: `${dutyRow("food")}${dutyRow("clean")}` },
     { key: "league", time: "الميدان", icon: "⚽", title: "الدوري", auto: todayMatches.length ? todayMatches.every((x) => x.played) : null,
-      body: `${todayMatches.length ? `<div class="mini-matches">${todayMatches.map((x) => `<a href="#league" class="mm ${x.played ? "done" : ""}"><span style="${carStyle(I.car[x.home_id])}">${esc(carName(x.home_id))}</span><b class="num">${x.played ? x.home_goals + " – " + x.away_goals : "ضد"}</b><span style="${carStyle(I.car[x.away_id])}">${esc(carName(x.away_id))}</span></a>`).join("")}</div>` : '<p class="muted">ما فيه مباريات في هذا اللقاء.</p>'}
+      body: `<p><a class="btn sm" href="#field">⚽ افتح الملعب</a> <a class="btn ghost sm" href="#gather">📣 الجمع</a></p>${todayMatches.length ? `<div class="mini-matches">${todayMatches.map((x) => `<a href="#match/${x.id}" class="mm ${x.played ? "done" : ""}"><span style="${carStyle(I.car[x.home_id])}">${esc(carName(x.home_id))}</span><b class="num">${x.played ? x.home_goals + " – " + x.away_goals : "ضد"}</b><span style="${carStyle(I.car[x.away_id])}">${esc(carName(x.away_id))}</span></a>`).join("")}</div>` : '<p class="muted">ما فيه مباريات في هذا اللقاء.</p>'}
         <p>🎴 <a href="#cards">بطاقات القوة: اسحب أو سجّل المستخدمة</a></p>
         ${drawn.length ? `<p class="small">سلّم البطاقات المطبوعة: ${drawn.map((p) => `${esc(L.POWER[p.kind].name)} ← ${esc(carName(p.caravan_id))}`).join("، ")}</p>` : ""}
         <p class="small muted">قبل الصافرة: كل قافلة تعلن بطاقتها، والكابتن يمثلها.</p>` },
@@ -309,7 +310,7 @@ function liveCaravan(c, m) {
     ${rows || '<p class="muted pad">لا يوجد مغامرون في هذي القافلة.</p>'}
     ${dutyBar(c, m)}
     ${powerBar(c, m)}
-    <footer><span>نقاط التحديات</span><button class="step" data-act="tc" data-car="${c.id}" data-d="-5" aria-label="نقص 5">−</button><output class="num">${r.ch}</output><button class="step" data-act="tc" data-car="${c.id}" data-d="5" aria-label="زد 5">+</button><small class="muted">أساسي 10 · متقدم 15 · خبير 20</small></footer>
+    <footer><span>نقاط التحديات</span><button class="step" data-act="tc" data-car="${c.id}" data-d="-5" aria-label="نقص 5">−</button><output class="num">${r.tc}</output><button class="step" data-act="tc" data-car="${c.id}" data-d="5" aria-label="زد 5">+</button><small class="muted">أساسي 10 · متقدم 15 · خبير 20</small></footer>
   </section>`;
 }
 
@@ -606,7 +607,9 @@ function viewPrint(arg) {
   const m = I.meet[meetId]; const { pc, duty, lvl, topic, lead } = printCards();
   let title, guide, sheets;
   const deck = Object.entries(L.DECK).flatMap(([k, n]) => Array(n).fill(k));
-  if (arg === "deck") {
+  if ((arg === "att" || arg === "notes" || arg === "staff") && m) {
+    ({ title, guide, sheets } = meetSheets(arg, m));
+  } else if (arg === "deck") {
     title = "بطاقات القوة";
     guide = `<li><b>${deck.length} بطاقة</b> في ${Math.ceil(deck.length / 9)} صفحات: برونزية ×4 لكل نوع، فضية وذهبية ×3، أسطورية ×2.</li><li>ورق مقوّى 250–300 جرام لامع أو مطفي، A4، الهوامش «بلا»، وفعّل «رسومات الخلفية».</li><li>الصفحة الأخيرة ظهر البطاقات (اختياري): اطبعها على ظهر الصفحات الثلاث إذا الطابعة تطبع وجهين.</li><li>قصّها على الخطوط، وخلها في ظرف معك. البطاقة تُسلّم للقائد بعد السحب، وترجع لك بعد المباراة.</li>`;
     sheets = `<div class="sheet cards">${deck.map(pc).join("")}</div><div class="sheet cards backs">${Array(9).fill(0).map(() => `<div class="pp-cell">${powerBack()}</div>`).join("")}</div>`;
@@ -635,6 +638,45 @@ function viewPrint(arg) {
       <h2 class="pp-h">بنك مواضيع الكلمة</h2><div class="sheet topics">${L.TOPICS.map((_, i) => topic(i)).join("")}</div>`;
   }
   $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#home">→ رجوع لليوم</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
+}
+// ---------------- أوراق اللقاء ----------------
+function meetSheets(arg, m) {
+  const date = `اللقاء ${m.number} · الخميس ${fmtDate(m.meet_date)}`;
+  const nav = `<li class="ps-nav">${[["att", "تحضير القادة"], ["notes", "ملاحظات القائد والنائب"], ["staff", "ورقة المشرف والمساعد"]].map(([k, t]) => k === arg ? `<b>${t}</b>` : `<a href="#print/${k}">${t}</a>`).join(" · ")}</li>`;
+  const box = '<i class="pbox"></i>';
+  const lead = (c) => { const n = (id) => (id && I.kid[id] ? esc(L.kidName(I.kid[id])) : "................"); return `<p class="ps-lead">🎖️ القائد: <b>${n(c.leader_kid)}</b> · 🔰 النائب: <b>${n(c.deputy_kid)}</b></p>`; };
+  const head = (c, t, sub) => `<header class="ps-head" style="${carStyle(c)}"><div><small>نادي مهارة · المغامرون</small><h2>${t}</h2><p>${c ? "قافلة <b>" + esc(c.name) + "</b> · " : ""}${date}</p></div><img src="assets/mahara.png" alt=""></header>${sub || ""}`;
+  if (arg === "att") {
+    const sheets = S.caravans.map((c) => { const ks = L.kidsOf(S, c.id);
+      return `<section class="psheet">${head(c, "كشف التحضير", lead(c))}
+        <table class="ptbl"><thead><tr><th>#</th><th>الاسم</th><th>حاضر</th><th>غائب</th></tr></thead><tbody>
+        ${ks.map((k, i) => `<tr><td class="num">${i + 1}</td><td>${esc(L.kidName(k))}</td><td>${box}</td><td>${box}</td></tr>`).join("")}
+        ${Array(4).fill(0).map((_, i) => `<tr class="blank"><td class="num">${ks.length + i + 1}</td><td><span class="pline"></span><small>جديد؟ اكتب اسمه الثلاثي</small></td><td>${box}</td><td>${box}</td></tr>`).join("")}
+        </tbody></table>
+        <p class="ps-foot">✓ في خانة «حاضر» أو «غائب» لكل واحد. أي مغامر جديد يكتب اسمه في الأسطر الفاضية. الورقة ترجع للأستاذ بعد الانطلاقة.</p></section>`; }).join("");
+    return { title: "أوراق اللقاء: تحضير القادة", guide: `${nav}<li>ورقة لكل قافلة (${S.caravans.length} صفحات). يستلمها القائد في الانطلاقة ويرجّعها بعد ما يحضّر.</li><li>بدون أي رقم جوال أو بيانات: الاسم والحضور بس.</li><li>A4 عادي، الهوامش افتراضية.</li>`, sheets };
+  }
+  if (arg === "notes") {
+    const cols = [["⭐", "ساعد أو تميّز"], ["⏰", "تأخّر"], ["👂", "ما التزم بالتعليمات"], ["✋", "خشونة"]];
+    const sheets = S.caravans.map((c) => { const ks = L.kidsOf(S, c.id);
+      return `<section class="psheet">${head(c, "ورقة القائد والنائب", lead(c) + `<p class="ps-intro">علّم ✓ في الخانة اللي صارت اليوم، واكتب كلمة توضّح. <b>ابدأ بالتميّز:</b> مين ساعد أو أبدع أو شجّع؟ الورقة للأستاذ بس، ما تنقرى قدام أحد.</p>`)}
+        <table class="ptbl notes"><thead><tr><th>الاسم</th>${cols.map(([i, t]) => `<th class="pc"><span>${i}</span>${t}</th>`).join("")}<th>وش صار؟ (كلمة أو كلمتين)</th></tr></thead><tbody>
+        ${ks.map((k) => `<tr><td>${esc(k.first_name)} <small>${esc(k.family_name || "")}</small></td>${cols.map(() => `<td>${box}</td>`).join("")}<td><span class="pline"></span></td></tr>`).join("")}
+        ${Array(2).fill(0).map(() => `<tr class="blank"><td><span class="pline"></span></td>${cols.map(() => `<td>${box}</td>`).join("")}<td><span class="pline"></span></td></tr>`).join("")}
+        </tbody></table>
+        <div class="ps-sign"><span>توقيع القائد: ................</span><span>توقيع النائب: ................</span></div>
+        <p class="ps-foot">تُسلّم للأستاذ في الختام. ملاحظة وحدة ما تعني عقوبة: الأستاذ يشوف ويتأكد بنفسه.</p></section>`; }).join("");
+    return { title: "أوراق اللقاء: ملاحظات القائد والنائب", guide: `${nav}<li>ورقة لكل قافلة. يعبّيها القائد والنائب طول اليوم، ويسلّمونها لك في الختام.</li><li>الخانة الأولى للتميّز عمدًا: نبي القادة يلاحظون الخير قبل الغلط.</li><li>أنت تقرر بعد ما تتأكد بنفسك. لا تعلن الورقة ولا تعاقب على ملاحظة وحدة.</li>`, sheets };
+  }
+  // staff-only
+  const groups = S.caravans.map((c) => [c, L.kidsOf(S, c.id)]).concat([[null, L.activeKids(S).filter((k) => !k.caravan_id)]]).filter(([, ks]) => ks.length);
+  let n = 0;
+  const rows = groups.map(([c, ks]) => `<tr class="pgrp" style="${carStyle(c)}"><td colspan="6">${c ? "قافلة " + esc(c.name) : "بدون قافلة"} <small>(${ks.length})</small></td></tr>` + ks.map((k) => `<tr><td class="num">${++n}</td><td>${esc(L.kidName(k))}${k.official ? "" : ' <small class="pun">غير مسجّل</small>'}</td><td>${box}</td><td>${box}</td><td><span class="pline"></span></td><td><span class="pline"></span></td></tr>`).join("")).join("");
+  const sheets = `<section class="psheet sstaff">${head(null, "ورقة المشرف والمساعد", `<p class="ps-intro">🔒 للمشرف والمساعد فقط. <b>يحتاج متابعة</b>: سبب قصير (غياب متكرر، سلوك، صحة، تميّز يستاهل تكريم). <b>رقم ولي الأمر</b>: اكتبه بس للي ما سجّله في المنصة الرسمية، وأدخله هناك بعد اللقاء، وبعدها أتلف الورقة.</p>`)}
+    <table class="ptbl sst"><thead><tr><th>#</th><th>الاسم</th><th>حاضر</th><th>يحتاج متابعة</th><th>السبب</th><th>رقم ولي الأمر (للناقص)</th></tr></thead><tbody>${rows}
+      <tr class="pgrp"><td colspan="6">جدد ما هم في القائمة</td></tr>${Array(5).fill(0).map(() => `<tr class="blank"><td></td><td><span class="pline"></span></td><td>${box}</td><td>${box}</td><td><span class="pline"></span></td><td><span class="pline"></span></td></tr>`).join("")}
+    </tbody></table></section>`;
+  return { title: "أوراق اللقاء: ورقة المشرف والمساعد", guide: `${nav}<li>نسخة لك ونسخة للمساعد. ما تنعطى للقادة.</li><li>الأرقام ما تنحفظ في هذي المنصة: تنكتب على الورق، وتدخل المنصة الرسمية، والورقة تنتلف.</li>`, sheets };
 }
 function levelsHTML(tv) {
   const kids = L.activeKids(S).map((k) => ({ k, lv: L.level(L.kidTotal(S, I, k.id)) }));
@@ -708,13 +750,22 @@ function viewAdmin() {
   const pend = isOwner() ? accounts.filter((a) => a.status === "pending").length : 0;
   const tile = (href, icon, title, sub, badge) => `<a class="admin-tile" href="${href}"><span class="at-ic">${icon}</span><b>${title}${badge ? ` <b class="dot-n">${badge}</b>` : ""}</b><small>${sub}</small></a>`;
   $app().innerHTML = shell(`
-    ${pageHead("الإدارة", "كل اللي تحتاجه خارج وقت اللقاء.")}
+    ${pageHead("المزيد", "كل الأدوات والصفحات اللي ما تحتاجها كل دقيقة.")}
+    <h2 class="h2 adm-h">يوم اللقاء</h2>
+    <div class="admin-grid">
+      ${can("points") ? tile("#live", "✅", "التحضير والنقاط", "الحضور والبطاقات الخمس والخصم") : ""}
+      ${tile("#print/att", "🖨️", "أوراق اللقاء", "التحضير للقادة، ورقة الملاحظات، وورقتك أنت والمساعد")}
+      ${tile("#cards", "🎴", "بطاقات القوة", "السحب ورصيد كل قافلة وطباعة البطاقات")}
+      ${tile("#league", "🏆", "الدوري: التعديل المتقدم", "الحراس، لاعب الروح، الجوائز، تعديل أي مباراة")}
+      ${tile("#plan", "📋", "دليل اللقاء", "كل فقرة بالدقيقة")}
+    </div>
+    <h2 class="h2 adm-h">الإدارة</h2>
     <div class="admin-grid">
       ${tile("#reports", "📝", "التقارير", "الأسبوعي جاهز للنسخ، الحضور، بيانات اللقاءات")}
       ${tile("#kids", "🎒", "المغامرون", "الأسماء والمراكز والجوازات")}
       ${tile("#guide", "🧭", "دليل طريق القوافل", "القواعد والبطاقات والمحطات والمستويات")}
       ${tile("#seals", "📜", "الرسائل المختومة", "نصوص الأختام ولقاء البداية")}
-      ${tile("#print/set", "🖨️", "الطباعة", "مجموعة البطاقات الثابتة")}
+      ${tile("#print/set", "🗂️", "مجموعة البطاقات الثابتة", "القوة، التكليف، القيادة، المستويات، المواضيع")}
       ${tile("#screen", "📺", "شاشة التلفاز", "القوافل والمستويات والختم والدوري")}
       ${tile("season1.html", "🎬", "فيلم الموسم الأول", "إعلان القوافل · يُعرض على التلفاز بملء الشاشة")}
       ${isOwner() ? tile("#accounts", "👥", "الحسابات", "الموافقات والصلاحيات", pend) : ""}
@@ -1149,6 +1200,9 @@ document.addEventListener("keydown", (e) => {
   if ([" ", "Enter", "ArrowLeft", "PageDown"].includes(e.key)) { e.preventDefault(); ui.ann = Math.min(annSteps().length - 1, (ui.ann || 0) + 1); viewScreen(); }
   if (["ArrowRight", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); ui.ann = Math.max(0, (ui.ann || 0) - 1); viewScreen(); }
 });
+
+// ---------------- الملعب ----------------
+const field = initField({ S: () => S, I: () => I, meetId: () => meetId, can, esc, toast, guard, reload, shell, pageHead, meetPicker, fmtDate, doUndoable });
 
 // ---------------- boot ----------------
 window.addEventListener("hashchange", render);

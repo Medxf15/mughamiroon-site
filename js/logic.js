@@ -37,6 +37,9 @@ export function index(S) {
   for (const d of S.deductions) (I.ded[d.meeting_id + "|" + d.kid_id] ||= []).push(d);
   I.tc = {};
   for (const t of S.team_challenge) I.tc[t.meeting_id + "|" + t.caravan_id] = t.points;
+  // field points (assembly + games) count with the challenge points, but are stored apart
+  I.ev = {};
+  for (const e of S.field_events || []) I.ev[e.meeting_id + "|" + e.caravan_id] = (I.ev[e.meeting_id + "|" + e.caravan_id] || 0) + (e.points || 0);
   // a meeting is "taken" once anything real was recorded in it (a mark, an absence, a deduction)
   I.started = new Set();
   for (const p of S.points) if (meaningful(p)) I.started.add(p.meeting_id);
@@ -81,7 +84,8 @@ export function teamMeet(S, I, mid, cid) {
   const any = ks.some((k) => earned(I, mid, k.id) > 0);
   let stars = 0;
   if (ks.length >= 2 && any) { if (full === ks.length) stars = 2; else if (ready === ks.length) stars = 1; }
-  return { n: ks.length, ready, full, stars, sum, fz, ch: I.tc[mid + "|" + cid] || 0 };
+  const tc = I.tc[mid + "|" + cid] || 0, ev = (I.ev && I.ev[mid + "|" + cid]) || 0;
+  return { n: ks.length, ready, full, stars, sum, fz, tc, ev, ch: tc + ev };
 }
 
 export function standings(S) {
