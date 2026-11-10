@@ -170,7 +170,7 @@ export function initField(ctx) {
     tick = setInterval(() => {
       const el = document.getElementById("mx-clock"); if (!el || curMid !== mid) { clearInterval(tick); keepAwake(false); return; }
       const t = tGet(mid); const left = tLeft(t);
-      el.textContent = t.ph === "pre" ? fmtClock(t.half * 60000) : t.ph === "end" ? "—" : fmtClock(left);
+      el.textContent = t.ph === "pre" ? fmtClock(t.half * 60000) : t.ph === "end" ? "0:00" : fmtClock(left);
       const over = t.run && left <= 0 && (t.ph === "h1" || t.ph === "h2" || t.ph === "ht");
       el.classList.toggle("over", over || (t.ph !== "ht" && t.ph !== "pre" && left <= 0 && t.ph !== "end"));
       el.classList.toggle("warn", t.run && left > 0 && left <= 60000 && t.ph !== "ht");
@@ -196,17 +196,17 @@ export function initField(ctx) {
     const today = m ? S.matches.filter((x) => x.meeting_id === m.id).sort((a, b) => a.round - b.round || a.id - b.id) : [];
     const anyPlayed = S.matches.some((x) => x.stage === "league" && x.played);
     const st = L.standings(S);
-    const tool = (href, icon, t, s) => `<a class="ftool" href="${href}"><span>${icon}</span><b>${t}</b><small>${s}</small></a>`;
     const evToday = m ? (S.field_events || []).filter((e) => e.meeting_id === m.id) : [];
+    const tool = (href, icon, t, s) => `<a class="ftool" href="${href}"><span>${icon}</span><b>${t}</b><small>${s}</small></a>`;
     const ptsToday = (cid) => evToday.filter((e) => e.caravan_id === cid).reduce((n, e) => n + e.points, 0);
     const rounds = [...new Set(S.matches.map((x) => x.round))].sort((a, b) => a - b);
     $app().innerHTML = ctx.shell(`
       ${ctx.pageHead("الملعب", m ? `اللقاء ${m.number} · الخميس ${ctx.fmtDate(m.meet_date)}` : "", ctx.meetPicker())}
       <div class="ftools">
-        ${tool("#gather", "📣", "الجمع", "صفّر، وسجّل الأسرع والأضبط")}
-        ${tool("#game", "🎯", "نقاط لعبة", "أداء + تعاون لكل قافلة")}
+        ${tool("#gather", "📣", "الجمع", evToday.some((e) => e.kind === "gather") ? "✓ سُجّل " + new Set(evToday.filter((e) => e.kind === "gather").map((e) => e.game)).size + " جمع الليلة" : "صفّر، وسجّل الأسرع والأضبط")}
+        ${tool("#game", "🎯", "نقاط لعبة", evToday.some((e) => e.kind.startsWith("game")) ? "✓ " + new Set(evToday.filter((e) => e.kind.startsWith("game")).map((e) => e.game)).size + " لعبة الليلة" : "بنك ألعاب جاهز + أداء وتعاون")}
         ${tool("#cards", "🎴", "بطاقات القوة", "اسحب، وشوف رصيد كل قافلة")}
-        ${tool("#closing", "🌙", "الختام", "أرقام الليلة وجائزة الأسبوع")}
+        ${tool("#closing", "🌙", "الختام", evToday.some((e) => e.kind === "prize") ? "✓ جائزة الأسبوع معتمدة" : "أرقام الليلة وجائزة الأسبوع")}
         ${ctx.can("plan") ? `<button class="ftool" data-f="linkopen"><span>🔗</span><b>رابط الحكم</b><small>يسجّل المباراة بدون دخول</small></button>` : ""}
       </div>
       ${ui.linkOpen ? linkPanel() : ""}
@@ -240,7 +240,7 @@ export function initField(ctx) {
       <p class="muted small">اختر أول مباراة (مثلًا أول قافلتين انضبطوا في الجمع)، والمنصة تكمل باقي الجولات تلقائيًا بدون تكرار.${unplayedN ? ` <b>يستبدل ${unplayedN} مباراة ما انلعبت.</b>` : ""}${playedN ? ` اللي انلعب (${playedN}) ما ينلمس.` : ""} نتائج أسبوع فات ما سُجّلت؟ أدخلها أول من <a href="#league">التعديل المتقدم</a>.</p>
       <div class="fb-pick"><label>القافلة الأولى<select id="fb-a"><option value="">—</option>${opt(b.a)}</select></label><span class="vs">ضد</span><label>القافلة الثانية<select id="fb-b"><option value="">—</option>${opt(b.b)}</select></label>
         <label>تبدأ من<select id="fb-from">${ms.map((x, i) => `<option value="${i}" ${i === Number(b.from) ? "selected" : ""}>اللقاء ${x.number} · ${ctx.fmtDate(x.meet_date)}</option>`).join("")}</select></label></div>
-      <div class="row-btns"><button class="btn ghost sm" data-f="fbrand">🎲 قرعة أول مباراة</button><button class="btn sm" data-f="fbrun">اعرض الجدول</button></div>${prev}</details>`;
+      <div class="row-btns"><button class="btn ghost sm" data-f="fbrand">🎲 قرعة أول مباراة</button><button class="btn ghost sm" data-f="fbrun">اعرض الجدول</button></div>${prev}</details>`;
   }
   function linkPanel() {
     const t = ((ctx.S().app_settings || []).find((x) => x.key === "field_token") || {}).value;
@@ -270,14 +270,14 @@ export function initField(ctx) {
     const played = md.power.filter((p) => p.used_match_id === m.id && p.caravan_id === cid);
     const free = md.power.filter((p) => p.caravan_id === cid && !p.used_match_id && !p.used_at);
     const golden = played.some((p) => p.kind === "golden");
-    const ed = md.edit && !m.played;
+    const ed = md.edit && !m.played && !(ui.lock === m.id);
     const cardIc = { yellow: "🟨", red: "🟥", blue: "🟦" };
     return `<section class="mx-side" style="${carStyle(c)}">
       <h2 class="mx-name">${esc(c ? c.name : "؟")}</h2>
       <div class="mx-score num" aria-live="polite">${sc}</div>
       ${ed ? `<div class="mx-goal"><button class="mx-plus" data-f="goal" data-s="${s}" data-n="1">+ هدف</button>${golden ? `<button class="mx-plus gold" data-f="goal" data-s="${s}" data-n="2">⚡ +2</button>` : ""}<button class="mx-minus" data-f="goal" data-s="${s}" data-n="-1" aria-label="ألغِ هدف">−</button></div>` : ""}
       ${gl.length ? `<p class="mx-list">⚽ ${gl.map((g) => `<span>${esc(md.kid(g.kid_id).first_name)}${ed ? `<button class="x" data-f="goaldel" data-id="${g.id}" aria-label="احذف المسجّل">×</button>` : ""}</span>`).join("")}</p>` : ""}
-      ${ed ? `<div class="mx-cards">${["yellow", "red", "blue"].map((col) => `<button class="mx-cb ${col}" data-f="cardpick" data-s="${s}" data-c="${col}" aria-label="بطاقة ${col === "yellow" ? "صفراء" : col === "red" ? "حمراء" : "زرقاء للأمانة"}">${cardIc[col]}</button>`).join("")}</div>` : ""}
+      ${ed ? `<div class="mx-cards">${["yellow", "red", "blue"].map((col) => `<button class="mx-cb ${col}" data-f="cardpick" data-s="${s}" data-c="${col}" aria-label="بطاقة ${col === "yellow" ? "صفراء" : col === "red" ? "حمراء" : "زرقاء للأمانة"}">${cardIc[col]}<small>${{ yellow: "تنبيه", red: "خروج", blue: "أمانة" }[col]}</small></button>`).join("")}</div>` : ""}
       ${cd.length ? `<p class="mx-list">${cd.map((x) => `<span>${cardIc[x.color]} ${x.kid_id && md.kid(x.kid_id) ? esc(md.kid(x.kid_id).first_name) : "بدون اسم"}${ed ? `<button class="x" data-f="carddel" data-id="${x.id}" aria-label="احذف البطاقة">×</button>` : ""}</span>`).join("")}</p>` : ""}
       <div class="mx-pw">
         ${played.map((p) => { const P = L.POWER[p.kind] || {}; const timed = /دقيقت/.test(P.dur || "");
@@ -295,23 +295,24 @@ export function initField(ctx) {
       if (t.ph === "pre") ctrl = `<button class="mx-btn go" data-f="tgo">▶ ابدأ الشوط الأول</button>`;
       else if (t.ph === "ht") ctrl = `<button class="mx-btn go" data-f="tgo">▶ ابدأ الشوط الثاني</button>`;
       else if (t.ph === "h1" || t.ph === "h2") ctrl = (left <= 0 ? "" : t.run ? `<button class="mx-btn" data-f="tpause">⏸ إيقاف مؤقت</button>` : `<button class="mx-btn go" data-f="tresume">▶ كمّل</button>`)
-        + `<button class="mx-btn" data-f="tplus">+1 د</button><button class="mx-btn ${left <= 0 ? "go" : ""}" data-f="tend">${t.ph === "h1" ? "⏭ إنهاء الشوط" : "🏁 نهاية المباراة"}</button>`;
+        + `<button class="mx-btn" data-f="tplus">+1 د</button><button class="mx-btn ${left <= 0 ? "go" : "danger"}" data-f="tend">${t.ph === "h1" ? "⏭ إنهاء الشوط" : "🏁 نهاية المباراة"}</button>`;
       ctrl += `<button class="mx-btn ic" data-f="whistle" aria-label="صافرة">📢</button>`;
     }
     const coin = ui.coin[m.id];
     const pick = ui.pick && ui.pick.mid === m.id ? sheet(m, md) : "";
     const fin = (t.ph === "end" || ui.finish === m.id) && !m.played && ed;
+    ui.lock = fin ? m.id : null;
     $app().innerHTML = `<div class="mx ${m.played ? "played" : ""}">
       <header class="mx-top"><a class="mx-back" href="${ui.back}">→ رجوع</a><span class="mx-round">${m.stage === "final" ? "النهائي" : m.stage === "third" ? "المركز الثالث" : "الجولة " + m.round}</span><span id="mx-save" class="mx-save ok">✓ محفوظ</span></header>
       <div class="mx-clockbox"><small class="mx-ph">${m.played ? "✓ النتيجة معتمدة" : PH[t.ph]}${t.extra && (t.ph === "h1" || t.ph === "h2") ? ` · +${Math.round(t.extra / 60000)} د` : ""}</small>
-        <div id="mx-clock" class="mx-clock num">${t.ph === "pre" ? fmtClock(t.half * 60000) : t.ph === "end" ? "—" : fmtClock(left)}</div>
+        <div id="mx-clock" class="mx-clock num">${t.ph === "pre" ? fmtClock(t.half * 60000) : t.ph === "end" ? "0:00" : fmtClock(left)}</div>
         ${left <= 0 && (t.ph === "h1" || t.ph === "h2") && !m.played ? `<p class="mx-over">انتهى الوقت</p>` : ""}
         <div class="mx-ctrl">${ctrl}</div>
         ${t.ph === "pre" && !m.played && ed ? `<div class="mx-pre"><label>مدة الشوط <select data-f="thalf">${[5, 6, 7, 8, 10].map((n) => `<option value="${n}" ${t.half === n ? "selected" : ""}>${n} د</option>`).join("")}</select></label>
           <button class="chip" data-f="coin">🪙 قرعة البداية</button>${coin ? `<b class="mx-coin" style="${carStyle(md.car(coin))}">${esc(md.car(coin).name)} تختار الجهة أو ضربة البداية</b>` : ""}</div>` : ""}
       </div>
-      <div class="mx-board">${side(m, md, "h")}<div class="mx-vs">ضد</div>${side(m, md, "a")}</div>
       ${fin ? finishPanel(m, md) : ""}
+      <div class="mx-board ${fin ? "locked" : ""}">${side(m, md, "h")}<div class="mx-vs">ضد</div>${side(m, md, "a")}</div>
       ${m.played ? `<div class="mx-done"><p>النتيجة النهائية: <b>${esc(h.name)} ${m.home_goals ?? 0} – ${m.away_goals ?? 0} ${esc(a.name)}</b>${m.fair_home || m.fair_away ? ` · لعب نظيف: ${[m.fair_home ? h.name : null, m.fair_away ? a.name : null].filter(Boolean).map(esc).join("، ")}` : ""}</p>${ed ? `<button class="btn ghost sm" data-f="reopen">فتح للتعديل</button>` : ""}</div>`
         : ed && !fin ? `<div class="mx-foot"><button class="btn ghost sm" data-f="finopen">🏁 اعتمد النتيجة الحين</button>${t.ph !== "pre" ? `<button class="btn ghost sm" data-f="treset">↺ صفّر الوقت</button>` : ""}</div>` : ""}
       ${pick}
@@ -349,12 +350,12 @@ export function initField(ctx) {
     else {
       const left = S.caravans.filter((c) => !g.order.some((o) => o.cid === c.id));
       body = `<div class="ga-run"><div class="ga-clock num" id="ga-clock">${fmtClock(Date.now() - g.t0)}</div>
-        <div class="ga-cars">${left.map((c) => `<button class="ga-car" style="${carStyle(c)}" data-f="garrive" data-car="${c.id}">${esc(c.name)}<small>وصلت وانتظمت</small></button>`).join("") || '<p class="muted">كل القوافل وصلت.</p>'}</div>
-        ${g.order.length ? `<ol class="ga-order">${g.order.map((o, i) => { const c = I.car[o.cid]; const pts = o.ok ? GATHER_PTS[i] || 0 : 0;
+        <div class="ga-cars">${left.map((c) => `<button class="ga-car" style="${carStyle(c)}" data-f="garrive" data-car="${c.id}">✓ وصلت ${esc(c.name)}<small>اضغط لما تنتظم في صفها</small></button>`).join("") || '<p class="muted">كل القوافل وصلت.</p>'}</div>
+        ${g.order.length ? `<ol class="ga-order">${(() => { let rank = 0; return g.order.map((o, i) => { const c = I.car[o.cid]; const pts = o.ok ? GATHER_PTS[rank++] || 0 : 0;
           return `<li style="${carStyle(c)}"><span class="ga-rank num">${i + 1}</span><b>${esc(c.name)}</b><small class="num">${o.sec} ث</small>
             <button class="chip" data-f="gok" data-i="${i}" aria-pressed="${o.ok}">${o.ok ? "✓ منضبطة" : "✗ غير منضبطة"}</button><b class="num ga-pts">+${pts}</b>
-            ${o.ok ? "" : `<input class="ga-note" data-i="${i}" placeholder="مين وليش؟ (اختياري)" maxlength="80" value="${esc(o.note || "")}">`}</li>`; }).join("")}</ol>` : ""}
-        <p class="muted small">النقاط: الأولى ${GATHER_PTS[0]}، الثانية ${GATHER_PTS[1]}، الثالثة ${GATHER_PTS[2]}. اللي ما انتظمت ما تاخذ نقاط وتنسجّل.</p>
+            ${o.ok ? "" : `<div class="ga-why">${["تأخير", "صوت عالي", "تدافع", "صف غير مرتب"].map((w) => `<button class="chip" data-f="gwhy" data-i="${i}" data-w="${w}" aria-pressed="${o.note === w}">${w}</button>`).join("")}</div>`}</li>`; }); })().join("")}</ol>` : ""}
+        <p class="muted small">النقاط: الأولى ${GATHER_PTS[0]}، الثانية ${GATHER_PTS[1]}، الثالثة ${GATHER_PTS[2]} من المنضبطات بس. غير المنضبطة صفر وتنسجّل بسببها بدون أسماء. الرقم اللي تشوفه هنا هو اللي ينحفظ.</p>
         <div class="row-btns"><button class="btn" data-f="gsave" ${g.order.length ? "" : "disabled"}>اعتمد الجمع</button><button class="btn ghost" data-f="gcancel">إلغاء</button></div></div>`;
     }
     const firstTwo = groups.length ? evs.filter((e) => e.game === groups[0] && e.kind === "gather" && e.points > 0).sort((a, b) => b.points - a.points).slice(0, 2) : [];
@@ -423,16 +424,16 @@ export function initField(ctx) {
     const cell = (v, good) => `<td class="num ${v ? (good ? "good" : "bad") : "zero"}">${v}</td>`;
     $app().innerHTML = ctx.shell(`<a class="back" href="#field">→ الملعب</a>
       ${ctx.pageHead("🌙 الختام", "أرقام الليلة لكل قافلة. الجائزة قرارك أنت، والأرقام تساعدك.", ctx.meetPicker())}
-      <section class="panel"><div class="tbl-wrap"><table class="tbl cls"><thead><tr><th>القافلة</th><th>⭐ نجمة</th><th>📣 الجمع</th><th>🎯 الألعاب</th><th>⚽ الدوري</th><th>🤝 لعب نظيف</th><th>🟦</th><th>🟨</th><th>🟥</th><th>التكليف</th></tr></thead><tbody>
+      <section class="panel"><div class="tbl-wrap"><table class="tbl cls"><thead><tr><th>القافلة</th><th>⭐ نجمة</th><th>📣 الجمع</th><th>🎯 الألعاب</th><th>⚽ الدوري</th><th>🤝 لعب نظيف</th><th>🟦 أمانة</th><th>🟨 تنبيه</th><th>🟥 خروج</th><th>التكليف</th><th>مجموع الميدان</th></tr></thead><tbody>
         ${rows.map((r) => `<tr><td><span class="sw" style="${carStyle(r.c)}"></span><b>${esc(r.c.name)}</b></td>
           <td>${r.t.stars === 2 ? "🌟" : r.t.stars ? "⭐" : `<small class="num muted">${r.t.ready}/${r.t.n}</small>`}</td>
           <td class="num">${r.gather}${r.late ? ` <small class="bad">✗${r.late}</small>` : ""}</td>
           <td class="num">${r.gp + r.gc} <small class="muted">(${r.gp}+${r.gc})</small></td>
           <td class="num">${r.w || r.d || r.l ? `${r.w}ف ${r.d}ت ${r.l}خ` : "—"}</td>
           ${cell(r.fair, true)}${cell(r.blue, true)}${cell(r.yellow, false)}${cell(r.red, false)}
-          <td>${r.duty ? "✅" : "—"}</td></tr>`).join("")}
+          <td>${r.duty ? "✅" : "—"}</td><td class="num"><b>${r.gather + r.gp + r.gc + r.w * 3 + r.d + r.fair}</b></td></tr>`).join("")}
       </tbody></table></div>
-      <p class="muted small">⭐ النجمة: كل الحاضرين 4 نقاط فأكثر · 🟦 الأمانة: اعترف قبل ما ينكشف · التكليف: أتقنوه الليلة.</p></section>
+      <p class="muted small">⭐ النجمة من «التحضير والنقاط» (إذا ما سجّلتها تبقى فاضية) · 🟦 الأمانة: اعترف قبل ما ينكشف · مجموع الميدان = الجمع + الألعاب + فوز 3/تعادل 1 + لعب نظيف.</p></section>
       <section class="panel prize ${prize ? "has" : ""}"><h3>🏆 جائزة الأسبوع</h3>
         ${prize ? `<p class="prize-win" style="${carStyle(I.car[prize.caravan_id])}">قافلة <b>${esc(I.car[prize.caravan_id] ? I.car[prize.caravan_id].name : "")}</b>${prize.note ? ` · ${esc(prize.note)}` : ""}</p>${ed ? `<button class="btn ghost sm" data-f="prizedel">غيّر القرار</button>` : ""}`
         : ed ? `<p class="small">اختر القافلة، واكتب السبب بكلمتين تعلنها قدّامهم.</p>
@@ -464,17 +465,16 @@ export function initField(ctx) {
     const t = e.target;
     if (t.id === "fb-a" || t.id === "fb-b" || t.id === "fb-from") { ui.fb = { a: document.getElementById("fb-a").value, b: document.getElementById("fb-b").value, from: Number(document.getElementById("fb-from").value) }; ui.fbPlan = null; return; }
     if (t.dataset && t.dataset.f === "thalf") { const tt = tGet(curMid); tt.half = Number(t.value); tSet(curMid, tt); return paintMatch(); }
-    if (t.classList && t.classList.contains("ga-note") && ui.gather) { ui.gather.order[Number(t.dataset.i)].note = t.value.trim(); }
     if (t.id === "gm-name" && ui.game) ui.game.name = t.value.trim();
     if (t.id === "prize-why") ui.prize = { ...(ui.prize || {}), why: t.value.trim() };
   });
-  document.addEventListener("input", (e) => { const t = e.target; if (t.id === "gm-name" && ui.game) ui.game.name = t.value.trim(); if (t.classList && t.classList.contains("ga-note") && ui.gather) ui.gather.order[Number(t.dataset.i)].note = t.value.trim(); });
+  document.addEventListener("input", (e) => { const t = e.target; if (t.id === "gm-name" && ui.game) ui.game.name = t.value.trim(); });
 
   const busy = new Set();
   document.addEventListener("click", async (e) => {
     const b = e.target.closest("[data-f]"); if (!b || b.tagName === "SELECT") return;
     const f = b.dataset.f; const key = f + JSON.stringify(b.dataset);
-    if (busy.has(key)) return; busy.add(key); setTimeout(() => busy.delete(key), f === "gstep" ? 0 : f === "goal" ? 90 : 450);
+    if (busy.has(key)) return; busy.add(key); setTimeout(() => busy.delete(key), f === "gstep" ? 0 : f === "goal" ? 90 : 300);
     const md = M(); const m = md.matches.find((x) => x.id === curMid);
     const arm = (label, ms = 3000) => { if (ui.armed === key) return true; ui.armed = key; b.textContent = label; setTimeout(() => { if (ui.armed === key) ui.armed = null; }, ms); return false; };
     switch (f) {
@@ -484,10 +484,10 @@ export function initField(ctx) {
         if (!fb.a || !fb.b || fb.a === fb.b) { toast("اختر قافلتين مختلفتين لأول مباراة.", "err"); return; }
         ui.fbPlan = buildPlan(S, [Number(fb.a), Number(fb.b)], Number(fb.from)); return viewField(); }
       case "fbcancel": ui.fb = null; ui.fbPlan = null; return viewField();
-      case "fbapply": { const S = ctx.S(); const plan = ui.fbPlan; if (!plan) return;
+      case "fbapply": { const S = ctx.S(); const plan = ui.fbPlan; if (!plan) return; if (!arm("متأكد؟ اعتمد")) return;
         const old = S.matches.filter((x) => x.stage === "league" && !x.played).map(({ id, round, stage, meeting_id, home_id, away_id }) => ({ id, round, stage, meeting_id, home_id, away_id }));
         ui.fb = null; ui.fbPlan = null; try { localStorage.setItem("mgh.leagueBuilt", "1"); } catch (e) {}
-        return ctx.doUndoable(`انبنى الدوري: ${plan.rows.length} مباراة`, async () => { for (const x of old) await db.remove("matches", { id: x.id }); return db.insert("matches", plan.rows); },
+        return ctx.doUndoable(`انبنى الدوري: ${plan.rows.length} مباراة جديدة`, async () => { for (const x of old) await db.remove("matches", { id: x.id }); return db.insert("matches", plan.rows); },
           async (ins) => { for (const x of ins || []) await db.remove("matches", { id: x.id }); if (old.length) await db.insert("matches", old.map(({ id, ...r }) => r)); }, ["matches", "goals", "cards", "power_cards"]); }
       case "linkopen": ui.linkOpen = !ui.linkOpen; return viewField();
       case "linkcopy": try { await navigator.clipboard.writeText(b.dataset.v); toast("نُسخ الرابط ✓"); } catch (x) { toast("انسخه يدويًا من فوق", "err"); } return;
@@ -500,7 +500,7 @@ export function initField(ctx) {
       case "tpause": { const t = tGet(m.id); t.acc = tEl(t); t.run = false; tSet(m.id, t); return paintMatch(); }
       case "tresume": { audio(); const t = tGet(m.id); t.run = true; t.t0 = Date.now(); tSet(m.id, t); whistle(1); return paintMatch(); }
       case "tplus": { const t = tGet(m.id); if (tLeft(t) <= 0) { t.acc = tEl(t); t.run = true; t.t0 = Date.now(); } t.extra = (t.extra || 0) + 60000; t.rang = false; tSet(m.id, t); return paintMatch(); }
-      case "tend": { const t = tGet(m.id); whistle(3); if (t.ph === "h1") { Object.assign(t, { ph: "ht", acc: 0, run: true, t0: Date.now(), rang: false }); } else { Object.assign(t, { ph: "end", run: false }); ui.fair = {}; keepAwake(false); } tSet(m.id, t); return paintMatch(); }
+      case "tend": { const t = tGet(m.id); if (tLeft(t) > 0 && !arm(t.ph === "h1" ? "متأكد؟ إنهاء الشوط" : "متأكد؟ نهاية المباراة")) return; whistle(3); if (t.ph === "h1") { Object.assign(t, { ph: "ht", acc: 0, run: true, t0: Date.now(), rang: false }); } else { Object.assign(t, { ph: "end", run: false }); ui.fair = {}; keepAwake(false); } tSet(m.id, t); return paintMatch(); }
       case "treset": { if (!arm("متأكد؟")) return; tSet(m.id, { ph: "pre", run: false, t0: 0, acc: 0, extra: 0, half: tGet(m.id).half, brk: 2, rang: false }); return paintMatch(); }
       case "whistle": audio(); return whistle(1);
       case "coin": { const r = crypto.getRandomValues(new Uint32Array(1))[0] % 2; ui.coin[m.id] = r ? m.away_id : m.home_id; whistle(1); return paintMatch(); }
@@ -539,6 +539,7 @@ export function initField(ctx) {
       // --- gather
       case "gstart": audio(); whistle(2); ui.gather = { t0: Date.now(), order: [] }; return viewGather();
       case "garrive": { const g = ui.gather; if (!g) return; g.order.push({ cid: Number(b.dataset.car), sec: Math.round((Date.now() - g.t0) / 1000), ok: true, note: "" }); return viewGather(); }
+      case "gwhy": { const o = ui.gather.order[Number(b.dataset.i)]; o.note = o.note === b.dataset.w ? "" : b.dataset.w; return viewGather(); }
       case "gok": { const o = ui.gather.order[Number(b.dataset.i)]; o.ok = !o.ok; return viewGather(); }
       case "gcancel": if (!arm("متأكد؟")) return; ui.gather = null; return viewGather();
       case "gsave": { const g = ui.gather; const S = ctx.S(), mid = ctx.meetId(); const n = new Set((S.field_events || []).filter((x) => x.meeting_id === mid && x.kind === "gather").map((x) => x.game)).size + 1;
@@ -553,7 +554,7 @@ export function initField(ctx) {
 
       // --- game points
       case "gstep": { const g = ui.game; const cid = b.dataset.car, k = b.dataset.k; const o = (g.v[cid] ||= { perf: 0, coop: 0 }); o[k] = Math.max(0, Math.min(GAME_MAX[k], (o[k] || 0) + Number(b.dataset.d))); return viewGame(); }
-      case "gmreset": ui.game = { name: "", v: {} }; return viewGame();
+      case "gmreset": if (!arm("متأكد؟ يمسح الأرقام")) return; ui.game = { name: "", v: {} }; return viewGame();
       case "gpick": { const x = gameById(b.dataset.id); const g = ui.game || (ui.game = { name: "", v: {} }); g.gid = g.gid === x.id ? null : x.id; if (g.gid) g.name = x.name; return viewGame(); }
       case "prizesel": ui.prize = { ...(ui.prize || {}), cid: Number(b.dataset.car) }; return viewClosing();
       case "prizewhy": ui.prize = { ...(ui.prize || {}), why: b.dataset.w }; return viewClosing();

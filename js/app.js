@@ -642,24 +642,33 @@ function viewPrint(arg) {
   $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#home">→ رجوع لليوم</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
 }
 // ---------------- بطاقة المغامر المعلّقة ----------------
-const TAG_TRAITS = [["🤝", "تعاون"], ["🏅", "روح رياضية"], ["⏱️", "انضباط"], ["🗣️", "كلمة طيبة"], ["💡", "مبادرة"]];
+const TAG_TRAITS = [["🤝", "تعاون"], ["🏅", "روح رياضية"], ["🗣️", "كلمة طيبة"]];
 function kidTags() {
   const groups = S.caravans.map((c) => [c, L.kidsOf(S, c.id)]).concat([[null, L.activeKids(S).filter((k) => !k.caravan_id)]]).filter(([, ks]) => ks.length);
   const weeks = 8;
-  const tag = (k, c) => `<div class="ktag" style="${carStyle(c)}"><i class="kt-hole"></i>
+  const front = (k, c) => `<div class="ktag" style="${carStyle(c)}"><i class="kt-hole l"></i><i class="kt-hole r"></i>
       <header><small>${c ? "قافلة " + esc(c.name) : "المغامرون"}</small><img src="assets/mahara.png" alt=""></header>
-      <h2>${esc(k.first_name)}</h2><p class="kt-fam">${esc(k.family_name || "")}</p>
-      <table><thead><tr><th></th>${Array(weeks).fill(0).map((_, i) => `<th>${i + 1}</th>`).join("")}</tr></thead><tbody>
-        ${TAG_TRAITS.map(([ic, t]) => `<tr><th>${ic} ${t}</th>${Array(weeks).fill("<td></td>").join("")}</tr>`).join("")}
-      </tbody></table>
-      <footer>كل ✓ شافها الأستاذ بعينه · «أتحدى وأتعاون»</footer></div>`;
-  const all = groups.flatMap(([c, ks]) => ks.map((k) => tag(k, c)));
-  const pages = []; for (let i = 0; i < all.length; i += 8) pages.push(`<section class="ktag-page">${all.slice(i, i + 8).join("")}</section>`);
+      <div class="kt-mid"><h2>${esc(k.first_name)}</h2><p class="kt-fam">${esc(k.family_name || "")}</p></div>
+      <p class="kt-motto">أتحدى وأتعاون</p><footer>نادي مهارة · حي الهجرة</footer></div>`;
+  const back = (k, c) => `<div class="ktag back" style="${carStyle(c)}"><i class="kt-hole l"></i><i class="kt-hole r"></i>
+      <header><small>${esc(k.first_name)} · ${c ? esc(c.name) : ""}</small><small>✓ تُعلَّم في دائرة الختام</small></header>
+      <table><thead><tr><th>اللقاء</th>${TAG_TRAITS.map(([ic, t]) => `<th>${ic}<br>${t}</th>`).join("")}</tr></thead><tbody>
+        ${Array(weeks).fill(0).map((_, i) => `<tr><th>${i + 1}</th>${TAG_TRAITS.map(() => "<td></td>").join("")}</tr>`).join("")}
+      </tbody></table></div>`;
+  const all = groups.flatMap(([c, ks]) => ks.map((k) => [k, c]));
+  const pages = [];
+  for (let i = 0; i < all.length; i += 8) {
+    const chunk = all.slice(i, i + 8);
+    pages.push(`<section class="ktag-page">${chunk.map(([k, c]) => front(k, c)).join("")}</section>`);
+    // back side: mirror each row of 4 so duplex printing lines up
+    const rows = [chunk.slice(0, 4), chunk.slice(4, 8)].filter((r) => r.length);
+    pages.push(`<section class="ktag-page">${rows.map((r) => { const m = r.slice().reverse(); while (m.length < 4) m.unshift(null); return m.map((x) => (x ? back(x[0], x[1]) : '<div class="ktag empty"></div>')).join(""); }).join("")}</section>`);
+  }
   return { title: "بطاقات المغامرين المعلّقة",
-    guide: `<li><b>${all.length} بطاقة</b> في ${pages.length} صفحات A4 (8 بطاقات بالصفحة، مقاس 74×105 مم). ورق مقوّى، وثقب من فوق لحبل التعليق.</li>
-      <li>الخانات كلها إيجابية: ${TAG_TRAITS.map(([, t]) => t).join("، ")}. أنت تعلّم ✓ بالقلم لما تشوفها بعينك، في عمود رقم اللقاء.</li>
-      <li>الولد يعلّقها طول اللقاء، وآخر اللقاء القائد يجمع بطاقات قافلته في صندوقها. ما تروح البيت وما تنقرى قدّام أحد.</li>
-      <li>الطفل اللي بطاقته فاضية من لقاء: هذا تنبيه لك أنت، مو له. امسك له فرصة الأسبوع الجاي.</li>`,
+    guide: `<li><b>${all.length} بطاقة</b> بمقاس 74×105 مم، 8 بالصفحة، وكل صفحة وجه يتبعها صفحة ظهرها (اطبع وجهين على الحافة القصيرة). ورق مقوّى، وثقبان في الزاويتين عشان ما تدور.</li>
+      <li><b>الوجه:</b> الاسم والقافلة بس، هذا اللي يشوفه الكل. <b>الظهر:</b> شبكة ${weeks} لقاءات × ${TAG_TRAITS.length} سلوكيات (${TAG_TRAITS.map(([, t]) => t).join("، ")})، خلية 9 مم تنعلّم بقلم.</li>
+      <li>ما تنعلّم على صدر الولد في الملعب. في <b>دائرة الختام</b> كل ولد يمسك بطاقته بيده، وأنت تعلّم ✓ اللي شفته بعينك، ثم القائد يجمع بطاقات قافلته في صندوقها.</li>
+      <li>الظهر ما يُقارن قدّام أحد. بطاقة فاضية = تنبيه لك أنت: امسك له فرصة الأسبوع الجاي.</li>`,
     sheets: pages.join("") };
 }
 
@@ -681,16 +690,16 @@ function meetSheets(arg, m) {
     return { title: "أوراق اللقاء: تحضير القادة", guide: `${nav}<li>ورقة لكل قافلة (${S.caravans.length} صفحات). يستلمها القائد في الانطلاقة ويرجّعها بعد ما يحضّر.</li><li>بدون أي رقم جوال أو بيانات: الاسم والحضور بس.</li><li>A4 عادي، الهوامش افتراضية.</li>`, sheets };
   }
   if (arg === "notes") {
-    const cols = [["⭐", "ساعد أو تميّز"], ["⏰", "تأخّر"], ["👂", "ما التزم بالتعليمات"], ["✋", "خشونة"]];
+    const cols = [["🤝", "ساعد زميل"], ["📣", "شجّع"], ["⏱️", "التزم بالوقت"], ["🗣️", "كلمة طيبة"]];
     const sheets = S.caravans.map((c) => { const ks = L.kidsOf(S, c.id);
-      return `<section class="psheet">${head(c, "ورقة القائد والنائب", lead(c) + `<p class="ps-intro">علّم ✓ في الخانة اللي صارت اليوم، واكتب كلمة توضّح. <b>ابدأ بالتميّز:</b> مين ساعد أو أبدع أو شجّع؟ الورقة للأستاذ بس، ما تنقرى قدام أحد.</p>`)}
-        <table class="ptbl notes"><thead><tr><th>الاسم</th>${cols.map(([i, t]) => `<th class="pc"><span>${i}</span>${t}</th>`).join("")}<th>وش صار؟ (كلمة أو كلمتين)</th></tr></thead><tbody>
-        ${ks.map((k) => `<tr><td>${esc(k.first_name)} <small>${esc(k.family_name || "")}</small></td>${cols.map(() => `<td>${box}</td>`).join("")}<td><span class="pline"></span></td></tr>`).join("")}
-        ${Array(2).fill(0).map(() => `<tr class="blank"><td><span class="pline"></span></td>${cols.map(() => `<td>${box}</td>`).join("")}<td><span class="pline"></span></td></tr>`).join("")}
+      return `<section class="psheet">${head(c, "ورقة القائد والنائب", lead(c) + `<p class="ps-intro big"><b>مهمتكم الليلة: تشوفون الخير في قافلتكم.</b> علّم ✓ لمن ساعد زميل، أو شجّع، أو التزم بالوقت، أو قال كلمة طيبة. الورقة للأستاذ بس.</p>`)}
+        <table class="ptbl notes"><thead><tr><th>الاسم</th>${cols.map(([i, t]) => `<th class="pc"><span>${i}</span>${t}</th>`).join("")}</tr></thead><tbody>
+        ${ks.map((k) => `<tr><td>${esc(k.first_name)} <small>${esc(k.family_name || "")}</small></td>${cols.map(() => `<td>${box}</td>`).join("")}</tr>`).join("")}
+        ${Array(2).fill(0).map(() => `<tr class="blank"><td><span class="pline"></span></td>${cols.map(() => `<td>${box}</td>`).join("")}</tr>`).join("")}
         </tbody></table>
-        <div class="ps-sign"><span>توقيع القائد: ................</span><span>توقيع النائب: ................</span></div>
-        <p class="ps-foot">تُسلّم للأستاذ في الختام. ملاحظة وحدة ما تعني عقوبة: الأستاذ يشوف ويتأكد بنفسه.</p></section>`; }).join("");
-    return { title: "أوراق اللقاء: ملاحظات القائد والنائب", guide: `${nav}<li>ورقة لكل قافلة. يعبّيها القائد والنائب طول اليوم، ويسلّمونها لك في الختام.</li><li>الخانة الأولى للتميّز عمدًا: نبي القادة يلاحظون الخير قبل الغلط.</li><li>أنت تقرر بعد ما تتأكد بنفسك. لا تعلن الورقة ولا تعاقب على ملاحظة وحدة.</li>`, sheets };
+        <div class="ps-free"><b>شي تبون الأستاذ يعرفه؟</b> (بدون أسماء إذا ما يحتاج)<span class="pline"></span><span class="pline"></span></div>
+        <p class="ps-foot">تُسلّم للأستاذ في الختام. الأستاذ يشوف ويتأكد بنفسه، وما تنقرى قدّام أحد.</p></section>`; }).join("");
+    return { title: "أوراق اللقاء: ورقة القائد والنائب", guide: `${nav}<li>ورقة لكل قافلة. يعبّيها القائد والنائب طول اليوم، ويسلّمونها لك في الختام.</li><li>الخانات كلها إيجابية عمدًا: طفل 11 سنة ما يصير مراقب على زملائه. اللي يحتاج تبليغ يكتبونه في السطر الحر، وأنت تتأكد بنفسك.</li>`, sheets };
   }
   // staff-only
   const groups = S.caravans.map((c) => [c, L.kidsOf(S, c.id)]).concat([[null, L.activeKids(S).filter((k) => !k.caravan_id)]]).filter(([, ks]) => ks.length);
