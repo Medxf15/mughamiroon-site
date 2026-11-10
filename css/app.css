@@ -1104,8 +1104,8 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .ps-head img{height:13mm;filter:grayscale(1)}
 .ps-lead{margin:0;font-size:3.8mm}
 .ps-intro{margin:0;font-size:3.5mm;line-height:1.6;background:#f3f4f8;border-radius:2mm;padding:2mm 3mm}
-.ps-intro.big{font-size:4.6mm;line-height:1.7;background:#fff7d6;border:.4mm solid #e0b64a}
-.ps-free{display:grid;gap:2mm;font-size:4.2mm;margin-top:4mm}.ps-free .pline{height:9mm}
+.ps-intro.big{font-size:4mm;line-height:1.6;background:#fff7d6;border:.4mm solid #e0b64a}
+.ps-free{display:grid;gap:1mm;font-size:3.8mm;margin-top:2mm}.ps-free .pline{height:7mm}
 .ptbl{width:100%;border-collapse:collapse;font-size:4mm}
 .ptbl th,.ptbl td{border:.3mm solid #666;padding:3.2mm 2mm;text-align:start;vertical-align:middle}
 .ptbl th{background:#eceef5;font-size:3.4mm}
@@ -1113,7 +1113,7 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .ptbl tr.blank td small{display:block;color:#888;font-size:2.6mm}
 .ptbl.notes td:first-child small{color:#666}
 .ptbl.notes th.pc{width:26mm;font-size:3.4mm;line-height:1.3}.ptbl.notes th.pc span{display:block;font-size:6mm}
-.ptbl.notes td{height:12mm;font-size:4.6mm}.ptbl.notes .pbox{width:8mm;height:8mm}
+.ptbl.notes td{height:9mm;font-size:4.2mm}.ptbl.notes .pbox{width:8mm;height:8mm}
 .ptbl.sst{font-size:3.4mm}.ptbl.sst td,.ptbl.sst th{padding:1.1mm 1.6mm}
 .ptbl.sst td:nth-child(5),.ptbl.sst td:nth-child(6){text-align:start;width:38mm}
 .ptbl tr.pgrp td{background:#f3f4f8;font-weight:700;border-inline-start:2.5mm solid var(--tc,#999);text-align:start}
@@ -1123,7 +1123,7 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .ps-sign{display:flex;justify-content:space-between;gap:6mm;font-size:3.6mm;margin-top:auto}
 .ps-foot{margin:0;font-size:3.1mm;color:#444}
 @media print{
-  .psheet{border:none;margin:0;padding:0;min-height:0;break-after:page}
+  .psheet{border:none;margin:0;padding:0;min-height:0;max-height:282mm;overflow:hidden;gap:2.5mm;break-after:page}
   .psheet:last-child{break-after:auto}
 }
 
@@ -1153,7 +1153,8 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .say{margin:0;padding-inline-start:18px;display:grid;gap:6px}
 
 /* بطاقات المغامرين المعلّقة: 8 × (74×105 مم) على A4، وجه ثم ظهر */
-.ktag-page{display:grid;grid-template-columns:repeat(4,74mm);grid-auto-rows:105mm;justify-content:center;gap:0;background:#fff;margin:0 auto 12px;width:210mm;padding:7mm 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+@page tags{size:A4 landscape;margin:0}
+.ktag-page{page:tags;display:grid;grid-template-columns:repeat(4,74mm);grid-auto-rows:105mm;justify-content:center;gap:0;background:#fff;margin:0 auto 12px;width:297mm;height:210mm;box-sizing:border-box;padding:0;align-content:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .ktag{position:relative;box-sizing:border-box;border:.3mm dashed #999;padding:9mm 5mm 4mm;display:flex;flex-direction:column;color:#111;background:#fff;font-family:"IBM Plex Sans Arabic",sans-serif}
 .ktag.empty{border-color:transparent}
 .ktag::before{content:"";position:absolute;inset:0 0 auto 0;height:5mm;background:var(--tc)}
@@ -1172,4 +1173,4 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .ktag th,.ktag td{border:.3mm solid #666;height:9mm;padding:0 .5mm;text-align:center}
 .ktag tbody th{width:9mm;font-weight:700;background:#f3f4f8}
 .ktag thead th{font-size:2.6mm;background:#eef0f6;line-height:1.2}
-@media print{.ktag-page{margin:0;padding:7mm 0;break-after:page}.ktag-page:last-child{break-after:auto}}
+@media print{.ktag-page{margin:0;padding:0;break-after:page}.ktag-page:last-child{break-after:auto}}
