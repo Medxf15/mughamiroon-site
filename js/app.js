@@ -4,6 +4,7 @@ import * as L from "./logic.js";
 import { planFor, toMin, fmt12 } from "./plans.js";
 import { powerCard, powerIcon, powerBack, playerCard, packBack } from "./pcard.js";
 import { initField } from "./field.js";
+import { svg as ic } from "./icons.js";
 
 // ---------------- state ----------------
 const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings", "duty_log", "field_events"];
@@ -589,18 +590,22 @@ const DUTY_TONE = { musalla: "#1fa865", kalima: "#0a63e6", food: "#ef8a33", clea
 const LVL_TONE = ["#6b7cff", "#1fa865", "#0a63e6", "#ef8a33", "#e7297a", "#d4a106"];
 function printCards() {
   const pc = (kind) => `<div class="pp-cell">${powerCard(kind)}</div>`;
-  const duty = (d) => `<div class="pp-duty" style="--dt:${DUTY_TONE[d.key]}"><header class="pd-head"><small>تكليف القافلة</small><h3>${esc(d.name)}</h3></header><div class="pd-medal">${d.icon}</div>
-      <div class="pd-body"><p class="pd-k">الإتقان يعني</p><ul>${d.tasks.map((t) => `<li><i></i>${esc(t)}</li>`).join("")}</ul></div>
-      <footer class="pd-f"><b>⭐</b> كل إتقانين = نجمة للقافلة</footer></div>`;
-  const lvl = (lv, name) => `<div class="pp-lvl" style="--lt:${LVL_TONE[lv.i]}"><div class="pl-side"><div class="pl-medal">${lv.icon}</div><div class="pl-ladder">${L.LEVELS.map((_, i) => `<i class="${i <= lv.i ? "on" : ""}"></i>`).join("")}</div></div>
+  const duty = (d) => `<div class="pp-duty" style="--dt:${DUTY_TONE[d.key]}">
+      <header class="pd-head"><div class="pd-t"><small>تكليف القافلة · أمر ميداني</small><h3>${esc(d.name)}</h3></div>${ic(d.key, "pd-ic")}</header>
+      <div class="pd-body"><p class="pd-k">الإتقان يعني</p><ol>${d.tasks.map((t, i) => `<li><b class="num">${i + 1}</b><span>${esc(t)}</span><i></i></li>`).join("")}</ol></div>
+      <div class="pd-slot"><span>قافلة</span><span class="pline"></span><span>اللقاء</span><span class="pline short"></span></div>
+      <footer class="pd-f">${ic("star", "pd-star")}<span><b>كل إتقانين = نجمة للقافلة.</b> البطاقة تُسلَّم في الانطلاقة، وترجع للأستاذ في الختام.</span></footer></div>`;
+  const lvl = (lv, name) => `<div class="pp-lvl" style="--lt:${LVL_TONE[lv.i]}"><div class="pl-side"><div class="pl-medal">${ic("star", "pl-star")}</div><div class="pl-ladder">${L.LEVELS.map((_, i) => `<i class="${i <= lv.i ? "on" : ""}"></i>`).join("")}</div></div>
       <div class="pl-main"><small>لقب جديد في طريق القوافل</small><h3>${esc(lv.name)}</h3><p>${esc(lv.what)}</p>
       <div class="pl-name"><span>${name ? esc(name) : ""}</span></div><div class="pl-sign"><span>المستوى ${lv.i + 1} من ${L.LEVELS.length}</span><span>نادي مهارة · المغامرون</span></div></div></div>`;
   const topic = (i, who) => { const tp = L.TOPICS[i]; return `<div class="pp-topic ${tp.c}"><header class="pt-head"><span class="pt-cat">${L.TOPIC_CATS[tp.c]}</span><span class="pt-n">${String(i + 1).padStart(2, "0")}</span></header>
       <h3>${esc(tp.t)}</h3><p class="pt-s">${esc(tp.s)}</p><div class="pt-q"><b>اسأل الحضور</b>${esc(tp.q)}</div>
-      <footer class="pt-f"><span>🎙️ منبر القافلة · ⏱️ 3 دقائق</span><span class="pt-who">${who ? esc(who) : "المتحدث: ............"}</span></footer></div>`; };
-  const lead = (dep) => `<div class="pp-lead ${dep ? "dep" : ""}"><header><span class="pl-badge">${dep ? "🔰" : "🎖️"}</span><div><small>طريق القوافل</small><h3>${dep ? "نائب القائد" : "قائد القافلة"}</h3></div></header>
-      <ul>${(dep ? L.LEAD.deputy : L.LEAD.leader).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
-      <p class="pl-motto">${L.LEAD.verse}<br><b>${esc(L.LEAD.motto)}</b></p><p class="pl-rule">${esc(L.LEAD.rule)}</p><div class="pl-name"><span>قافلة: ............ · الاسم: ............</span></div></div>`;
+      <footer class="pt-f"><span>منبر القافلة · 3 دقائق</span><span class="pt-who">${who ? esc(who) : "المتحدث: ............"}</span></footer></div>`; };
+  const lead = (dep) => `<div class="pp-lead ${dep ? "dep" : ""}"><header><div><small>طريق القوافل · بطاقة دور</small><h3>${dep ? "نائب القائد" : "قائد القافلة"}</h3></div>${ic(dep ? "deputy" : "leader", "pl-ic")}</header>
+      <ol class="pl-list">${(dep ? L.LEAD.deputy : L.LEAD.leader).map((x, i) => `<li><b class="num">${i + 1}</b>${esc(x)}</li>`).join("")}</ol>
+      <p class="pl-motto"><span class="pl-verse">${L.LEAD.verse}</span><b>${esc(L.LEAD.motto)}</b></p>
+      <div class="pl-slot"><span>الاسم</span><span class="pline"></span><span>قافلة</span><span class="pline short"></span></div>
+      <p class="pl-rule">${esc(L.LEAD.rule)}</p></div>`;
   return { pc, duty, lvl, topic, lead };
 }
 function viewPrint(arg) {
@@ -642,7 +647,7 @@ function viewPrint(arg) {
   $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#home">→ رجوع لليوم</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
 }
 // ---------------- بطاقة المغامر المعلّقة ----------------
-const TAG_TRAITS = [["🤝", "تعاون"], ["🏅", "روح رياضية"], ["🗣️", "كلمة طيبة"]];
+const TAG_TRAITS = [["coop", "تعاون"], ["sport", "روح رياضية"], ["word", "كلمة طيبة"]];
 function kidTags() {
   const groups = S.caravans.map((c) => [c, L.kidsOf(S, c.id)]).concat([[null, L.activeKids(S).filter((k) => !k.caravan_id)]]).filter(([, ks]) => ks.length);
   const weeks = 8;
@@ -651,8 +656,8 @@ function kidTags() {
       <div class="kt-mid"><h2>${esc(k.first_name)}</h2><p class="kt-fam">${esc(k.family_name || "")}</p></div>
       <p class="kt-motto">أتحدى وأتعاون</p><footer>نادي مهارة · حي الهجرة</footer></div>`;
   const back = (k, c) => `<div class="ktag back" style="${carStyle(c)}"><i class="kt-hole l"></i><i class="kt-hole r"></i>
-      <header><small>${esc(k.first_name)} · ${c ? esc(c.name) : ""}</small><small>✓ تُعلَّم في دائرة الختام</small></header>
-      <table><thead><tr><th>اللقاء</th>${TAG_TRAITS.map(([ic, t]) => `<th>${ic}<br>${t}</th>`).join("")}</tr></thead><tbody>
+      <header><small>${esc(k.first_name)} · ${c ? esc(c.name) : ""}</small><small>تُعلَّم في دائرة الختام</small></header>
+      <table><thead><tr><th>اللقاء</th>${TAG_TRAITS.map(([k, t]) => `<th>${ic(k, "kt-ic")}<br>${t}</th>`).join("")}</tr></thead><tbody>
         ${Array(weeks).fill(0).map((_, i) => `<tr><th>${i + 1}</th>${TAG_TRAITS.map(() => "<td></td>").join("")}</tr>`).join("")}
       </tbody></table></div>`;
   const all = groups.flatMap(([c, ks]) => ks.map((k) => [k, c]));
@@ -677,7 +682,7 @@ function meetSheets(arg, m) {
   const date = `اللقاء ${m.number} · الخميس ${fmtDate(m.meet_date)}`;
   const nav = `<li class="ps-nav">${[["att", "تحضير القادة"], ["notes", "ملاحظات القائد والنائب"], ["staff", "ورقة المشرف والمساعد"]].map(([k, t]) => k === arg ? `<b>${t}</b>` : `<a href="#print/${k}">${t}</a>`).join(" · ")}</li>`;
   const box = '<i class="pbox"></i>';
-  const lead = (c) => { const n = (id) => (id && I.kid[id] ? esc(L.kidName(I.kid[id])) : "................"); return `<p class="ps-lead">🎖️ القائد: <b>${n(c.leader_kid)}</b> · 🔰 النائب: <b>${n(c.deputy_kid)}</b></p>`; };
+  const lead = (c) => { const n = (id) => (id && I.kid[id] ? esc(L.kidName(I.kid[id])) : "................"); return `<p class="ps-lead">القائد: <b>${n(c.leader_kid)}</b> · النائب: <b>${n(c.deputy_kid)}</b></p>`; };
   const head = (c, t, sub) => `<header class="ps-head" style="${carStyle(c)}"><div><small>نادي مهارة · المغامرون</small><h2>${t}</h2><p>${c ? "قافلة <b>" + esc(c.name) + "</b> · " : ""}${date}</p></div><img src="assets/mahara.png" alt=""></header>${sub || ""}`;
   if (arg === "att") {
     const sheets = S.caravans.map((c) => { const ks = L.kidsOf(S, c.id);
@@ -690,10 +695,10 @@ function meetSheets(arg, m) {
     return { title: "أوراق اللقاء: تحضير القادة", guide: `${nav}<li>ورقة لكل قافلة (${S.caravans.length} صفحات). يستلمها القائد في الانطلاقة ويرجّعها بعد ما يحضّر.</li><li>بدون أي رقم جوال أو بيانات: الاسم والحضور بس.</li><li>A4 عادي، الهوامش افتراضية.</li>`, sheets };
   }
   if (arg === "notes") {
-    const cols = [["🤝", "ساعد زميل"], ["📣", "شجّع"], ["⏱️", "التزم بالوقت"], ["🗣️", "كلمة طيبة"]];
+    const cols = [["coop", "ساعد زميل"], ["sport", "شجّع"], ["clock", "التزم بالوقت"], ["word", "كلمة طيبة"]];
     const sheets = S.caravans.map((c) => { const ks = L.kidsOf(S, c.id);
       return `<section class="psheet">${head(c, "ورقة القائد والنائب", lead(c) + `<p class="ps-intro big"><b>مهمتكم الليلة: تشوفون الخير في قافلتكم.</b> علّم ✓ لمن ساعد زميل، أو شجّع، أو التزم بالوقت، أو قال كلمة طيبة. الورقة للأستاذ بس.</p>`)}
-        <table class="ptbl notes"><thead><tr><th>الاسم</th>${cols.map(([i, t]) => `<th class="pc"><span>${i}</span>${t}</th>`).join("")}</tr></thead><tbody>
+        <table class="ptbl notes"><thead><tr><th>الاسم</th>${cols.map(([k, t]) => `<th class="pc">${ic(k, "ps-ic")}${t}</th>`).join("")}</tr></thead><tbody>
         ${ks.map((k) => `<tr><td>${esc(k.first_name)} <small>${esc(k.family_name || "")}</small></td>${cols.map(() => `<td>${box}</td>`).join("")}</tr>`).join("")}
         ${Array(2).fill(0).map(() => `<tr class="blank"><td><span class="pline"></span></td>${cols.map(() => `<td>${box}</td>`).join("")}</tr>`).join("")}
         </tbody></table>
@@ -705,7 +710,7 @@ function meetSheets(arg, m) {
   const groups = S.caravans.map((c) => [c, L.kidsOf(S, c.id)]).concat([[null, L.activeKids(S).filter((k) => !k.caravan_id)]]).filter(([, ks]) => ks.length);
   let n = 0;
   const rows = groups.map(([c, ks]) => `<tr class="pgrp" style="${carStyle(c)}"><td colspan="6">${c ? "قافلة " + esc(c.name) : "بدون قافلة"} <small>(${ks.length})</small></td></tr>` + ks.map((k) => `<tr><td class="num">${++n}</td><td>${esc(L.kidName(k))}${k.official ? "" : ' <small class="pun">غير مسجّل</small>'}</td><td>${box}</td><td>${box}</td><td><span class="pline"></span></td><td><span class="pline"></span></td></tr>`).join("")).join("");
-  const sheets = `<section class="psheet sstaff">${head(null, "ورقة المشرف والمساعد", `<p class="ps-intro">🔒 للمشرف والمساعد فقط. <b>يحتاج متابعة</b>: سبب قصير (غياب متكرر، سلوك، صحة، تميّز يستاهل تكريم). <b>رقم ولي الأمر</b>: اكتبه بس للي ما سجّله في المنصة الرسمية، وأدخله هناك بعد اللقاء، وبعدها أتلف الورقة.</p>`)}
+  const sheets = `<section class="psheet sstaff">${head(null, "ورقة المشرف والمساعد", `<p class="ps-intro">للمشرف والمساعد فقط. <b>يحتاج متابعة</b>: سبب قصير (غياب متكرر، سلوك، صحة، تميّز يستاهل تكريم). <b>رقم ولي الأمر</b>: اكتبه بس للي ما سجّله في المنصة الرسمية، وأدخله هناك بعد اللقاء، وبعدها أتلف الورقة.</p>`)}
     <table class="ptbl sst"><thead><tr><th>#</th><th>الاسم</th><th>حاضر</th><th>يحتاج متابعة</th><th>السبب</th><th>رقم ولي الأمر (للناقص)</th></tr></thead><tbody>${rows}
       <tr class="pgrp"><td colspan="6">جدد ما هم في القائمة</td></tr>${Array(5).fill(0).map(() => `<tr class="blank"><td></td><td><span class="pline"></span></td><td>${box}</td><td>${box}</td><td><span class="pline"></span></td><td><span class="pline"></span></td></tr>`).join("")}
     </tbody></table></section>`;

@@ -548,21 +548,23 @@ body.is-print{background:#fff;color:#1d2552}
 .pw-rule{align-self:start;margin:0;font-size:3.1mm;line-height:1.55;background:rgba(0,0,0,.28);border:.2mm solid color-mix(in srgb,var(--a) 40%,transparent);border-radius:2mm;padding:1.6mm 2mm}
 .pw-foot{display:flex;align-items:center;gap:1.5mm;width:100%;font-size:2.3mm;color:color-mix(in srgb,var(--a) 80%,#fff)}.pw-foot i{flex:1;height:.2mm;background:color-mix(in srgb,var(--a) 50%,transparent)}
 
-/* duty card 99×136 */
-.pp-duty{height:136mm;display:grid;grid-template-rows:auto auto 1fr auto;background:var(--star-ink),#fff;background-size:7mm 7mm;color:#1d2552;overflow:hidden}
-.pd-head{background:var(--star-tile),linear-gradient(160deg,var(--dt),color-mix(in srgb,var(--dt) 55%,#0f1540));background-size:7mm 7mm,auto;color:#fff;text-align:center;padding:6mm 5mm 13mm}
-.pd-head small{font-size:3mm;letter-spacing:.3mm;opacity:.9}.pd-head h3{font-family:var(--display);color:#fff;font-size:8mm;margin-top:1mm}
-.pd-medal{justify-self:center;margin-top:-11mm;width:22mm;height:22mm;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:11mm;box-shadow:0 0 0 1.2mm var(--dt),0 2mm 5mm rgba(0,0,0,.18)}
-.pd-body{padding:4mm 8mm 0}.pd-k{font-family:var(--display);font-weight:700;color:var(--dt);font-size:4.2mm;margin:0 0 3mm;text-align:center}
-.pd-body ul{list-style:none;margin:0;padding:0;display:grid;gap:3.4mm}
-.pd-body li{display:flex;gap:3mm;align-items:flex-start;font-size:4.3mm;line-height:1.5}
-.pd-body li i{flex:none;width:5mm;height:5mm;margin-top:.6mm;border:.5mm solid var(--dt);border-radius:1.2mm}
-.pd-f{margin:4mm 6mm 6mm;text-align:center;background:color-mix(in srgb,var(--dt) 12%,#fff);border:.3mm solid var(--dt);color:#1d2552;border-radius:3mm;padding:2.5mm;font-weight:700;font-size:3.8mm}
-
+/* duty card 99×136: أمر ميداني */
+.pp-duty{height:136mm;display:grid;grid-template-rows:auto 1fr auto auto;background:#fff;color:#1d2552;overflow:hidden}
+.pd-head{display:grid;grid-template-columns:1fr 30mm;align-items:center;gap:3mm;background:linear-gradient(135deg,#1b2457,#0f1540);color:#fff;padding:7mm 6mm 6mm;border-bottom:2.2mm solid var(--dt)}
+.pd-t small{display:block;font-size:2.9mm;letter-spacing:.2mm;color:#c9d2ff}.pd-head h3{font-family:var(--display);color:#fff;font-size:10mm;line-height:1.05;margin-top:1.5mm}
+.pd-ic{width:30mm;height:30mm;color:var(--dt)}
+.pd-body{padding:6mm 6mm 0}.pd-k{font-family:var(--display);font-weight:700;color:var(--dt);font-size:5mm;margin:0 0 4mm}
+.pd-body ol{list-style:none;margin:0;padding:0;display:grid;gap:5mm}
+.pd-body li{display:grid;grid-template-columns:9mm 1fr 8mm;align-items:center;gap:3mm;font-size:4.6mm;line-height:1.45;font-weight:600}
+.pd-body li b{font-family:"Readex Pro",sans-serif;font-size:7mm;color:var(--dt);line-height:1}
+.pd-body li i{width:8mm;height:8mm;border:.6mm solid #1d2552;border-radius:1.5mm}
+.pd-slot{display:flex;align-items:flex-end;gap:2mm;padding:0 6mm;font-size:3.4mm;color:#5d6590}.pd-slot .pline{flex:1;min-width:0;height:5mm}.pd-slot .pline.short{flex:0 0 14mm}
+.pd-f{display:flex;align-items:center;gap:3mm;margin:4mm 6mm 6mm;padding-top:3mm;border-top:.3mm solid #c7cde4;font-size:3.2mm;line-height:1.5;color:#333b66}
+.pd-star{width:9mm;height:9mm;flex:none;color:#d4a106}
 /* level card 99×66 */
-.pp-lvl{height:66mm;display:grid;grid-template-columns:30mm 1fr;background:#fff;color:#1d2552;overflow:hidden}
+.pp-lvl{height:66mm;display:grid;grid-template-columns:30mm 1fr;background:#fff!important;color:#1d2552;overflow:hidden}
 .pl-side{background:var(--star-tile),linear-gradient(170deg,var(--lt),color-mix(in srgb,var(--lt) 45%,#0f1540));background-size:7mm 7mm,auto;display:grid;place-items:center;align-content:center;gap:4mm;padding:3mm}
-.pl-medal{width:20mm;height:20mm;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:10mm;box-shadow:0 0 0 1mm rgba(255,255,255,.45),0 0 0 2mm color-mix(in srgb,var(--lt) 60%,transparent)}
+.pl-medal{width:20mm;height:20mm;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:10mm;color:var(--lt);box-shadow:0 0 0 1mm rgba(255,255,255,.45),0 0 0 2mm color-mix(in srgb,var(--lt) 60%,transparent)}
 .pl-ladder{display:flex;gap:1.2mm}.pl-ladder i{width:2.4mm;height:2.4mm;border-radius:50%;background:rgba(255,255,255,.3)}.pl-ladder i.on{background:#fff}
 .pl-main{padding:4.5mm 5mm 3.5mm;display:grid;align-content:start;gap:1mm;background:var(--star-ink);background-size:7mm 7mm}
 .pl-main small{color:var(--lt);font-weight:700;font-size:2.9mm;letter-spacing:.2mm}
@@ -572,14 +574,14 @@ body.is-print{background:#fff;color:#1d2552}
 .pl-sign{display:flex;justify-content:space-between;font-size:2.5mm;color:#8a91b4;margin-top:1.2mm}
 
 /* topic card 99×92 */
-.pp-topic{--tt:#e7297a;height:92mm;display:grid;grid-template-rows:auto auto 1fr auto auto;gap:2mm;padding:0 0 3mm;background:var(--star-ink),#fff;background-size:7mm 7mm;color:#1d2552;overflow:hidden}
+.pp-topic{--tt:#e7297a;height:92mm;display:grid;grid-template-rows:auto auto auto 1fr auto;gap:2.5mm;padding:0 0 3mm;background:#fff;color:#1d2552;overflow:hidden}
 .pp-topic.m{--tt:#1fa865}
-.pt-head{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,var(--tt),color-mix(in srgb,var(--tt) 60%,#27378a));color:#fff;padding:2.2mm 5mm;font-size:3mm}
+.pt-head{display:flex;justify-content:space-between;align-items:center;background:#0f1540;border-bottom:1.6mm solid var(--tt);color:#fff;padding:2.2mm 5mm;font-size:3mm}
 .pt-cat{font-weight:700;letter-spacing:.2mm}.pt-n{font-family:var(--display);font-weight:700;font-size:4mm;background:rgba(255,255,255,.2);border-radius:1.5mm;padding:0 1.8mm}
-.pp-topic h3{font-family:var(--display);color:#1d2552;font-size:6mm;line-height:1.25;padding:1mm 5mm 0}
+.pp-topic h3{font-family:var(--display);color:#1d2552;font-size:7mm;line-height:1.2;padding:1mm 5mm 0}
 .pt-s{margin:0;padding:0 5mm;font-size:3.35mm;line-height:1.7;color:#333b66}
-.pt-q{margin:0 5mm;border-inline-start:1.2mm solid var(--tt);background:color-mix(in srgb,var(--tt) 9%,#fff);border-radius:1.5mm;padding:1.8mm 3mm;font-size:3.35mm;line-height:1.55}
-.pt-q b{display:block;color:var(--tt);font-size:2.8mm;margin-bottom:.4mm}
+.pt-q{margin:0 5mm;align-self:center;border-inline-start:1.6mm solid var(--tt);padding:1mm 3mm;font-size:4.2mm;line-height:1.55;font-weight:600}
+.pt-q b{display:block;color:var(--tt);font-size:3mm;margin-bottom:.6mm;font-weight:700}
 .pt-f{display:flex;justify-content:space-between;gap:2mm;padding:1.5mm 5mm 0;border-top:.3mm dashed #c7cde4;margin:0 4mm;font-size:2.8mm;color:#5d6590}.pt-who{font-weight:700;color:#1d2552}
 @media print{
   @page{size:A4;margin:6mm}
@@ -588,6 +590,8 @@ body.is-print{background:#fff;color:#1d2552}
   .pp-h{display:none}
   .sheet.cards>*:nth-child(9n){break-after:page}
   .sheet.topics>*:nth-child(6n){break-after:page}
+  .sheet{break-before:page}
+  .sheet.cards:first-of-type{break-before:auto}
 }
 
 /* presentation mode: hide the supervisor's private notes */
@@ -703,15 +707,17 @@ body.is-screen .tabbar,body.is-print .tabbar{display:none!important}
 .g-rules{display:flex;gap:8px;flex-wrap:wrap}.g-rules span{background:#0f1730;border:1px solid var(--line);border-radius:999px;padding:4px 12px}
 @media (max-width:900px){.admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-/* leader print card 99×92 */
-.pp-lead{height:92mm;display:grid;grid-template-rows:auto 1fr auto auto;gap:2mm;padding:0 0 3mm;background:var(--star-ink),#fff;background-size:7mm 7mm;color:#1d2552;overflow:hidden;--ld:#d4a106}
+/* leader print card 99×92: بطاقة دور */
+.pp-lead{height:92mm;display:grid;grid-template-rows:auto 1fr auto auto auto;gap:1.4mm;padding:0 0 2.5mm;background:#fff;color:#1d2552;overflow:hidden;--ld:#d4a106}
 .pp-lead.dep{--ld:#0a63e6}
-.pp-lead header{display:flex;align-items:center;gap:3mm;padding:3mm 5mm;color:#fff;background:var(--star-tile),linear-gradient(120deg,var(--ld),color-mix(in srgb,var(--ld) 45%,#0f1540));background-size:7mm 7mm,auto}
-.pp-lead header small{font-size:2.8mm;opacity:.9}.pp-lead header h3{font-family:var(--display);color:#fff;font-size:6.6mm}
-.pl-badge{width:13mm;height:13mm;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:7mm;flex:none}
-.pp-lead ul{margin:1mm 5mm 0;padding-inline-start:5mm;display:grid;gap:1.6mm;font-size:3.7mm;line-height:1.45}
-.pl-motto{margin:0 5mm;text-align:center;font-size:3.4mm;background:color-mix(in srgb,var(--ld) 10%,#fff);border:.3mm solid var(--ld);border-radius:2mm;padding:1.8mm}
-.pp-lead .pl-name{margin:0 5mm;font-size:3mm;color:#5d6590;border-bottom:none;min-height:auto}
+.pp-lead header{display:grid;grid-template-columns:1fr 16mm;align-items:center;gap:3mm;padding:3mm 5mm 2.5mm;color:#fff;background:linear-gradient(135deg,#1b2457,#0f1540);border-bottom:1.8mm solid var(--ld)}
+.pp-lead header small{display:block;font-size:2.8mm;color:#c9d2ff}.pp-lead header h3{font-family:var(--display);color:#fff;font-size:8mm;line-height:1.05;margin-top:1mm}
+.pl-ic{width:18mm;height:18mm;color:var(--ld)}
+.pl-list{list-style:none;margin:.5mm 5mm 0;padding:0;display:grid;gap:1.2mm;font-size:3.6mm;line-height:1.4;align-content:start}
+.pl-list li{display:grid;grid-template-columns:6mm 1fr;gap:2mm;align-items:baseline}.pl-list b{font-family:"Readex Pro",sans-serif;color:var(--ld);font-size:4.6mm}
+.pl-motto{margin:0 5mm;text-align:center;font-size:3.4mm;line-height:1.45;border-top:.3mm solid #c7cde4;border-bottom:.3mm solid #c7cde4;padding:1.2mm 0;display:grid;gap:.5mm}.pl-verse{color:var(--ld);font-weight:700}
+.pl-slot{display:flex;align-items:flex-end;gap:2mm;margin:0 5mm;font-size:3.2mm;color:#5d6590}.pl-slot .pline{flex:1;min-width:0;height:4.5mm}.pl-slot .pline.short{flex:0 0 16mm}
+.pl-rule{margin:0 5mm;font-size:2.8mm;line-height:1.45;color:#5d6590}
 .car-hero h1{line-height:1.2;margin-top:4px}
 .toast{z-index:80}
 
@@ -924,7 +930,7 @@ ul.checks{list-style:none;padding:0;display:grid;gap:4px}ul.checks li::before{co
 .pw-chip.t4{border-color:#ffd24a;color:#ffe7a8}.pcard.t4{--g1:#2a2416;--g2:#000;color:#ffd24a}
 .lead-rule,.ann-rule{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:rgba(242,193,78,.12);border:1px solid rgba(242,193,78,.45);color:#ffe7a8;font-weight:600}
 .ann-rule{text-align:center;font-size:clamp(16px,1.6vw,26px);margin:18px auto 0;max-width:1100px}
-.pl-rule{font-size:2.8mm;color:#8a5a00;margin:1.5mm 0 0;font-weight:700}
+.pp-lead .pl-rule{font-size:2.8mm;line-height:1.4;color:#8a5a00;margin:0 5mm;font-weight:700}
 
 /* ================= بطاقة اللاعب + فتح البكجات (شاشة الإعلان) ================= */
 .plc{--w:min(30vh,300px);width:var(--w);aspect-ratio:63/88;position:relative;overflow:hidden;border-radius:calc(var(--w)*.06);container-type:inline-size;--u:calc(var(--w)/100);color:#fff;text-align:center;
@@ -1112,7 +1118,7 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .ptbl td:nth-child(n+3),.ptbl th:nth-child(n+3){text-align:center}
 .ptbl tr.blank td small{display:block;color:#888;font-size:2.6mm}
 .ptbl.notes td:first-child small{color:#666}
-.ptbl.notes th.pc{width:26mm;font-size:3.4mm;line-height:1.3}.ptbl.notes th.pc span{display:block;font-size:6mm}
+.ptbl.notes th.pc{width:26mm;font-size:3.4mm;line-height:1.3}.ps-ic{display:block;width:7mm;height:7mm;margin:0 auto 1mm;color:#1d2552}
 .ptbl.notes td{height:9mm;font-size:4.2mm}.ptbl.notes .pbox{width:8mm;height:8mm}
 .ptbl.sst{font-size:3.4mm}.ptbl.sst td,.ptbl.sst th{padding:1.1mm 1.6mm}
 .ptbl.sst td:nth-child(5),.ptbl.sst td:nth-child(6){text-align:start;width:38mm}
@@ -1172,5 +1178,6 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .ktag table{width:100%;border-collapse:collapse;font-size:3mm;margin-top:3mm}
 .ktag th,.ktag td{border:.3mm solid #666;height:9mm;padding:0 .5mm;text-align:center}
 .ktag tbody th{width:9mm;font-weight:700;background:#f3f4f8}
-.ktag thead th{font-size:2.6mm;background:#eef0f6;line-height:1.2}
+.ktag thead th{font-size:2.6mm;background:#eef0f6;line-height:1.2}.kt-ic{display:block;width:5.5mm;height:5.5mm;margin:0 auto;color:var(--tc)}
 @media print{.ktag-page{margin:0;padding:0;break-after:page}.ktag-page:last-child{break-after:auto}}
+.pl-star{width:11mm;height:11mm}
