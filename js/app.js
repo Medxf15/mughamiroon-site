@@ -647,7 +647,7 @@ function viewPrint(arg) {
   $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#home">→ رجوع لليوم</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
 }
 // ---------------- بطاقة المغامر المعلّقة ----------------
-const TAG_TRAITS = [["coop", "تعاون"], ["sport", "روح رياضية"], ["word", "كلمة طيبة"]];
+const TAG_TRAITS = [["coop", "تعاون"], ["clock", "التزام"], ["word", "كلمة طيبة"]];
 function kidTags() {
   const groups = S.caravans.map((c) => [c, L.kidsOf(S, c.id)]).concat([[null, L.activeKids(S).filter((k) => !k.caravan_id)]]).filter(([, ks]) => ks.length);
   const weeks = 8;
