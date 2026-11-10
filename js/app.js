@@ -86,7 +86,7 @@ const NAV = [
   ["caravans", "القوافل", "🐪", () => true, true],
   ["admin", "المزيد", "☰", () => true, true],
 ];
-const SECTION = { plan: "home", live: "home", kit: "home", league: "field", cards: "field", gather: "field", game: "field", match: "field", studio: "admin", kids: "admin", kid: "admin", caravan: "caravans", reports: "admin", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", sheets: "admin" };
+const SECTION = { plan: "home", live: "home", kit: "home", league: "field", cards: "field", gather: "field", game: "field", match: "field", closing: "field", studio: "admin", kids: "admin", kid: "admin", caravan: "caravans", reports: "admin", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", sheets: "admin" };
 
 let screenTimer = null;
 async function render() {
@@ -106,7 +106,7 @@ async function render() {
   if (me.status !== "approved") return viewPending();
   if (!S) { $app().innerHTML = shell('<div class="empty">جاري تحميل البيانات…</div>'); await guard(loadAll); if (!S) return; if (isOwner()) await guard(loadAccounts); }
   else if (r.name === "accounts" && isOwner()) await guard(loadAccounts);
-  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint, studio: viewStudio, plan: viewPlan, cards: viewCards, field: field.viewField, match: field.viewMatch, gather: field.viewGather, game: field.viewGame };
+  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint, studio: viewStudio, plan: viewPlan, cards: viewCards, field: field.viewField, match: field.viewMatch, gather: field.viewGather, game: field.viewGame, closing: field.viewClosing };
   const fn = views[r.name] || viewToday;
   if (r.name === "live" && !can("points")) return go("home");
   if (r.name === "accounts" && !isOwner()) return go("home");
@@ -243,7 +243,7 @@ function viewToday() {
         ${drawn.length ? `<p class="small">سلّم البطاقات المطبوعة: ${drawn.map((p) => `${esc(L.POWER[p.kind].name)} ← ${esc(carName(p.caravan_id))}`).join("، ")}</p>` : ""}
         <p class="small muted">قبل الصافرة: كل قافلة تعلن بطاقتها، والكابتن يمثلها.</p>` },
     { key: "close", time: "9:45", icon: "🌙", title: "الختام", auto: null,
-      body: `<div class="close-stars">${S.caravans.map((c) => { const t = L.teamMeet(S, I, m.id, c.id); return `<span style="${carStyle(c)}">${esc(c.name)} ${t.stars === 2 ? "🌟" : t.stars ? "⭐" : `<small class="num">${t.ready}/${t.n}</small>`}</span>`; }).join("")}</div>
+      body: `<p><a class="btn sm" href="#closing">🌙 أرقام الليلة وجائزة الأسبوع</a></p><div class="close-stars">${S.caravans.map((c) => { const t = L.teamMeet(S, I, m.id, c.id); return `<span style="${carStyle(c)}">${esc(c.name)} ${t.stars === 2 ? "🌟" : t.stars ? "⭐" : `<small class="num">${t.ready}/${t.n}</small>`}</span>`; }).join("")}</div>
         <p>📜 الرسائل: ${sealsToday.length ? sealsToday.map((x) => `<b>${esc(carName(x.cid))}</b> فتحت «${esc(x.seal.title)}»`).join("، ") + ` · <a href="#screen">اعرضها على الشاشة</a>` : "ما وصلت أي قافلة محطة جديدة بعد. كل نجمة = خطوة."}</p>
         ${lv.length ? `<p>🏅 مستويات جديدة: ${lv.map((x) => `${x.lv.icon} <b>${esc(x.k.first_name)}</b> «${esc(x.lv.name)}»`).join("، ")} · <a href="#print/meet">اطبع بطاقاتهم</a></p>` : ""}
         <p class="reflect">سؤال التأمل: <b>«متى حسّيت إن فريقك يحتاجك؟»</b></p>
@@ -609,6 +609,8 @@ function viewPrint(arg) {
   const deck = Object.entries(L.DECK).flatMap(([k, n]) => Array(n).fill(k));
   if ((arg === "att" || arg === "notes" || arg === "staff") && m) {
     ({ title, guide, sheets } = meetSheets(arg, m));
+  } else if (arg === "tags") {
+    ({ title, guide, sheets } = kidTags());
   } else if (arg === "deck") {
     title = "بطاقات القوة";
     guide = `<li><b>${deck.length} بطاقة</b> في ${Math.ceil(deck.length / 9)} صفحات: برونزية ×4 لكل نوع، فضية وذهبية ×3، أسطورية ×2.</li><li>ورق مقوّى 250–300 جرام لامع أو مطفي، A4، الهوامش «بلا»، وفعّل «رسومات الخلفية».</li><li>الصفحة الأخيرة ظهر البطاقات (اختياري): اطبعها على ظهر الصفحات الثلاث إذا الطابعة تطبع وجهين.</li><li>قصّها على الخطوط، وخلها في ظرف معك. البطاقة تُسلّم للقائد بعد السحب، وترجع لك بعد المباراة.</li>`;
@@ -639,6 +641,28 @@ function viewPrint(arg) {
   }
   $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#home">→ رجوع لليوم</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
 }
+// ---------------- بطاقة المغامر المعلّقة ----------------
+const TAG_TRAITS = [["🤝", "تعاون"], ["🏅", "روح رياضية"], ["⏱️", "انضباط"], ["🗣️", "كلمة طيبة"], ["💡", "مبادرة"]];
+function kidTags() {
+  const groups = S.caravans.map((c) => [c, L.kidsOf(S, c.id)]).concat([[null, L.activeKids(S).filter((k) => !k.caravan_id)]]).filter(([, ks]) => ks.length);
+  const weeks = 8;
+  const tag = (k, c) => `<div class="ktag" style="${carStyle(c)}"><i class="kt-hole"></i>
+      <header><small>${c ? "قافلة " + esc(c.name) : "المغامرون"}</small><img src="assets/mahara.png" alt=""></header>
+      <h2>${esc(k.first_name)}</h2><p class="kt-fam">${esc(k.family_name || "")}</p>
+      <table><thead><tr><th></th>${Array(weeks).fill(0).map((_, i) => `<th>${i + 1}</th>`).join("")}</tr></thead><tbody>
+        ${TAG_TRAITS.map(([ic, t]) => `<tr><th>${ic} ${t}</th>${Array(weeks).fill("<td></td>").join("")}</tr>`).join("")}
+      </tbody></table>
+      <footer>كل ✓ شافها الأستاذ بعينه · «أتحدى وأتعاون»</footer></div>`;
+  const all = groups.flatMap(([c, ks]) => ks.map((k) => tag(k, c)));
+  const pages = []; for (let i = 0; i < all.length; i += 8) pages.push(`<section class="ktag-page">${all.slice(i, i + 8).join("")}</section>`);
+  return { title: "بطاقات المغامرين المعلّقة",
+    guide: `<li><b>${all.length} بطاقة</b> في ${pages.length} صفحات A4 (8 بطاقات بالصفحة، مقاس 74×105 مم). ورق مقوّى، وثقب من فوق لحبل التعليق.</li>
+      <li>الخانات كلها إيجابية: ${TAG_TRAITS.map(([, t]) => t).join("، ")}. أنت تعلّم ✓ بالقلم لما تشوفها بعينك، في عمود رقم اللقاء.</li>
+      <li>الولد يعلّقها طول اللقاء، وآخر اللقاء القائد يجمع بطاقات قافلته في صندوقها. ما تروح البيت وما تنقرى قدّام أحد.</li>
+      <li>الطفل اللي بطاقته فاضية من لقاء: هذا تنبيه لك أنت، مو له. امسك له فرصة الأسبوع الجاي.</li>`,
+    sheets: pages.join("") };
+}
+
 // ---------------- أوراق اللقاء ----------------
 function meetSheets(arg, m) {
   const date = `اللقاء ${m.number} · الخميس ${fmtDate(m.meet_date)}`;
@@ -755,6 +779,7 @@ function viewAdmin() {
     <div class="admin-grid">
       ${can("points") ? tile("#live", "✅", "التحضير والنقاط", "الحضور والبطاقات الخمس والخصم") : ""}
       ${tile("#print/att", "🖨️", "أوراق اللقاء", "التحضير للقادة، ورقة الملاحظات، وورقتك أنت والمساعد")}
+      ${tile("#print/tags", "🏷️", "بطاقات المغامرين المعلّقة", "بطاقة باسم كل ولد، تعلّم فيها ✓ بالقلم")}
       ${tile("#cards", "🎴", "بطاقات القوة", "السحب ورصيد كل قافلة وطباعة البطاقات")}
       ${tile("#league", "🏆", "الدوري: التعديل المتقدم", "الحراس، لاعب الروح، الجوائز، تعديل أي مباراة")}
       ${tile("#plan", "📋", "دليل اللقاء", "كل فقرة بالدقيقة")}

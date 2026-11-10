@@ -1120,3 +1120,44 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
   .psheet{border:none;margin:0;padding:0;min-height:0;break-after:page}
   .psheet:last-child{break-after:auto}
 }
+
+/* بنك الألعاب */
+.gb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.gb-card{display:grid;gap:2px;text-align:start;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px;color:var(--fg);cursor:pointer;font:inherit}
+.gb-card.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 40%,transparent)}
+.gb-card b{font-family:var(--display)}.gb-card small{color:var(--muted);font-size:.78rem}
+.gb-ic{font-size:1.5rem}
+.gcard{display:grid;gap:10px;margin-top:12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:14px;padding:14px}
+.gcard header{display:flex;gap:10px;align-items:center}.gcard header .gb-ic{font-size:2.2rem}
+.gc-hook{margin:0;color:var(--c-yellow);font-weight:600}
+.gc-rule{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.gc-rule span{display:grid;gap:2px;background:var(--surface);border-radius:10px;padding:8px 10px;font-size:.92rem}
+.gc-rule b{color:var(--muted);font-size:.78rem;font-weight:600}
+.gc-why{margin:0;font-family:var(--display);font-size:1.05rem;color:var(--head)}
+.gc-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.gc-cols h4{margin-bottom:4px}.gc-cols ol{margin:0;padding-inline-start:18px;font-size:.92rem;display:grid;gap:3px}
+
+/* الختام */
+.tbl.cls td.good{color:var(--ok-fg);font-weight:700}.tbl.cls td.bad{color:#ff9db0;font-weight:700}.tbl.cls td.zero{color:var(--muted)}
+.prize{border-color:#ffd24a66}.prize.has{background:linear-gradient(160deg,#1a1405,var(--surface))}
+.prize-win{font-size:1.3rem;font-family:var(--display);border-inline-start:6px solid var(--tc);padding-inline-start:10px;margin:0}
+.prize-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.ga-car.sm{min-height:56px;font-size:1.1rem;opacity:.6}.ga-car.sm.on{opacity:1;box-shadow:0 0 0 3px #fff}
+.prize-why{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.say{margin:0;padding-inline-start:18px;display:grid;gap:6px}
+
+/* بطاقات المغامرين المعلّقة: 8 × (74×105 مم) على A4 */
+.ktag-page{display:grid;grid-template-columns:repeat(4,74mm);grid-auto-rows:105mm;justify-content:center;gap:0;background:#fff;margin:0 auto 12px;width:210mm;padding:7mm 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.ktag{position:relative;box-sizing:border-box;border:.3mm dashed #999;padding:7mm 4mm 3mm;display:flex;flex-direction:column;gap:1.5mm;color:#111;background:#fff;font-family:"IBM Plex Sans Arabic",sans-serif}
+.ktag::before{content:"";position:absolute;inset:0 0 auto 0;height:4mm;background:var(--tc)}
+.kt-hole{position:absolute;top:1.2mm;left:50%;width:4mm;height:4mm;margin-left:-2mm;border-radius:50%;background:#fff;border:.3mm solid #333}
+.ktag header{display:flex;justify-content:space-between;align-items:center}
+.ktag header small{font-size:2.8mm;color:var(--tc);font-weight:700}.ktag header img{height:6mm;filter:grayscale(1)}
+.ktag h2{font-family:"Lalezar","Readex Pro",sans-serif;font-size:11mm;line-height:1;color:#111;margin:1mm 0 0}
+.kt-fam{margin:0;font-size:3mm;color:#555}
+.ktag table{width:100%;border-collapse:collapse;font-size:3mm;margin-top:2mm}
+.ktag th,.ktag td{border:.25mm solid #777;height:8.6mm;padding:0 .5mm;text-align:center}
+.ktag tbody th{text-align:start;font-weight:600;width:21mm;white-space:nowrap}
+.ktag thead th{font-size:2.4mm;background:#eef0f6}
+.ktag footer{margin-top:auto;font-size:2.3mm;color:#555;text-align:center}
+@media print{.ktag-page{margin:0;padding:7mm 0;break-after:page}.ktag-page:last-child{break-after:auto}}

@@ -22,7 +22,7 @@ else {
     ${s.levels ? `<div class="lv">${s.levels.map(([a, b]) => `<div><b>${esc(a)}:</b> ${esc(b)}</div>`).join("")}</div>` : ""}
     ${s.steps ? `<ol>${s.steps.map(([t, x]) => `<li><b>${fmt12(t)}</b> ${esc(x)}</li>`).join("")}</ol>` : ""}
     ${s.safety ? `<p><b>السلامة:</b></p>${list(s.safety)}` : ""}${s.alt ? `<p><b>البديل:</b> ${esc(s.alt)}</p>` : ""}</div>`).join("")}
-  <div class="box"><h2>التكليفات</h2>${list(Object.entries(P.duties || {}).map(([c, x]) => `${c}: ${x}`))}<h2>مباريات الدوري</h2>${list((P.matches || []).map((m) => m.join(" × ")))}</div>
+  <div class="box"><h2>التكليفات</h2>${list(Object.entries(P.duties || {}).map(([c, x]) => `${c}: ${x}`))}<h2>مباريات الدوري</h2>${(P.matches || []).length ? list(P.matches.map((m) => m.join(" × "))) : "<p>مباراتان: أول مباراة لأول قافلتين انضبطتا في الجمع، والجدول يُبنى في المنصة بدون تكرار.</p>"}</div>
   <div class="box"><h2>الأدوات</h2>${list(P.tools)}<h2>دور المساعد</h2><p>${esc(P.assistant)}</p></div>
   <div class="box"><h2>سؤال التأمل</h2><p>${esc(P.reflect)}</p><h2>التحدي المنزلي</h2><p>${esc(P.home)}</p></div>
   <p class="foot">أعدّه مسؤول فئة المغامرين · نادي مهارة – حي الهجرة · جمعية أطفال طيبة</p>`;
