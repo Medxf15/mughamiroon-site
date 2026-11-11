@@ -666,11 +666,11 @@ function kidTags() {
     const N = L.STARS[Math.min(lv.i, L.STARS.length - 1)], top = !lv.next;
     const cs = N <= 4 ? 8.4 : Math.floor((((64 - 6 - 4 - 15) - (N - 1) * 1.2) / N) * 10) / 10;
     const rows = L.FIVE.map((f) => `<div class="row">${ic(f.ic, "ri")}<div class="lb"><b>${f.name}</b>${N <= 3 ? `<span>${f.what}</span>` : ""}</div><div class="cs" style="--s:${cs}mm">${Array(N).fill(0).map((_, i) => `<i class="${i < (have[f.k] || 0) ? "pre" : ""}">${i < (have[f.k] || 0) ? ic("check", "ck") : STAR_SVG}</i>`).join("")}</div></div>`).join("");
-    const how = top ? `أنت <b>شيخ القافلة</b>: وصلت قمة أُحد. كل نجمة جديدة تسجّلها هنا في سجل الشرف، وهذي البطاقة تبقى لك. علّقها في بيتك.`
+    const how = top ? `أنت <b>شيخ القافلة</b>: وصلت قمة أُحد. كمّل جمع النجوم هنا، وهذي البطاقة تبقى لك. علّقها في بيتك.`
       : `مستواك الآن: <b>${lv.name}</b>. عبّئ كل الخانات، ثم علّق هذي البطاقة عندك في البيت، وخذ بطاقة <b>${lv.next.name}</b>.`;
     return `<div class="ktag b" style="${carStyle(c)}">${hole}
       <header><small>${esc(k.first_name)} · ${lv.name}</small><small>تُعلَّم في دائرة الختام</small></header>
-      <h2 class="bt">${N === 1 ? "نجمة" : N + " نجوم"} في <em>كل قيمة</em></h2><p class="bs">${top ? "سجل الشرف" : "عشان تنتقل إلى مستوى «" + lv.next.name + "»"}</p>${rows}<p class="how">${how}</p></div>`;
+      <h2 class="bt">${N === 1 ? "نجمة" : N + " نجوم"} في <em>كل قيمة</em></h2><p class="bs">${top ? "قمة أُحد" : "عشان تنتقل إلى مستوى «" + lv.next.name + "»"}</p>${rows}<p class="how">${how}</p></div>`;
   };
   const all = groups.flatMap(([c, ks]) => ks.map((k) => {
     const lv = L.level(L.kidTotal(S, I, k.id)), st = L.starsOf(S, I, k.id), N = L.STARS[Math.min(lv.i, L.STARS.length - 1)], prev = lv.i ? L.STAR_CUM[lv.i - 1] : 0;
