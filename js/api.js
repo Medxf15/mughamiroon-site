@@ -138,13 +138,20 @@ function eqs(match) { const o = {}; for (const k in match) o[k] = "eq." + match[
 // ---------- Storage (film voice clips) ----------
 export const storage = {
   publicUrl: (bucket, path) => `${SB_URL}/storage/v1/object/public/${bucket}/${path}`,
-  async upload(bucket, path, blob) {
+  async upload(bucket, path, blob, errMsg = "ما انحفظ التسجيل") {
     await ensureFresh();
     const res = await fetch(`${SB_URL}/storage/v1/object/${bucket}/${path}`, { method: "POST", headers: { apikey: SB_KEY, Authorization: "Bearer " + (session && session.access_token), "Content-Type": blob.type || "audio/webm", "x-upsert": "true", "cache-control": "60" }, body: blob });
-    if (!res.ok) { let d = null; try { d = await res.json(); } catch (e) {} throw new ApiError("ما انحفظ التسجيل" + (d && d.message ? ": " + d.message : ""), res.status); }
+    if (!res.ok) { let d = null; try { d = await res.json(); } catch (e) {} throw new ApiError(errMsg + (d && d.message ? ": " + d.message : ""), res.status); }
     return true;
   },
   async remove(bucket, path) { await ensureFresh(); const res = await fetch(`${SB_URL}/storage/v1/object/${bucket}/${path}`, { method: "DELETE", headers: { apikey: SB_KEY, Authorization: "Bearer " + (session && session.access_token) } }); if (!res.ok) throw new ApiError("ما انحذف التسجيل", res.status); return true; },
+  /** temporary link to a private file (staff only) */
+  async signedUrl(bucket, path, secs = 300) {
+    await ensureFresh();
+    const res = await fetch(`${SB_URL}/storage/v1/object/sign/${bucket}/${path}`, { method: "POST", headers: { apikey: SB_KEY, "Content-Type": "application/json", Authorization: "Bearer " + (session && session.access_token) }, body: JSON.stringify({ expiresIn: secs }) });
+    if (!res.ok) throw new ApiError("ما انفتح الملف", res.status);
+    const d = await res.json(); return SB_URL + "/storage/v1" + d.signedURL;
+  },
   /** list works without login because the bucket is public-read */
   async list(bucket) { const res = await fetch(`${SB_URL}/storage/v1/object/list/${bucket}`, { method: "POST", headers: { apikey: SB_KEY, "Content-Type": "application/json", ...(session && session.access_token ? { Authorization: "Bearer " + session.access_token } : {}) }, body: JSON.stringify({ prefix: "", limit: 500, sortBy: { column: "name", order: "asc" } }) }); if (!res.ok) return []; return res.json(); },
 };

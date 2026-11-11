@@ -4,10 +4,11 @@ import * as L from "./logic.js";
 import { planFor, toMin, fmt12 } from "./plans.js";
 import { powerCard, powerIcon, powerBack, playerCard, packBack } from "./pcard.js";
 import { initField } from "./field.js";
+import { initMeetFile } from "./meetfile.js";
 import { svg as ic, EMBLEM } from "./icons.js";
 
 // ---------------- state ----------------
-const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings", "duty_log", "field_events"];
+const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings", "duty_log", "field_events", "meeting_files"];
 let S = null, I = null, me = null, accounts = [];
 let meetId = null;
 let ui = { present: (() => { try { return localStorage.getItem("mgh.present") === "1"; } catch (e) { return false; } })(), seenCards: new Set(), liveCar: "all", kidsQ: "", kidsCar: "all", leagueTab: "matches", screenTab: "caravans", openDed: null, openMatch: null, armed: null };
@@ -87,7 +88,7 @@ const NAV = [
   ["caravans", "القوافل", "🐪", () => true, true],
   ["admin", "المزيد", "☰", () => true, true],
 ];
-const SECTION = { plan: "home", live: "home", kit: "home", league: "field", cards: "field", gather: "field", game: "field", match: "field", closing: "field", studio: "admin", kids: "admin", kid: "admin", caravan: "caravans", reports: "admin", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", sheets: "admin" };
+const SECTION = { plan: "home", live: "home", kit: "home", league: "field", cards: "field", gather: "field", game: "field", match: "field", closing: "field", studio: "admin", kids: "admin", kid: "admin", caravan: "caravans", reports: "admin", meet: "home", fair: "caravans", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", sheets: "admin" };
 
 let screenTimer = null;
 async function render() {
@@ -107,7 +108,7 @@ async function render() {
   if (me.status !== "approved") return viewPending();
   if (!S) { $app().innerHTML = shell('<div class="empty">جاري تحميل البيانات…</div>'); await guard(loadAll); if (!S) return; if (isOwner()) await guard(loadAccounts); }
   else if (r.name === "accounts" && isOwner()) await guard(loadAccounts);
-  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint, studio: viewStudio, plan: viewPlan, cards: viewCards, field: field.viewField, match: field.viewMatch, gather: field.viewGather, game: field.viewGame, closing: field.viewClosing };
+  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, meet: mf.viewMeet, fair: mf.viewFair, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint, studio: viewStudio, plan: viewPlan, cards: viewCards, field: field.viewField, match: field.viewMatch, gather: field.viewGather, game: field.viewGame, closing: field.viewClosing };
   const fn = views[r.name] || viewToday;
   if (r.name === "live" && !can("points")) return go("home");
   if (r.name === "accounts" && !isOwner()) return go("home");
@@ -262,6 +263,7 @@ function viewToday() {
       <div class="hero-side">${meetPicker()}<div class="hero-prog"><div class="prog"><i style="width:${Math.round((doneN / steps.length) * 100)}%"></i></div><small class="num">${doneN} من ${steps.length} محطات</small></div></div>
     </section>
     ${planFor(m.number) ? `<a class="plan-banner" href="#plan/${m.number}"><span>📋</span><div><b>دليل اللقاء: ${esc(planFor(m.number).title)}</b><small>كل فقرة بالدقيقة، واللي تقوله، ومهام المساعد والقادة</small></div><i>←</i></a>` : ""}
+    <a class="plan-banner" href="#meet"><span>🗂️</span><div><b>ملف اللقاء ${m.number}</b><small>كل ما صار + الصور + تقرير الجمعة جاهز للنسخ</small></div><i>←</i></a>
     ${isOwner() && accounts.some((a) => a.status === "pending") ? `<a class="notice" href="#accounts">${accounts.filter((a) => a.status === "pending").length} حساب ينتظر موافقتك</a>` : ""}
     <ol class="day">${steps.map((st, i) => `<li class="day-step ${st.done ? "done" : ""} ${i === nowIdx ? "now" : ""}">
       <div class="ds-rail"><span class="ds-dot">${st.done ? "✓" : st.icon}</span></div>
@@ -837,6 +839,8 @@ function viewAdmin() {
     </div>
     <h2 class="h2 adm-h">الإدارة</h2>
     <div class="admin-grid">
+      ${tile("#meet", "🗂️", "ملف اللقاء", "كل ما صار في اللقاء + الصور + تقرير الجمعة جاهز")}
+      ${tile("#fair", "⚖️", "ميزان العدل", "من أخذ ومن فاته: النقاط والحضور والمنبر")}
       ${tile("#reports", "📝", "التقارير", "الأسبوعي جاهز للنسخ، الحضور، بيانات اللقاءات")}
       ${tile("#kids", "🎒", "المغامرون", "الأسماء والمراكز والجوازات")}
       ${tile("#guide", "🧭", "دليل طريق القوافل", "القواعد والبطاقات والمحطات والمستويات")}
@@ -952,6 +956,7 @@ document.addEventListener("click", async (e) => {
   if (b.tagName === "INPUT") return; // checkboxes handled on change
   if (busy.has(key)) return; busy.add(key); setTimeout(() => busy.delete(key), a === "tc" || a === "pt" ? 150 : 400);
   const k = b.dataset.k, id = b.dataset.id;
+  if (a.startsWith("mf") && (await mf.onClick(a, b, key))) return;
   switch (a) {
     case "logout": await auth.signOut(); me = null; S = null; location.hash = "login"; return render();
     case "recheck": me = null; await guard(loadMe); return render();
@@ -1279,6 +1284,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 // ---------------- الملعب ----------------
+const mf = initMeetFile({ S: () => S, I: () => I, meetId: () => meetId, $app, render, ui, can, esc, toast, guard, reload, shell, pageHead, meetPicker, fmtDate });
 const field = initField({ S: () => S, I: () => I, meetId: () => meetId, can, esc, toast, guard, reload, shell, pageHead, meetPicker, fmtDate, doUndoable });
 
 // ---------------- boot ----------------
