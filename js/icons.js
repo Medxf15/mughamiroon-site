@@ -14,6 +14,8 @@ export const ICON = {
   coop: `<g ${S}><path d="M8 30l12-8 10 8-6 6"/><path d="M56 30 44 22l-10 8 6 6"/><path d="M24 36l8 8 8-8"/><path d="M14 38v10l18 10 18-10V38"/></g>`,
   sport: `<g ${S}><circle cx="32" cy="40" r="14"/><path d="M26 8l6 18 6-18"/><path d="M20 8h24"/><path d="M32 32l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z" fill="currentColor" stroke="none"/></g>`,
   word: `<g ${S}><path d="M10 12h44v28H28l-12 10V40h-6z"/><path d="M20 22h24M20 30h14"/></g>`,
+  flag: `<g ${S}><path d="M14 58V8"/><path d="M14 10h34l-8 12 8 12H14"/></g>`,
+  gem: `<g ${S}><path d="M18 8h28l12 16-26 34L6 24z"/><path d="M6 24h52"/><path d="M24 8l-6 16 14 34 14-34-6-16"/></g>`,
   // عام
   star: `<path d="M32 4l8.6 17.4 19.2 2.8-13.9 13.5 3.3 19.1L32 47.8l-17.2 9 3.3-19.1L4.2 24.2l19.2-2.8z" fill="currentColor"/>`,
   check: `<g ${S}><path d="M12 34l14 14 26-30"/></g>`,

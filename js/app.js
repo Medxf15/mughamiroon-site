@@ -647,33 +647,37 @@ function viewPrint(arg) {
   $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#home">→ رجوع لليوم</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
 }
 // ---------------- بطاقة المغامر المعلّقة ----------------
-const TAG_TRAITS = [["coop", "تعاون"], ["clock", "التزام"], ["word", "كلمة طيبة"]];
+const LVL_STEPS = [6, 6, 8, 8, 8]; // نقاط كل مستوى للتالي (مجموعها 36 = شيخ القافلة)
 function kidTags() {
   const groups = S.caravans.map((c) => [c, L.kidsOf(S, c.id)]).concat([[null, L.activeKids(S).filter((k) => !k.caravan_id)]]).filter(([, ks]) => ks.length);
-  const weeks = 8;
-  const front = (k, c) => `<div class="ktag" style="${carStyle(c)}"><i class="kt-hole l"></i><i class="kt-hole r"></i>
+  const hole = '<i class="kt-hole l"></i><i class="kt-hole r"></i>';
+  const front = (k, c, lv) => `<div class="ktag" style="${carStyle(c)}">${hole}
       <header><small>${c ? "قافلة " + esc(c.name) : "المغامرون"}</small><img src="assets/mahara.png" alt=""></header>
-      <div class="kt-mid"><h2>${esc(k.first_name)}</h2><p class="kt-fam">${esc(k.family_name || "")}</p></div>
-      <p class="kt-motto">أتحدى وأتعاون</p><footer>نادي مهارة · حي الهجرة</footer></div>`;
-  const back = (k, c) => `<div class="ktag back" style="${carStyle(c)}"><i class="kt-hole l"></i><i class="kt-hole r"></i>
-      <header><small>${esc(k.first_name)} · ${c ? esc(c.name) : ""}</small><small>تُعلَّم في دائرة الختام</small></header>
-      <table><thead><tr><th>اللقاء</th>${TAG_TRAITS.map(([k, t]) => `<th>${ic(k, "kt-ic")}<br>${t}</th>`).join("")}</tr></thead><tbody>
-        ${Array(weeks).fill(0).map((_, i) => `<tr><th>${i + 1}</th>${TAG_TRAITS.map(() => "<td></td>").join("")}</tr>`).join("")}
-      </tbody></table></div>`;
-  const all = groups.flatMap(([c, ks]) => ks.map((k) => [k, c]));
+      <div class="kt-mid"><h2 class="${(k.first_name || "").length > 6 ? "long" : ""}">${esc(k.first_name)}</h2><p class="kt-fam">${esc(k.family_name || "")}</p></div>
+      <p class="kt-lv">${lv.name}</p><p class="kt-motto">أتحدى وأتعاون</p><footer>نادي مهارة · حي الهجرة</footer></div>`;
+  const back = (k, c, lv, have) => {
+    const need = lv.next ? lv.next.min - lv.min : 0;
+    const cells = lv.next
+      ? `<p class="kt-goal">طريقك إلى <b>${lv.next.name}</b>: ${need} نقاط</p><div class="kt-cells" style="--n:${need > 6 ? 4 : 3}">${Array(need).fill(0).map((_, i) => `<i class="${i < have ? "pre" : ""}">${i < have ? ic("check", "kt-ck") : ""}</i>`).join("")}</div>
+         <p class="kt-rule">كل نقطة تكسبها = خانة. تكتمل الخانات؟ تستلم بطاقة <b>${lv.next.name}</b> في دائرة الختام، وبطاقتك هذي تروح معك البيت.</p>`
+      : `<p class="kt-goal"><b>وصلت القمة</b></p><p class="kt-rule">مهمتك الآن: أرشد زميلًا. كل مرة تساعد راكبًا جديدًا علّم خانة.</p><div class="kt-cells">${Array(5).fill(0).map(() => "<i></i>").join("")}</div>`;
+    return `<div class="ktag back" style="${carStyle(c)}">${hole}
+      <header><small>${esc(k.first_name)} · ${lv.name}</small><small>تُعلَّم في دائرة الختام</small></header>
+      <ul class="kt-five">${L.FIVE.map((f) => `<li>${ic(f.ic, "kt-ic")}<b>${f.name}</b><span>${f.what}</span></li>`).join("")}</ul>${cells}</div>`;
+  };
+  const all = groups.flatMap(([c, ks]) => ks.map((k) => { const tot = L.kidTotal(S, I, k.id), lv = L.level(tot); return [k, c, lv, Math.max(0, Math.min(tot - lv.min, lv.next ? lv.next.min - lv.min : 0))]; }));
   const pages = [];
   for (let i = 0; i < all.length; i += 8) {
     const chunk = all.slice(i, i + 8);
-    pages.push(`<section class="ktag-page">${chunk.map(([k, c]) => front(k, c)).join("")}</section>`);
-    // back side: mirror each row of 4 so duplex printing lines up
+    pages.push(`<section class="ktag-page">${chunk.map((x) => front(...x)).join("")}</section>`);
     const rows = [chunk.slice(0, 4), chunk.slice(4, 8)].filter((r) => r.length);
-    pages.push(`<section class="ktag-page">${rows.map((r) => { const m = r.slice().reverse(); while (m.length < 4) m.unshift(null); return m.map((x) => (x ? back(x[0], x[1]) : '<div class="ktag empty"></div>')).join(""); }).join("")}</section>`);
+    pages.push(`<section class="ktag-page">${rows.map((r) => { const m = r.slice().reverse(); while (m.length < 4) m.unshift(null); return m.map((x) => (x ? back(...x) : '<div class="ktag empty"></div>')).join(""); }).join("")}</section>`);
   }
-  return { title: "بطاقات المغامرين المعلّقة",
-    guide: `<li><b>${all.length} بطاقة</b> بمقاس 74×105 مم، 8 بالصفحة، وكل صفحة وجه يتبعها صفحة ظهرها (اطبع وجهين على الحافة القصيرة). ورق مقوّى، وثقبان في الزاويتين عشان ما تدور.</li>
-      <li><b>الوجه:</b> الاسم والقافلة بس، هذا اللي يشوفه الكل. <b>الظهر:</b> شبكة ${weeks} لقاءات × ${TAG_TRAITS.length} سلوكيات (${TAG_TRAITS.map(([, t]) => t).join("، ")})، خلية 9 مم تنعلّم بقلم.</li>
-      <li>ما تنعلّم على صدر الولد في الملعب. في <b>دائرة الختام</b> كل ولد يمسك بطاقته بيده، وأنت تعلّم ✓ اللي شفته بعينك، ثم القائد يجمع بطاقات قافلته في صندوقها.</li>
-      <li>الظهر ما يُقارن قدّام أحد. بطاقة فاضية = تنبيه لك أنت: امسك له فرصة الأسبوع الجاي.</li>`,
+  return { title: "بطاقات المغامرين المعلّقة (بطاقة لكل مستوى)",
+    guide: `<li><b>${all.length} بطاقة</b> بمقاس 74×105 مم، 8 بالصفحة، وجه ثم ظهر (اطبع وجهين على الحافة القصيرة). ورق مقوّى، وثقبان للتعليق.</li>
+      <li>كل بطاقة على <b>مستوى الطفل الحالي</b>: ظهرها فيه النقاط الخمس (التعاون، الالتزام، الأخلاق، المبادرة، الإتقان) وخانات بعدد النقاط اللي يحتاجها للمستوى التالي. النقاط اللي كسبها قبل الطباعة معبّأة مسبقًا.</li>
+      <li>في <b>دائرة الختام</b> كل ولد يمسك بطاقته وتعلّم له خانة لكل نقطة كسبها. اكتملت الخانات؟ يستلم بطاقة المستوى التالي (من «بطاقات المستويات» أو أعد الطباعة)، والقديمة يوديها البيت.</li>
+      <li>الخصم ما يُكتب على البطاقة. الرقم المعتمد هو اللي في المنصة، والبطاقة تُقرَّب له. الظهر ما يُقارن قدّام أحد.</li>`,
     sheets: pages.join("") };
 }
 
@@ -695,9 +699,9 @@ function meetSheets(arg, m) {
     return { title: "أوراق اللقاء: تحضير القادة", guide: `${nav}<li>ورقة لكل قافلة (${S.caravans.length} صفحات). يستلمها القائد في الانطلاقة ويرجّعها بعد ما يحضّر.</li><li>بدون أي رقم جوال أو بيانات: الاسم والحضور بس.</li><li>A4 عادي، الهوامش افتراضية.</li>`, sheets };
   }
   if (arg === "notes") {
-    const cols = [["coop", "ساعد زميل"], ["sport", "شجّع"], ["clock", "التزم بالوقت"], ["word", "كلمة طيبة"]];
+    const cols = L.FIVE.map((f) => [f.ic, f.name]);
     const sheets = S.caravans.map((c) => { const ks = L.kidsOf(S, c.id);
-      return `<section class="psheet">${head(c, "ورقة القائد والنائب", lead(c) + `<p class="ps-intro big"><b>مهمتكم الليلة: تشوفون الخير في قافلتكم.</b> علّم ✓ لمن ساعد زميل، أو شجّع، أو التزم بالوقت، أو قال كلمة طيبة. الورقة للأستاذ بس.</p>`)}
+      return `<section class="psheet">${head(c, "ورقة القائد والنائب", lead(c) + `<p class="ps-intro big"><b>مهمتكم الليلة: تشوفون الخير في قافلتكم.</b> علّم ✓ لمن تعاون، أو التزم، أو قال كلمة طيبة، أو بادر، أو أتقن شغله. الورقة للأستاذ بس.</p>`)}
         <table class="ptbl notes"><thead><tr><th>الاسم</th>${cols.map(([k, t]) => `<th class="pc">${ic(k, "ps-ic")}${t}</th>`).join("")}</tr></thead><tbody>
         ${ks.map((k) => `<tr><td>${esc(k.first_name)} <small>${esc(k.family_name || "")}</small></td>${cols.map(() => `<td>${box}</td>`).join("")}</tr>`).join("")}
         ${Array(2).fill(0).map(() => `<tr class="blank"><td><span class="pline"></span></td>${cols.map(() => `<td>${box}</td>`).join("")}</tr>`).join("")}
