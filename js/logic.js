@@ -267,6 +267,11 @@ export function starsOf(S, I, kid) {
   for (const m of S.meetings) { const p = row(I, m.id, kid); if (!p || p.present === false) continue; for (const k in r) r[k] += Number(p[k]) || 0; }
   return r;
 }
+/** هل في بطاقة الطفل الحالية خانة فاضية لهذي القيمة؟ (المنصة مرآة البطاقة الورقية) */
+export function hasEmptyCell(S, I, kid, v) {
+  const lv = level(kidTotal(S, I, kid)); const N = STARS[Math.min(lv.i, STARS.length - 1)], prev = lv.i ? STAR_CUM[lv.i - 1] : 0;
+  return (starsOf(S, I, kid)[v] || 0) - prev < N;
+}
 export function level(total) {
   let i = 0; for (let j = 0; j < LEVELS.length; j++) if (total >= LEVELS[j].min) i = j;
   const nx = LEVELS[i + 1] || null;

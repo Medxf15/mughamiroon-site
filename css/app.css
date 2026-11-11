@@ -1331,3 +1331,19 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .tv-win{display:flex;align-items:center;gap:22px;margin-top:22px;padding:22px 28px;border-radius:22px;background:linear-gradient(135deg,rgba(212,167,44,.28),rgba(212,167,44,.08));border:2px solid rgba(212,167,44,.6)}
 .tv-win span{font-size:4.5rem}.tv-win small{font-size:1.4rem;color:#e6c35c;display:block}.tv-win b{font-size:3rem;color:var(--tc);font-family:var(--display)}.tv-win p{font-size:1.5rem;margin:4px 0 0}
 @media (max-width:759px){.tabbar a[href="#quick"] .ti{filter:none;opacity:1;font-size:1.45rem}.tabbar a[href="#quick"]{color:#ffd166}}
+
+/* نجمة للقافلة كلها + تنبيه العدل + كشف ترتيب الليلة */
+.q-all{border-top:1px dashed var(--line);padding-top:10px;display:grid;gap:6px}
+.q-none{border-color:#ffd166!important;color:#ffd166}.q-none[aria-pressed="true"]{background:#8a6a00!important;color:#fff}
+#nt-msg{width:100%;font:inherit;line-height:1.8;resize:vertical}
+.tv-rev{font-size:1.1rem;margin-inline-start:14px;vertical-align:middle}
+@keyframes tvIn{from{opacity:0;transform:translateY(26px) scale(.96)}to{opacity:1;transform:none}}
+.tv-board.reveal .tv-rev{visibility:hidden}
+.tv-board.reveal .bd-row,.tv-board.reveal .tv-win,.tv-board.reveal .board + p{opacity:0;animation:tvIn .7s ease-out forwards}
+.tv-board.reveal .bd-row:nth-child(1){animation-delay:calc(var(--rv) * (var(--rn) - 1))}
+.tv-board.reveal .bd-row:nth-child(2){animation-delay:calc(var(--rv) * (var(--rn) - 2))}
+.tv-board.reveal .bd-row:nth-child(3){animation-delay:calc(var(--rv) * (var(--rn) - 3))}
+.tv-board.reveal .bd-row:nth-child(4){animation-delay:calc(var(--rv) * (var(--rn) - 4))}
+.tv-board.reveal .bd-row:nth-child(5){animation-delay:calc(var(--rv) * (var(--rn) - 5))}
+.tv-board.reveal .tv-win,.tv-board.reveal .board + p{animation-delay:calc(var(--rv) * var(--rn) + 600ms)}
+@media (prefers-reduced-motion:reduce){.tv-board.reveal .bd-row,.tv-board.reveal .tv-win,.tv-board.reveal .board + p{opacity:1;animation:none}}

@@ -93,6 +93,7 @@ const NAV = [
 const SECTION = { plan: "home", live: "home", kit: "home", league: "field", cards: "field", gather: "field", game: "field", match: "field", closing: "quick", pts: "quick", studio: "admin", kids: "admin", kid: "admin", caravan: "caravans", reports: "admin", meet: "home", fair: "caravans", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", sheets: "admin" };
 
 let screenTimer = null;
+const REVEAL_STEP = 2200; // ms بين كل قافلة في كشف ترتيب الليلة
 async function render() {
   clearInterval(screenTimer); screenTimer = null;
   const r = parseRoute();
@@ -362,7 +363,9 @@ function viewScreen() {
     body = `<section class="tv-board">${boardHTML()}</section>`;
   } else if (ui.screenTab === "night") {
     const N = L.nightOf(S, I, meetId); const pc = N.prize ? I.car[N.prize.caravan_id] : null;
-    body = `<section class="tv-board"><h2 class="tv-h">🌙 ترتيب الليلة</h2>${N.any ? boardHTML(meetId) : '<p class="tv-empty">تبدأ النقاط مع أول نجمة.</p>'}${pc ? `<div class="tv-win" style="${carStyle(pc)}"><span>🏆</span><div><small>جائزة الأسبوع</small><b>قافلة ${esc(pc.name)}</b>${N.prize.note ? `<p>${esc(N.prize.note)}</p>` : ""}</div></div>` : ""}</section>`;
+    const n = S.caravans.length; const total = REVEAL_STEP * (n + 1) + 1500;
+    const rev = !!(ui.revealAt && Date.now() - ui.revealAt < total);
+    body = `<section class="tv-board ${rev ? "reveal" : ""}" style="--rv:${REVEAL_STEP}ms;--rn:${n}"><h2 class="tv-h">🌙 ترتيب الليلة ${N.any ? `<button class="chip tv-rev" data-act="scrreveal">🎬 اكشف الترتيب</button>` : ""}</h2>${N.any ? boardHTML(meetId) : '<p class="tv-empty">تبدأ النقاط مع أول نجمة.</p>'}${pc ? `<div class="tv-win" style="${carStyle(pc)}"><span>🏆</span><div><small>جائزة الأسبوع</small><b>قافلة ${esc(pc.name)}</b>${N.prize.note ? `<p>${esc(N.prize.note)}</p>` : ""}</div></div>` : ""}</section>`;
   } else if (ui.screenTab === "levels") {
     body = levelsHTML(true);
   } else if (ui.screenTab === "power") {
@@ -390,7 +393,7 @@ function viewScreen() {
     <p class="tv-legend">${L.CATS.map((c) => `<span><i class="dot" style="--c:${c[2]}"></i>${c[1]}</span>`).join("")}<span>⭐ كل القافلة ${L.NC - 1} نقاط فأكثر</span><span>🌟 كل القافلة ${L.NC}</span></p>
   </div>`;
   if (ui.screenTab === "announce") return;
-  screenTimer = setInterval(async () => { if (parseRoute().name !== "screen") return; if (ui.screenTab === "announce") return; try { await reload("points", "deductions", "team_challenge", "matches", "goals", "cards", "kids", "caravans", "league_rounds", "power_cards", "seals", "app_settings", "duty_log"); viewScreen(); } catch (e) {} }, 10000);
+  screenTimer = setInterval(async () => { if (parseRoute().name !== "screen") return; if (ui.screenTab === "announce") return; if (ui.revealAt && Date.now() - ui.revealAt < REVEAL_STEP * (S.caravans.length + 1) + 1500) return; try { await reload("points", "deductions", "team_challenge", "matches", "goals", "cards", "kids", "caravans", "league_rounds", "power_cards", "seals", "app_settings", "duty_log", "field_events"); viewScreen(); } catch (e) {} }, 10000);
 }
 
 // ---------------- caravans ----------------
@@ -1062,7 +1065,8 @@ document.addEventListener("click", async (e) => {
     case "sealsave": { const n = Number(b.dataset.n); const o = S.seals.find((x) => x.n === n) || {}; const prev = { n, title: o.title || "", hint: o.hint || "", body: o.body || "", mission: o.mission || "" };
       return doUndoable("حُفظ الختم", () => db.upsert("seals", [{ n, title: sel("sl-t-" + n).value.trim(), hint: sel("sl-h-" + n).value.trim(), body: sel("sl-b-" + n).value.trim(), mission: sel("sl-m-" + n).value.trim() }], "n"), () => db.upsert("seals", [prev], "n"), ["seals"]); }
     case "sealopen": ui.openSeal = ui.openSeal === Number(b.dataset.n) ? null : Number(b.dataset.n); return viewSeals();
-    case "scrtab": ui.screenTab = b.dataset.v; return viewScreen();
+    case "scrtab": ui.screenTab = b.dataset.v; ui.revealAt = 0; return viewScreen();
+    case "scrreveal": ui.revealAt = Date.now(); return viewScreen();
     case "ltab": ui.leagueTab = b.dataset.v; return viewLeague();
     case "present": return setPoint(k, { present: !L.present(I, meetId, k) });
     case "star": { const v = b.dataset.v, st = b.dataset.s, r = L.row(I, meetId, k) || {};
