@@ -352,6 +352,19 @@ export function caravanBoard(S, I) {
   return rows;
 }
 
+/** نقاط الألعاب اليدوية («لعبة»): المشرف يكتب العدد والسبب، وتنجمع لكل قافلة (الليلة وكل الدورة). الدوري والبطاقات لا تدخل هنا. */
+export function gameBoard(S, meetingId) {
+  const rows = S.caravans.map((c) => {
+    const ev = (S.field_events || []).filter((e) => e.caravan_id === c.id && e.kind === "manual");
+    const total = ev.reduce((n, e) => n + (e.points || 0), 0);
+    const today = ev.filter((e) => e.meeting_id === meetingId).reduce((n, e) => n + (e.points || 0), 0);
+    return { c, total, today, count: ev.length, n: kidsOf(S, c.id).length };
+  });
+  rows.sort((a, b) => b.total - a.total || b.today - a.today || a.c.sort - b.c.sort);
+  let r = 0, prev = null; rows.forEach((x, i) => { if (x.total !== prev) { r = i + 1; prev = x.total; } x.rank = r; });
+  return rows;
+}
+
 /** seals: one sealed letter waits at each station. A caravan opens letter n when its camel reaches station n (every star = one step). No dependence on other caravans. */
 export function sealState(S, I) {
   const seals = (S.seals || []).slice().sort((a, b) => a.n - b.n);

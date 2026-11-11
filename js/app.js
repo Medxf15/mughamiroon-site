@@ -88,7 +88,7 @@ const NAV = [
   ["caravans", "القوافل", "🐪", () => true, true],
   ["admin", "المزيد", "☰", () => true, true],
 ];
-const SECTION = { plan: "home", live: "home", kit: "home", league: "field", cards: "field", gather: "field", game: "field", match: "field", closing: "field", studio: "admin", kids: "admin", kid: "admin", caravan: "caravans", reports: "admin", meet: "home", fair: "caravans", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", sheets: "admin" };
+const SECTION = { plan: "home", live: "home", kit: "home", league: "field", cards: "field", gather: "field", game: "field", match: "field", closing: "field", pts: "field", studio: "admin", kids: "admin", kid: "admin", caravan: "caravans", reports: "admin", meet: "home", fair: "caravans", accounts: "admin", guide: "admin", seals: "admin", profile: "admin", road: "admin", sheets: "admin" };
 
 let screenTimer = null;
 async function render() {
@@ -108,7 +108,7 @@ async function render() {
   if (me.status !== "approved") return viewPending();
   if (!S) { $app().innerHTML = shell('<div class="empty">جاري تحميل البيانات…</div>'); await guard(loadAll); if (!S) return; if (isOwner()) await guard(loadAccounts); }
   else if (r.name === "accounts" && isOwner()) await guard(loadAccounts);
-  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, meet: mf.viewMeet, fair: mf.viewFair, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint, studio: viewStudio, plan: viewPlan, cards: viewCards, field: field.viewField, match: field.viewMatch, gather: field.viewGather, game: field.viewGame, closing: field.viewClosing };
+  const views = { home: viewToday, kit: viewToday, live: viewLive, caravans: viewCaravans, caravan: viewCaravan, league: viewLeague, kids: viewKids, kid: viewKid, reports: viewReports, meet: mf.viewMeet, fair: mf.viewFair, accounts: viewAccounts, screen: viewScreen, profile: viewProfile, road: viewGuide, guide: viewGuide, seals: viewSeals, admin: viewAdmin, print: viewPrint, studio: viewStudio, plan: viewPlan, cards: viewCards, field: field.viewField, match: field.viewMatch, gather: field.viewGather, game: field.viewGame, closing: field.viewClosing, pts: field.viewPts };
   const fn = views[r.name] || viewToday;
   if (r.name === "live" && !can("points")) return go("home");
   if (r.name === "accounts" && !isOwner()) return go("home");
@@ -240,7 +240,7 @@ function viewToday() {
       body: `${dutyRow("musalla")}${dutyRow("kalima")}${kalC ? `<p class="small">${kd && kd.speaker_kid ? `🎙️ المتحدث: <b>${esc(L.kidName(I.kid[kd.speaker_kid]))}</b>${kd.topic != null ? " · " + esc(L.TOPICS[kd.topic].t) : ""}` : ed ? `<span class="alert">اختر متحدث وموضوع ${esc(kalC.name)}:</span>` : ""}</p>${ed && !(kd && kd.speaker_kid && kd.topic != null) ? `<div class="duty-kal">${kalimaPick(kalC, m)}</div>` : ""}` : ""}` },
     { key: "meal", time: "الوجبة", icon: "🍽️", title: "الوجبة والنظافة", auto: null, body: `${dutyRow("food")}${dutyRow("clean")}` },
     { key: "league", time: "الميدان", icon: "⚽", title: "الدوري", auto: todayMatches.length ? todayMatches.every((x) => x.played) : null,
-      body: `<p><a class="btn sm" href="#field">⚽ افتح الملعب</a> <a class="btn ghost sm" href="#gather">📣 الجمع</a></p>${todayMatches.length ? `<div class="mini-matches">${todayMatches.map((x) => `<a href="#match/${x.id}" class="mm ${x.played ? "done" : ""}"><span style="${carStyle(I.car[x.home_id])}">${esc(carName(x.home_id))}</span><b class="num">${x.played ? x.home_goals + " – " + x.away_goals : "ضد"}</b><span style="${carStyle(I.car[x.away_id])}">${esc(carName(x.away_id))}</span></a>`).join("")}</div>` : '<p class="muted">ما فيه مباريات في هذا اللقاء.</p>'}
+      body: `<p><a class="btn sm" href="#field">⚽ افتح الملعب</a> <a class="btn ghost sm" href="#pts">🎮 نقاط</a></p>${todayMatches.length ? `<div class="mini-matches">${todayMatches.map((x) => `<a href="#match/${x.id}" class="mm ${x.played ? "done" : ""}"><span style="${carStyle(I.car[x.home_id])}">${esc(carName(x.home_id))}</span><b class="num">${x.played ? x.home_goals + " – " + x.away_goals : "ضد"}</b><span style="${carStyle(I.car[x.away_id])}">${esc(carName(x.away_id))}</span></a>`).join("")}</div>` : '<p class="muted">ما فيه مباريات في هذا اللقاء.</p>'}
         <p>🎴 <a href="#cards">بطاقات القوة: اسحب أو سجّل المستخدمة</a></p>
         ${drawn.length ? `<p class="small">سلّم البطاقات المطبوعة: ${drawn.map((p) => `${esc(L.POWER[p.kind].name)} ← ${esc(carName(p.caravan_id))}`).join("، ")}</p>` : ""}
         <p class="small muted">قبل الصافرة: كل قافلة تعلن بطاقتها، والكابتن يمثلها.</p>` },
@@ -357,7 +357,7 @@ function viewScreen() {
         <footer><b>${r.stars === 2 ? "🌟 نجمة ذهبية هذا اللقاء" : r.stars === 1 ? "⭐ نجمة هذا اللقاء" : `جاهزون للنجمة <span class="num">${r.ready} من ${r.n}</span>`}</b><div class="prog"><i style="width:${pct}%"></i></div><span>📍 ${esc(L.ROAD[pos])} · 🎴 <b class="num">${L.freeCards(S, c.id).length}</b> · رصيد <b class="num">${t.bal}</b></span>${fresh ? `<span class="perk-new">🎁 ${esc(fresh.name)}: ${esc(fresh.what)}</span>` : ""}</footer>
       </section>`; }).join("")}</div>`;
   } else if (ui.screenTab === "board") {
-    body = `<section class="tv-board">${boardHTML()}</section>`;
+    body = `<section class="tv-board"><h2 class="tv-h">⭐ نجوم المغامرين</h2>${boardHTML(false)}<h2 class="tv-h">🎮 نقاط الألعاب</h2>${gameBoardHTML()}</section>`;
   } else if (ui.screenTab === "levels") {
     body = levelsHTML(true);
   } else if (ui.screenTab === "power") {
@@ -389,9 +389,17 @@ function viewScreen() {
 }
 
 // ---------------- caravans ----------------
-function boardHTML() {
+function gameBoardHTML() {
+  const rows = L.gameBoard(S, meetId); const max = Math.max(1, ...rows.map((x) => Math.abs(x.total)));
+  return `<div class="board">${rows.map((x) => `<div class="bd-row" style="${carStyle(x.c)}"><span class="bd-rank num">${x.rank}</span><div><div class="bd-name">${esc(x.c.name)}</div><div class="bd-meta">الليلة <bdi dir="ltr">${x.today > 0 ? "+" : ""}${x.today}</bdi> · ${x.count} إدخال</div><div class="bd-bar"><i style="width:${Math.round((Math.max(0, x.total) / max) * 100)}%"></i></div></div><div class="bd-avg"><b class="num"><bdi dir="ltr">${x.total}</bdi></b><small>نقطة ألعاب</small></div></div>`).join("")}</div>
+    <p class="muted small">نقاط الألعاب يكتبها المشرف يدويًا (العدد والسبب) من «الملعب ← نقاط». ما فيها دوري ولا بطاقات.</p>`;
+}
+function boardHTML(tabs = true) {
   const rows = L.caravanBoard(S, I); const max = Math.max(1, ...rows.map((x) => x.avg));
-  return `<div class="board">${rows.map((x) => `<div class="bd-row" style="${carStyle(x.c)}"><span class="bd-rank num">${x.rank}</span><div><div class="bd-name">${esc(x.c.name)}</div><div class="bd-meta">${x.n} أعضاء · ${x.sum} نجمة · 📍 ${esc(L.ROAD[x.pos])}</div><div class="bd-bar"><i style="width:${Math.round((x.avg / max) * 100)}%"></i></div></div><div class="bd-avg"><b class="num">${x.avg.toFixed(1)}</b><small>نجمة لكل مغامر</small></div></div>`).join("")}</div>
+  const tab = ui.boardTab === "game" ? "game" : "stars";
+  const bar = tabs ? `<div class="seg" role="group" aria-label="نوع الترتيب"><button data-act="btab" data-v="stars" aria-pressed="${tab === "stars"}">⭐ نجوم المغامرين</button><button data-act="btab" data-v="game" aria-pressed="${tab === "game"}">🎮 نقاط الألعاب</button></div>` : "";
+  if (tabs && tab === "game") return bar + gameBoardHTML();
+  return bar + `<div class="board">${rows.map((x) => `<div class="bd-row" style="${carStyle(x.c)}"><span class="bd-rank num">${x.rank}</span><div><div class="bd-name">${esc(x.c.name)}</div><div class="bd-meta">${x.n} أعضاء · ${x.sum} نجمة · 📍 ${esc(L.ROAD[x.pos])}</div><div class="bd-bar"><i style="width:${Math.round((x.avg / max) * 100)}%"></i></div></div><div class="bd-avg"><b class="num">${x.avg.toFixed(1)}</b><small>نجمة لكل مغامر</small></div></div>`).join("")}</div>
     <p class="muted small">الترتيب بمتوسط نجوم المغامر الواحد (مجموع النجوم ÷ عدد الأعضاء)، فلا تتفوق قافلة لأن أعضاءها أكثر.</p>`;
 }
 function viewCaravans() {
@@ -1056,6 +1064,7 @@ document.addEventListener("click", async (e) => {
       return doUndoable("حُفظ الختم", () => db.upsert("seals", [{ n, title: sel("sl-t-" + n).value.trim(), hint: sel("sl-h-" + n).value.trim(), body: sel("sl-b-" + n).value.trim(), mission: sel("sl-m-" + n).value.trim() }], "n"), () => db.upsert("seals", [prev], "n"), ["seals"]); }
     case "sealopen": ui.openSeal = ui.openSeal === Number(b.dataset.n) ? null : Number(b.dataset.n); return viewSeals();
     case "scrtab": ui.screenTab = b.dataset.v; return viewScreen();
+    case "btab": ui.boardTab = b.dataset.v; return viewCaravans();
     case "ltab": ui.leagueTab = b.dataset.v; return viewLeague();
     case "present": return setPoint(k, { present: !L.present(I, meetId, k) });
     case "star": { const v = b.dataset.v, st = b.dataset.s, r = L.row(I, meetId, k) || {};

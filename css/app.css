@@ -1285,3 +1285,18 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .tv-board .bd-row{padding:18px 22px;grid-template-columns:70px minmax(0,1fr) auto}
 .tv-board .bd-rank{font-size:3.4rem}.tv-board .bd-name{font-size:2.2rem}.tv-board .bd-meta{font-size:1.3rem}.tv-board .bd-avg b{font-size:3rem}.tv-board .bd-avg small{font-size:1.1rem}
 .tv-board .bd-bar{height:14px}
+
+/* نقاط «لعبة» اليدوية */
+.pts-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.pts-car{border-radius:14px;background:var(--soft);padding:10px 12px;text-align:center;border-top:4px solid var(--tc)}
+.pts-car b{display:block}.pts-car small{color:var(--muted)}
+.pts-tot{display:block;font-family:"Lalezar",sans-serif;font-size:2.2rem;line-height:1.1;color:var(--tc)}
+.pts-step{display:flex;align-items:center;justify-content:center;gap:18px;margin:12px 0 6px}
+.pts-n{font-family:"Lalezar",sans-serif;font-size:2.8rem;min-width:3ch;text-align:center}
+.pts-quick{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px}
+.pts-form input{width:100%}
+.pts-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.pts-list li{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 12px;border-radius:12px;background:var(--soft);border-inline-start:4px solid var(--tc)}
+.pts-list .good{color:#1b7a3b;font-weight:700}.pts-list .bad{color:#b3261e;font-weight:700}
+.tv-board .tv-h{font-size:2rem;margin:18px 0 8px}
+.board + .seg,.panel > .seg + .board{margin-top:12px}

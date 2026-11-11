@@ -67,7 +67,7 @@ export const GAME_MAX = { perf: 7, coop: 3 };
 // ---------------- module ----------------
 export function initField(ctx) {
   const { esc, toast } = ctx;
-  const ui = { fb: null, fbPlan: null, pick: null, finish: null, coin: {}, gather: null, game: null, linkOpen: false, armed: null };
+  const ui = { fb: null, fbPlan: null, pick: null, finish: null, coin: {}, gather: null, game: null, pts: { cid: null, n: 1, why: "" }, linkOpen: false, armed: null };
   let mode = "staff", tok = null, FS = null, FSerr = null;
   const pending = {}; // mid -> {h,a} not yet saved
   let saveT = null, saving = false;
@@ -203,8 +203,7 @@ export function initField(ctx) {
     $app().innerHTML = ctx.shell(`
       ${ctx.pageHead("الملعب", m ? `اللقاء ${m.number} · الخميس ${ctx.fmtDate(m.meet_date)}` : "", ctx.meetPicker())}
       <div class="ftools">
-        ${tool("#gather", "📣", "الجمع", evToday.some((e) => e.kind === "gather") ? "✓ سُجّل " + new Set(evToday.filter((e) => e.kind === "gather").map((e) => e.game)).size + " جمع الليلة" : "صفّر، وسجّل الأسرع والأضبط")}
-        ${tool("#game", "🎯", "نقاط لعبة", evToday.some((e) => e.kind.startsWith("game")) ? "✓ " + new Set(evToday.filter((e) => e.kind.startsWith("game")).map((e) => e.game)).size + " لعبة الليلة" : "بنك ألعاب جاهز + أداء وتعاون")}
+        ${tool("#pts", "🎮", "نقاط", evToday.some((e) => e.kind === "manual") ? "✓ " + evToday.filter((e) => e.kind === "manual").length + " إدخال الليلة" : "تكتب العدد والسبب بنفسك")}
         ${tool("#cards", "🎴", "بطاقات القوة", "اسحب، وشوف رصيد كل قافلة")}
         ${tool("#closing", "🌙", "الختام", evToday.some((e) => e.kind === "prize") ? "✓ جائزة الأسبوع معتمدة" : "أرقام الليلة وجائزة الأسبوع")}
         ${ctx.can("plan") ? `<button class="ftool" data-f="linkopen"><span>🔗</span><b>رابط الحكم</b><small>يسجّل المباراة بدون دخول</small></button>` : ""}
@@ -213,7 +212,7 @@ export function initField(ctx) {
       <section class="fsec"><h2 class="h2">⚽ مباريات اليوم</h2>
         ${today.length ? `<div class="fmatches">${today.map((x) => matchRow(x, "#match/" + x.id, md)).join("")}</div><p class="muted small">ترتيب اللعب على كيفك، افتح أي مباراة وابدأ.</p>` : `<p class="muted">ما فيه مباريات في هذا اللقاء.${!anyPlayed ? " ابنِ الدوري تحت." : ""}</p>`}
       </section>
-      ${evToday.length ? `<section class="fsec"><h2 class="h2">📊 نقاط الميدان اليوم</h2><div class="fpts">${S.caravans.map((c) => `<span style="${carStyle(c)}"><b>${esc(c.name)}</b><b class="num">${ptsToday(c.id)}</b></span>`).join("")}</div><p class="muted small">من الجمع والألعاب، وتنضاف لرصيد القافلة.</p></section>` : ""}
+      ${evToday.length ? `<section class="fsec"><h2 class="h2">📊 نقاط الميدان اليوم</h2><div class="fpts">${S.caravans.map((c) => `<span style="${carStyle(c)}"><b>${esc(c.name)}</b><b class="num">${ptsToday(c.id)}</b></span>`).join("")}</div><p class="muted small">من «نقاط» اللي تكتبها بنفسك.</p></section>` : ""}
       ${edit ? builder(S) : ""}
       <section class="fsec"><h2 class="h2">🏆 الترتيب</h2><div class="tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>القافلة</th><th>لعب</th><th>فاز</th><th>تعادل</th><th>خسر</th><th>الفارق</th><th>النقاط</th></tr></thead><tbody>${st.map((s, i) => `<tr><td class="num">${i + 1}</td><td><span class="sw" style="${carStyle(I.car[s.id])}"></span>${esc(I.car[s.id] ? I.car[s.id].name : "")}</td><td class="num">${s.p}</td><td class="num">${s.w}</td><td class="num">${s.d}</td><td class="num">${s.l}</td><td class="num">${s.gf - s.ga}</td><td class="num"><b>${s.pts}</b></td></tr>`).join("")}</tbody></table></div>
         <p class="muted small">فوز 3، تعادل 1، و+1 لعب نظيف يعطيه الحكم آخر المباراة.</p></section>
@@ -404,6 +403,26 @@ export function initField(ctx) {
       <p class="small">⚠️ ${esc(x.safety)} · 🔁 <b>البديل:</b> ${esc(x.alt)}</p></article>`;
   }
 
+  // ======== نقاط «لعبة» (يدوي) ========
+  const PTS_QUICK = [1, 2, 3, 5, 10];
+  function viewPts() {
+    const S = ctx.S(), I = ctx.I(); const m = I.meet[ctx.meetId()]; const ed = ctx.can("points");
+    const p = ui.pts;
+    const evs = m ? (S.field_events || []).filter((e) => e.meeting_id === m.id && e.kind === "manual").sort((a, b) => b.id - a.id) : [];
+    const board = L.gameBoard(S, m ? m.id : null);
+    const sign = (n) => `<bdi dir="ltr">${n > 0 ? "+" + n : n}</bdi>`;
+    $app().innerHTML = ctx.shell(`<a class="back" href="#field">→ الملعب</a>
+      ${ctx.pageHead("🎮 نقاط", "أنت تكتب كم نقطة والسبب، وتنضاف تحت «لعبة» وتظهر في لوحة القوافل.", ctx.meetPicker())}
+      <section class="panel pts-board">${board.map((x) => `<div class="pts-car" style="${carStyle(x.c)}"><b>${esc(x.c.name)}</b><span class="num pts-tot"><bdi dir="ltr">${x.total}</bdi></span><small>الليلة ${sign(x.today)}</small></div>`).join("")}</section>
+      ${ed && m ? `<section class="panel pts-form"><h3>أضف نقاط</h3>
+        <div class="prize-pick">${S.caravans.map((c) => `<button class="ga-car sm ${p.cid === c.id ? "on" : ""}" style="${carStyle(c)}" data-f="ptscar" data-car="${c.id}">${esc(c.name)}</button>`).join("")}</div>
+        <div class="pts-step"><button class="step" data-f="ptsn" data-d="-1" aria-label="نقص">−</button><output class="num pts-n">${sign(p.n)}</output><button class="step" data-f="ptsn" data-d="1" aria-label="زد">+</button></div>
+        <div class="pts-quick">${PTS_QUICK.map((q) => `<button class="chip" data-f="ptsq" data-v="${q}"><bdi dir="ltr">+${q}</bdi></button>`).join("")}<button class="chip" data-f="ptsq" data-v="-1"><bdi dir="ltr">-1</bdi></button><button class="chip" data-f="ptsq" data-v="-3"><bdi dir="ltr">-3</bdi></button></div>
+        <label>السبب<input id="pts-why" maxlength="60" placeholder="مثال: أسرع جمع، أفضل تعاون في اللعبة" value="${esc(p.why)}"></label>
+        <div class="row-btns"><button class="btn" data-f="ptssave" ${p.cid && p.n ? "" : "disabled"}>أضف النقاط</button></div></section>` : ""}
+      <section class="panel"><h3>إدخالات الليلة</h3>${evs.length ? `<ul class="pts-list">${evs.map((e) => `<li style="${carStyle(I.car[e.caravan_id])}"><b>${esc(I.car[e.caravan_id] ? I.car[e.caravan_id].name : "")}</b><span class="num ${e.points < 0 ? "bad" : "good"}">${sign(e.points)}</span><span class="muted">${esc(e.note || "بدون سبب")}</span>${ed ? `<button class="x" data-f="ptsdel" data-id="${e.id}" aria-label="احذف">×</button>` : ""}</li>`).join("")}</ul>` : '<p class="muted">ما أُدخلت نقاط الليلة.</p>'}</section>`, "pts");
+  }
+
   // ======== الختام ========
   function viewClosing() {
     const S = ctx.S(), I = ctx.I(); const m = I.meet[ctx.meetId()]; const ed = ctx.can("points");
@@ -414,26 +433,27 @@ export function initField(ctx) {
       const t = L.teamMeet(S, I, m.id, c.id);
       const ev = evs.filter((e) => e.caravan_id === c.id);
       const gather = ev.filter((e) => e.kind === "gather").reduce((n, e) => n + e.points, 0), late = ev.filter((e) => e.kind === "late").length;
+      const man = ev.filter((e) => e.kind === "manual").reduce((n, e) => n + e.points, 0);
       const gp = ev.filter((e) => e.kind === "game_perf").reduce((n, e) => n + e.points, 0), gc = ev.filter((e) => e.kind === "game_coop").reduce((n, e) => n + e.points, 0);
       const ms = S.matches.filter((x) => x.meeting_id === m.id && x.played && (x.home_id === c.id || x.away_id === c.id));
       let w = 0, d = 0, l = 0, fair = 0; ms.forEach((x) => { const me = x.home_id === c.id; const gf = me ? x.home_goals : x.away_goals, ga = me ? x.away_goals : x.home_goals; if (gf > ga) w++; else if (gf === ga) d++; else l++; if (me ? x.fair_home : x.fair_away) fair++; });
       const cards = S.cards.filter((x) => ms.some((mm) => mm.id === x.match_id) && I.kid[x.kid_id] && I.kid[x.kid_id].caravan_id === c.id);
       const duty = L.dutyMastered(S, m.id, c.id);
-      return { c, t, gather, late, gp, gc, w, d, l, fair, red: cards.filter((x) => x.color === "red").length, yellow: cards.filter((x) => x.color === "yellow").length, blue: cards.filter((x) => x.color === "blue").length, duty };
+      return { c, t, gather, late, man, gp, gc, w, d, l, fair, red: cards.filter((x) => x.color === "red").length, yellow: cards.filter((x) => x.color === "yellow").length, blue: cards.filter((x) => x.color === "blue").length, duty };
     });
     const cell = (v, good) => `<td class="num ${v ? (good ? "good" : "bad") : "zero"}">${v}</td>`;
     $app().innerHTML = ctx.shell(`<a class="back" href="#field">→ الملعب</a>
       ${ctx.pageHead("🌙 الختام", "أرقام الليلة لكل قافلة. الجائزة قرارك أنت، والأرقام تساعدك.", ctx.meetPicker())}
-      <section class="panel"><div class="tbl-wrap"><table class="tbl cls"><thead><tr><th>القافلة</th><th>⭐ نجمة</th><th>📣 الجمع</th><th>🎯 الألعاب</th><th>⚽ الدوري</th><th>🤝 لعب نظيف</th><th>🟦 أمانة</th><th>🟨 تنبيه</th><th>🟥 خروج</th><th>التكليف</th><th>مجموع الميدان</th></tr></thead><tbody>
+      <section class="panel"><div class="tbl-wrap"><table class="tbl cls"><thead><tr><th>القافلة</th><th>⭐ نجمة</th><th>📣 الجمع</th><th>🎯 الألعاب</th><th>🎮 لعبة</th><th>⚽ الدوري</th><th>🤝 لعب نظيف</th><th>🟦 أمانة</th><th>🟨 تنبيه</th><th>🟥 خروج</th><th>التكليف</th><th>مجموع الميدان</th></tr></thead><tbody>
         ${rows.map((r) => `<tr><td><span class="sw" style="${carStyle(r.c)}"></span><b>${esc(r.c.name)}</b></td>
           <td>${r.t.stars === 2 ? "🌟" : r.t.stars ? "⭐" : `<small class="num muted">${r.t.ready}/${r.t.n}</small>`}</td>
           <td class="num">${r.gather}${r.late ? ` <small class="bad">✗${r.late}</small>` : ""}</td>
-          <td class="num">${r.gp + r.gc} <small class="muted">(${r.gp}+${r.gc})</small></td>
+          <td class="num">${r.gp + r.gc} <small class="muted">(${r.gp}+${r.gc})</small></td><td class="num">${r.man}</td>
           <td class="num">${r.w || r.d || r.l ? `${r.w}ف ${r.d}ت ${r.l}خ` : "—"}</td>
           ${cell(r.fair, true)}${cell(r.blue, true)}${cell(r.yellow, false)}${cell(r.red, false)}
-          <td>${r.duty ? "✅" : "—"}</td><td class="num"><b>${r.gather + r.gp + r.gc + r.w * 3 + r.d + r.fair}</b></td></tr>`).join("")}
+          <td>${r.duty ? "✅" : "—"}</td><td class="num"><b>${r.gather + r.man + r.gp + r.gc + r.w * 3 + r.d + r.fair}</b></td></tr>`).join("")}
       </tbody></table></div>
-      <p class="muted small">⭐ النجمة من «التحضير والنقاط» (إذا ما سجّلتها تبقى فاضية) · 🟦 الأمانة: اعترف قبل ما ينكشف · مجموع الميدان = الجمع + الألعاب + فوز 3/تعادل 1 + لعب نظيف.</p></section>
+      <p class="muted small">⭐ النجمة من «التحضير والنقاط» (إذا ما سجّلتها تبقى فاضية) · 🟦 الأمانة: اعترف قبل ما ينكشف · مجموع الميدان = الجمع + الألعاب + «لعبة» (يدوي) + فوز 3/تعادل 1 + لعب نظيف.</p></section>
       <section class="panel prize ${prize ? "has" : ""}"><h3>🏆 جائزة الأسبوع</h3>
         ${prize ? `<p class="prize-win" style="${carStyle(I.car[prize.caravan_id])}">قافلة <b>${esc(I.car[prize.caravan_id] ? I.car[prize.caravan_id].name : "")}</b>${prize.note ? ` · ${esc(prize.note)}` : ""}</p>${ed ? `<button class="btn ghost sm" data-f="prizedel">غيّر القرار</button>` : ""}`
         : ed ? `<p class="small">اختر القافلة، واكتب السبب بكلمتين تعلنها قدّامهم.</p>
@@ -468,7 +488,7 @@ export function initField(ctx) {
     if (t.id === "gm-name" && ui.game) ui.game.name = t.value.trim();
     if (t.id === "prize-why") ui.prize = { ...(ui.prize || {}), why: t.value.trim() };
   });
-  document.addEventListener("input", (e) => { const t = e.target; if (t.id === "gm-name" && ui.game) ui.game.name = t.value.trim(); });
+  document.addEventListener("input", (e) => { const t = e.target; if (t.id === "gm-name" && ui.game) ui.game.name = t.value.trim(); if (t.id === "pts-why") ui.pts.why = t.value; });
 
   const busy = new Set();
   document.addEventListener("click", async (e) => {
@@ -552,6 +572,16 @@ export function initField(ctx) {
         return ctx.doUndoable("انحذف", async () => { for (const x of xs) await db.remove("field_events", { id: x.id }); return xs; }, async (r) => { await db.insert("field_events", r.map(({ id, created_at, ...x }) => x)); }, ["field_events"]); }
       case "gbuild": ui.fb = { a: b.dataset.a, b: b.dataset.b, from: Math.max(0, ctx.S().meetings.findIndex((x) => x.id === ctx.meetId())) }; { const S = ctx.S(); ui.fbPlan = buildPlan(S, [Number(b.dataset.a), Number(b.dataset.b)], ui.fb.from); } location.hash = "field"; return;
 
+      // --- نقاط يدوية
+      case "ptscar": ui.pts.cid = Number(b.dataset.car); return viewPts();
+      case "ptsn": ui.pts.n = Math.max(-50, Math.min(100, ui.pts.n + Number(b.dataset.d))) || 0; return viewPts();
+      case "ptsq": ui.pts.n = Number(b.dataset.v); return viewPts();
+      case "ptssave": { const p = ui.pts; const mid = ctx.meetId(); if (!p.cid || !p.n || !mid) return; const why = ((document.getElementById("pts-why") || {}).value || p.why || "").trim();
+        ui.pts = { cid: p.cid, n: 1, why: "" };
+        return ctx.doUndoable("أُضيفت النقاط", () => db.insert("field_events", [{ meeting_id: mid, caravan_id: p.cid, kind: "manual", game: "لعبة", points: p.n, note: why || null }]), async (r) => { for (const x of r || []) await db.remove("field_events", { id: x.id }); }, ["field_events"]); }
+      case "ptsdel": { if (!arm("احذف؟")) return; const xs = (ctx.S().field_events || []).filter((x) => String(x.id) === b.dataset.id);
+        return ctx.doUndoable("انحذف الإدخال", async () => { for (const x of xs) await db.remove("field_events", { id: x.id }); return xs; }, async (r) => { await db.insert("field_events", r.map(({ id, created_at, ...x }) => x)); }, ["field_events"]); }
+
       // --- game points
       case "gstep": { const g = ui.game; const cid = b.dataset.car, k = b.dataset.k; const o = (g.v[cid] ||= { perf: 0, coop: 0 }); o[k] = Math.max(0, Math.min(GAME_MAX[k], (o[k] || 0) + Number(b.dataset.d))); return viewGame(); }
       case "gmreset": if (!arm("متأكد؟ يمسح الأرقام")) return; ui.game = { name: "", v: {} }; return viewGame();
@@ -574,7 +604,7 @@ export function initField(ctx) {
   });
 
   return {
-    viewField, viewGather, viewGame, viewClosing,
+    viewField, viewGather, viewGame, viewClosing, viewPts,
     viewMatch: (id) => { mode = "staff"; return viewMatch(id, "#field"); },
     viewLink,
     leave: () => { mode = "staff"; document.body.classList.remove("is-match"); clearInterval(tick); clearInterval(ui.gT); curMid = null; keepAwake(false); },
