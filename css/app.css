@@ -1181,7 +1181,7 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .ktag .mt{display:block;width:64mm;height:25mm;margin:0 auto}.mt .bg{fill:#eef0f6}.mt .rd{fill:none;stroke:#14284b;stroke-width:1.2;stroke-dasharray:1.6 1.6}.mt .d{fill:#14284b}.mt .f{fill:#fff;stroke:#14284b;stroke-width:1.2}.mt .n{fill:var(--tc);stroke:#14284b;stroke-width:1.4}.mt .fl{fill:var(--tc);stroke:#14284b;stroke-width:.8}
 .ktag .stp{text-align:center;font-size:2.8mm;color:#6b7280;margin:.5mm 0 2.5mm}
 .ktag .plate{margin-top:auto;background:#14284b;color:#fff;border-radius:1.5mm;padding:1.8mm 2mm;text-align:center;line-height:1.1}
-.ktag .plate small{display:block;font-size:2.6mm;opacity:.85}.ktag .plate span{font-family:"Lalezar",sans-serif;font-size:8mm}.ktag .plate span.long{font-size:6.4mm}
+.ktag .plate.blank{background:#fff;color:#14284b;border:.4mm solid #14284b;min-height:15mm}.ktag .plate.blank small{color:#6b7280}.ktag .plate small{display:block;font-size:2.6mm;opacity:.85}.ktag .plate span{font-family:"Lalezar",sans-serif;font-size:8mm}.ktag .plate span.long{font-size:6.4mm}
 .ktag.b header small:last-child{color:#555;font-weight:500}.ktag.b::before{height:2mm}
 .ktag .bt{font-family:"Lalezar",sans-serif;font-size:6.2mm;line-height:1;margin:3mm 0 .8mm}.ktag .bt em{font-style:normal;color:var(--tc)}.ktag .bs{font-size:2.9mm;color:#6b7280;margin:0 0 2.5mm}
 .ktag .row{display:flex;align-items:center;gap:2mm;height:11.2mm;border-top:.25mm solid #cfd5e2}.ktag .row:last-of-type{border-bottom:.25mm solid #cfd5e2}
