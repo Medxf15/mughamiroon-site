@@ -598,9 +598,13 @@ function printCards() {
   const lvl = (lv, name) => `<div class="pp-lvl" style="--lt:${LVL_TONE[lv.i]}"><div class="pl-side"><div class="pl-medal">${ic("star", "pl-star")}</div><div class="pl-ladder">${L.LEVELS.map((_, i) => `<i class="${i <= lv.i ? "on" : ""}"></i>`).join("")}</div></div>
       <div class="pl-main"><small>لقب جديد في طريق القوافل</small><h3>${esc(lv.name)}</h3><p>${esc(lv.what)}</p>
       <div class="pl-name"><span>${name ? esc(name) : ""}</span></div><div class="pl-sign"><span>المستوى ${lv.i + 1} من ${L.LEVELS.length}</span><span>نادي مهارة · المغامرون</span></div></div></div>`;
-  const topic = (i, who) => { const tp = L.TOPICS[i]; return `<div class="pp-topic ${tp.c}"><header class="pt-head"><span class="pt-cat">${L.TOPIC_CATS[tp.c]}</span><span class="pt-n">${String(i + 1).padStart(2, "0")}</span></header>
-      <h3>${esc(tp.t)}</h3><p class="pt-s">${esc(tp.s)}</p><div class="pt-q"><b>اسأل الحضور</b>${esc(tp.q)}</div>
-      <footer class="pt-f"><span>منبر القافلة · 3 دقائق</span><span class="pt-who">${who ? esc(who) : "المتحدث: ............"}</span></footer></div>`; };
+  const topic = (i, who) => { const tp = L.TOPICS[i]; return `<div class="tsheet ${tp.c}">
+      <header><span class="ts-cat">${L.TOPIC_CATS[tp.c]}</span><span class="ts-sub">ورقة كلمة المنبر · 3 دقائق</span></header>
+      <h1>${esc(tp.t)}</h1>
+      <div class="ts-grid"><div class="ts-box"><b>فكرة الموضوع</b><p>${esc(tp.s)}</p></div><div class="ts-box q"><b>سؤال تطرحه على الحضور</b><p>${esc(tp.q)}</p></div></div>
+      <div class="ts-how"><b>كيف تجهّز كلمتك؟</b><ol><li>اكتبها بنفسك بخط يدك، وقافلتك تساعدك بالأفكار.</li><li>ابدأ بالسلام، ثم فكرة الموضوع بكلماتك أنت، ثم مثال أو قصة قصيرة من حياتك.</li><li>اطرح السؤال على الحضور، وانتظر جوابين أو ثلاثة.</li><li>اختم بدعاء قصير. المدة 3 دقائق، يعني نصف صفحة تقريبًا.</li><li>تدرّب عليها مرة قبل الخميس، وأحضر هذي الورقة معك للمصلى.</li></ol></div>
+      <div class="ts-write"><b>كلمتي</b><div class="ts-lines"></div></div>
+      <footer><span>المتحدث: ${who ? esc(who) : "................................"}</span><span>القافلة: ................</span><span>التاريخ: ............</span></footer></div>`; };
   const lead = (dep) => `<div class="pp-lead ${dep ? "dep" : ""}"><header><div><small>طريق القوافل · بطاقة دور</small><h3>${dep ? "نائب القائد" : "قائد القافلة"}</h3></div>${ic(dep ? "deputy" : "leader", "pl-ic")}</header>
       <ol class="pl-list">${(dep ? L.LEAD.deputy : L.LEAD.leader).map((x, i) => `<li><b class="num">${i + 1}</b>${esc(x)}</li>`).join("")}</ol>
       <p class="pl-motto"><span class="pl-verse">${L.LEAD.verse}</span><b>${esc(L.LEAD.motto)}</b></p>
@@ -620,17 +624,17 @@ function viewPrint(arg) {
     ({ title, guide, sheets } = kidTags(+arg[2]));
   } else if (arg === "pcu" || arg === "dutyu" || arg === "topicu") {
     // كل بطاقة مرة وحدة في صفحة مستقلة، تطبع أي صفحة بالعدد اللي تبيه
-    const one = (h) => `<div class="one">${h}</div>`;
+    const one = (h, c = "") => `<div class="one ${c}">${h}</div>`;
     if (arg === "pcu") {
       title = "بطاقات القوة: كل بطاقة مرة وحدة"; const kinds = Object.keys(L.DECK);
       guide = `<li>${kinds.length} بطاقة، كل بطاقة في صفحة، وآخر صفحة ظهر البطاقات. اطبع كل صفحة بالعدد اللي تبيه.</li>`;
-      sheets = kinds.map((k) => one(pc(k))).join("") + one(`<div class="pp-cell">${powerBack()}</div>`);
+      sheets = kinds.map((k) => one(pc(k), "pz")).join("") + one(`<div class="pp-cell">${powerBack()}</div>`, "pz");
     } else if (arg === "dutyu") {
       title = "بطاقات التكليف: كل بطاقة مرة وحدة"; guide = `<li>${L.DUTIES.length} تكاليف، كل بطاقة في صفحة. اطبع كل صفحة بالعدد اللي تبيه.</li>`;
-      sheets = L.DUTIES.map((d) => one(duty(d))).join("");
+      sheets = L.DUTIES.map((d) => one(duty(d), "dz")).join("");
     } else {
-      title = "مواضيع المنبر: كل موضوع مرة وحدة"; guide = `<li>${L.TOPICS.length} موضوع، كل موضوع في صفحة. اطبع كل صفحة بالعدد اللي تبيه.</li>`;
-      sheets = L.TOPICS.map((_, i) => one(topic(i))).join("");
+      title = "مواضيع المنبر: كل موضوع مرة وحدة"; guide = `<li>${L.TOPICS.length} موضوع، كل موضوع في ورقة A4 كاملة فيها التعليمات ومساحة لكتابة الكلمة بخط اليد. تسلّمها للمتحدث وهو يجهّز كلمته ويحضرها معه.</li>`;
+      sheets = L.TOPICS.map((_, i) => one(topic(i), "tz")).join("");
     }
   } else if (arg === "deck") {
     title = "بطاقات القوة";
@@ -643,7 +647,7 @@ function viewPrint(arg) {
     title = `بطاقات اللقاء ${m.number}`;
     guide = `<li>بطاقات المستويات الجديدة بالأسماء: <b>${lv.length}</b></li><li>بطاقة موضوع كلمة اللقاء القادم: <b>${kd && kd.topic != null ? 1 : 0}</b>${kd && kd.topic != null ? "" : " (اختر الموضوع من حقيبة اللقاء أولًا)"}</li><li>بطاقات القوة والتكليفات من المجموعة الثابتة، ما تحتاج تطبعها كل مرة.</li>`;
     sheets = lv.length ? `<div class="sheet lvls">${lv.map((x) => lvl(x.lv, L.kidName(x.k))).join("")}</div>` : "";
-    if (kd && kd.topic != null) sheets += `<div class="sheet topics">${topic(kd.topic, kd.speaker_kid && I.kid[kd.speaker_kid] ? L.kidName(I.kid[kd.speaker_kid]) : "")}</div>`;
+    if (kd && kd.topic != null) sheets += `<div class="sheet tsheets">${topic(kd.topic, kd.speaker_kid && I.kid[kd.speaker_kid] ? L.kidName(I.kid[kd.speaker_kid]) : "")}</div>`;
     if (!sheets) sheets = '<p class="empty">ما فيه شي يحتاج طباعة لهذا اللقاء.</p>';
   } else {
     title = "مجموعة الطباعة الثابتة";
@@ -658,7 +662,7 @@ function viewPrint(arg) {
       <h2 class="pp-h">بطاقات التكليف</h2><div class="sheet duties">${L.DUTIES.concat(L.DUTIES).map(duty).join("")}</div>
       <h2 class="pp-h">بطاقات القيادة</h2><div class="sheet topics">${[0, 0, 0, 0, 1, 1, 1, 1].map((x) => lead(!!x)).join("")}</div>
       <h2 class="pp-h">بطاقات المستويات</h2><div class="sheet lvls">${blanks.flatMap(([i, n]) => Array(n).fill(i)).map((i) => lvl(L.level(L.LEVELS[i].min))).join("")}</div>
-      <h2 class="pp-h">بنك مواضيع الكلمة</h2><div class="sheet topics">${L.TOPICS.map((_, i) => topic(i)).join("")}</div>`;
+      <h2 class="pp-h">بنك مواضيع الكلمة</h2><div class="sheet tsheets">${L.TOPICS.map((_, i) => topic(i)).join("")}</div>`;
   }
   $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#home">→ رجوع لليوم</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
 }

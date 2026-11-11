@@ -1194,3 +1194,19 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 
 .one{display:grid;place-items:center;min-height:200px;padding:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 @media print{.one{break-after:page;height:270mm;padding:0;overflow:hidden}.one:last-child{break-after:auto}}
+
+/* صفحة كاملة بلا هوامش لكل بطاقة */
+@page full{size:A4;margin:0}
+.one.pz .pp-cell{zoom:3.3}.one.dz .pp-duty{width:99mm;zoom:2.1}
+@media print{.one{page:full;height:296.5mm;overflow:hidden}}
+.tsheet{--tt:#e7297a;width:210mm;height:296.5mm;box-sizing:border-box;padding:12mm 14mm 10mm;display:flex;flex-direction:column;gap:5mm;background:#fff;color:#1d2552;font-family:"IBM Plex Sans Arabic",sans-serif;overflow:hidden}
+.tsheet.m{--tt:#1fa865}
+.tsheet header{display:flex;justify-content:space-between;align-items:center;border-bottom:1.2mm solid var(--tt);padding-bottom:3mm;font-size:4.6mm}.ts-cat{font-weight:700;color:var(--tt)}.ts-sub{color:#5d6590}
+.tsheet h1{font-family:"Lalezar","Readex Pro",sans-serif;font-size:15mm;line-height:1.1;margin:0;color:#0f1540}
+.ts-grid{display:grid;grid-template-columns:1fr 1fr;gap:5mm}.ts-box{border:.5mm solid #c7cde4;border-radius:2mm;padding:3.5mm 4mm}.ts-box.q{border-color:var(--tt);border-width:.8mm}
+.ts-box b,.ts-how b,.ts-write b{display:block;font-size:4.3mm;color:var(--tt);margin-bottom:1.2mm}.ts-box p{margin:0;font-size:5mm;line-height:1.7}
+.ts-how{background:#f4f5fa;border-radius:2mm;padding:3.5mm 4.5mm}.ts-how ol{margin:0;padding-inline-start:5mm;font-size:4.6mm;line-height:1.75}
+.ts-write{flex:1;display:flex;flex-direction:column;min-height:0}.ts-lines{flex:1;border:.5mm solid #c7cde4;border-radius:2mm;background:repeating-linear-gradient(transparent 0 9.2mm,#c7cde4 9.2mm 9.5mm);background-position:0 2mm}
+.tsheet footer{display:flex;justify-content:space-between;font-size:4.2mm;color:#1d2552;border-top:.3mm dashed #c7cde4;padding-top:3mm}
+.sheet.tsheets{display:block}
+@media print{.sheet.tsheets .tsheet{break-after:page;page:full}.sheet.tsheets .tsheet:last-child{break-after:auto}}
