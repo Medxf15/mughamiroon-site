@@ -14,6 +14,7 @@ else {
   <header class="hd"><img src="assets/mahara.png" alt="نادي مهارة"><div><h1>تحضير اللقاء ${n} · ${esc(P.title)}</h1><p>فئة المغامرين (10–12) · نادي مهارة – حي الهجرة · ${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}</p></div></header>
   <div class="noprint"><button id="pr">طباعة / PDF</button></div>
   <div class="meta"><div><small>قيمة الأسبوع</small><b>${esc(P.value)}</b></div><div><small>مهارة الديوان</small><b>${esc(P.diwanSkill)}</b></div><div><small>محطة المهارات</small><b>${esc(P.station)}</b></div><div><small>الميدان</small><b>${esc(P.field)}</b></div></div>
+  ${P.brief ? `<div class="box"><h2>الليلة باختصار</h2><ol>${P.brief.map(([t, x]) => `<li><b>${esc(t)}</b> ${esc(x)}</li>`).join("")}</ol></div>` : ""}
   <div class="box"><h2>هدف اللقاء</h2><p>${esc(P.goal)}</p><h2>كيف تعيش الفئة القيمة</h2><p>${esc(P.live)}</p></div>
   <h2>الجدول</h2>
   <table><thead><tr><th>الوقت</th><th>الفقرة</th><th>المكان</th><th>المنفّذ</th></tr></thead><tbody>${P.segs.filter((s) => s.kind !== "prep").map((s) => `<tr><td class="t">${fmt12(s.from)}–${fmt12(s.to)}</td><td><b>${esc(s.title)}</b><br><span style="color:var(--muted)">${esc(s.aim || "")}</span></td><td>${esc(s.place)}</td><td>${esc(s.who)}</td></tr>`).join("")}</tbody></table>

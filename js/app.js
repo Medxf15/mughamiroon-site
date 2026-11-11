@@ -1135,6 +1135,7 @@ function viewPlan(arg) {
     <section class="plan-hero"><div><p class="muted">اللقاء ${m.number} · الخميس ${fmtDate(m.meet_date)}</p><h1>${esc(P.title)}</h1><p>${esc(P.tagline)}</p>
       <div class="plan-chips"><span>💎 القيمة <b>${esc(P.value)}</b></span><span>👂 الديوان <b>${esc(P.diwanSkill)}</b></span><span>🥋 المحطة <b>${esc(P.station)}</b></span><span>⚽ الميدان <b>${esc(P.field)}</b></span></div></div>
       <div class="plan-now" id="plan-now">${planNowHTML(P, m)}</div></section>
+    ${P.brief ? `<section class="panel plan-brief"><h3>ليلتك باختصار</h3><ol class="ps-steps">${P.brief.map(([t, d]) => `<li><span class="num">${esc(t)}</span><p>${esc(d)}</p></li>`).join("")}</ol><p class="muted small">التفاصيل والكلام حرفيًا في كل فقرة تحت.</p></section>` : ""}
     <section class="panel plan-goal"><p><b>هدف اللقاء:</b> ${esc(P.goal)}</p><p><b>كيف نعيش القيمة:</b> ${esc(P.live)}</p>
       <div class="plan-duty">${Object.entries(P.duties || {}).map(([c, d]) => `<span><b>${esc(c)}</b> ${esc(d)}</span>`).join("")}</div></section>
     <div class="psegs">${P.segs.map(seg).join("")}</div>
