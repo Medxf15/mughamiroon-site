@@ -1175,17 +1175,19 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .kt-fam{margin:0;font-size:4mm;color:#555}
 .kt-motto{margin:0;text-align:center;font-family:"Lalezar",sans-serif;font-size:5mm;color:var(--tc)}
 .ktag footer{font-size:2.6mm;color:#777;text-align:center}
-.ktag h2.long{font-size:11mm}
-.kt-lv{margin:0 0 1mm;text-align:center;font-size:3.4mm;font-weight:700;color:#555}
-.kt-five{list-style:none;margin:2.5mm 0 0;padding:0;display:grid;gap:1.6mm}
-.kt-five li{display:grid;grid-template-columns:6mm 1fr;grid-template-rows:auto auto;column-gap:2mm;align-items:center}
-.kt-five .kt-ic{grid-row:1/3;width:6mm;height:6mm;color:var(--tc)}
-.kt-five b{font-size:3.3mm;line-height:1.1}.kt-five span{font-size:2.5mm;color:#555;line-height:1.2}
-.kt-goal{margin:3mm 0 1.5mm;font-size:3.2mm;text-align:center}
-.kt-cells{display:grid;grid-template-columns:repeat(var(--n,4),1fr);gap:1.6mm;justify-items:center}
-.kt-cells i{width:11mm;height:11mm;border:.4mm solid #333;border-radius:1.5mm;display:flex;align-items:center;justify-content:center}
-.kt-cells i.pre{background:#e9ebf2}.kt-ck{width:6mm;height:6mm;color:#333}
-.kt-rule{margin:auto 0 0;font-size:2.5mm;color:#666;text-align:center;line-height:1.3}
-.kt-cells+.kt-rule{margin-top:2mm}
+.ktag h1.lvn{font-family:"Lalezar",sans-serif;font-size:15mm;line-height:1;text-align:center;margin:.5mm 0 0;color:#14284b}
+.ktag h1.lvn.long{font-size:10.5mm;margin:3mm 0 1.4mm}.ktag .lvt{text-align:center;font-size:3.2mm;color:#4b5563;margin:0 0 2mm}
+.ktag{height:105mm;overflow:hidden}.ktag .em{display:block;width:21mm;height:24mm;margin:0 auto}
+.ktag .mt{display:block;width:64mm;height:25mm;margin:0 auto}.mt .bg{fill:#eef0f6}.mt .rd{fill:none;stroke:#14284b;stroke-width:1.2;stroke-dasharray:1.6 1.6}.mt .d{fill:#14284b}.mt .f{fill:#fff;stroke:#14284b;stroke-width:1.2}.mt .n{fill:var(--tc);stroke:#14284b;stroke-width:1.4}.mt .fl{fill:var(--tc);stroke:#14284b;stroke-width:.8}
+.ktag .stp{text-align:center;font-size:2.8mm;color:#6b7280;margin:.5mm 0 2.5mm}
+.ktag .plate{margin-top:auto;background:#14284b;color:#fff;border-radius:1.5mm;padding:1.8mm 2mm;text-align:center;line-height:1.1}
+.ktag .plate small{display:block;font-size:2.6mm;opacity:.85}.ktag .plate span{font-family:"Lalezar",sans-serif;font-size:8mm}.ktag .plate span.long{font-size:6.4mm}
+.ktag.b header small:last-child{color:#555;font-weight:500}.ktag.b::before{height:2mm}
+.ktag .bt{font-family:"Lalezar",sans-serif;font-size:6.2mm;line-height:1;margin:3mm 0 .8mm}.ktag .bt em{font-style:normal;color:var(--tc)}.ktag .bs{font-size:2.9mm;color:#6b7280;margin:0 0 2.5mm}
+.ktag .row{display:flex;align-items:center;gap:2mm;height:11.2mm;border-top:.25mm solid #cfd5e2}.ktag .row:last-of-type{border-bottom:.25mm solid #cfd5e2}
+.ktag .ri{width:6mm;height:6mm;color:var(--tc);flex:none}.ktag .lb{flex:1;display:flex;flex-direction:column;line-height:1.15}.ktag .lb b{font-size:3.4mm}.ktag .lb span{font-size:2.4mm;color:#6b7280}
+.ktag .cs{display:flex;gap:1.2mm;flex:none}.ktag .cs i{width:var(--s,8.4mm);height:var(--s,8.4mm);border:.4mm solid #14284b;border-radius:1.3mm;display:flex;align-items:center;justify-content:center;color:#c3c9d6}
+.ktag .cs i.pre{background:#e9ebf2;color:#14284b}.ktag .st{width:66%;height:66%}.ktag .ck{width:70%;height:70%}
+.ktag .how{margin-top:auto;border:.4mm solid #14284b;border-radius:1.5mm;padding:2mm 2.5mm;font-size:2.9mm;line-height:1.45;text-align:center;margin-bottom:0}.ktag .how b{font-family:"Lalezar",sans-serif;font-size:4mm;color:var(--tc);font-weight:400}
 @media print{.ktag-page{margin:0;padding:0;break-after:page}.ktag-page:last-child{break-after:auto}}
 .pl-star{width:11mm;height:11mm}

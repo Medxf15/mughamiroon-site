@@ -249,12 +249,21 @@ export function currentMeeting(S) {
 /** personal levels: cumulative net points, compared with yourself only (no ranking) */
 export const LEVELS = [
   { min: 0, name: "راكب", icon: "🎒", what: "ركب مع القافلة وبدأ الطريق" },
-  { min: 6, name: "رفيق", icon: "🤝", what: "رفيق درب يُعتمد عليه" },
-  { min: 12, name: "سَنَد", icon: "🛡️", what: "يسند قافلته وقت الحاجة" },
-  { min: 20, name: "خبير الدرب", icon: "🧭", what: "يعرف الطريق ويدل غيره عليه" },
-  { min: 28, name: "حادي القافلة", icon: "🐪", what: "صوته يحمّس القافلة ويقودها" },
-  { min: 36, name: "شيخ القافلة", icon: "🏆", what: "قدوة القافلة وكبيرها في الأخلاق" },
+  { min: 5, name: "رفيق", icon: "🤝", what: "رفيق درب يُعتمد عليه" },
+  { min: 20, name: "سَنَد", icon: "🛡️", what: "يسند قافلته وقت الحاجة" },
+  { min: 40, name: "خبير الدرب", icon: "🧭", what: "يعرف الطريق ويدل غيره عليه" },
+  { min: 65, name: "حادي القافلة", icon: "🐪", what: "صوته يحمّس القافلة ويقودها" },
+  { min: 95, name: "شيخ القافلة", icon: "🏆", what: "قدوة القافلة وكبيرها في الأخلاق" },
 ];
+/** نجوم كل قيمة لكل مستوى (خمس قيم): تجمع الخانات الخمس. مجموع كل قيمة 19 نجمة = شيخ القافلة، والمجموع الكلي 95. */
+export const STARS = [1, 3, 4, 5, 6];
+export const STAR_CUM = STARS.reduce((a, n) => (a.push((a[a.length - 1] || 0) + n), a), []); // 1,4,8,13,19
+/** عدد اللقاءات اللي كسب فيها الطفل كل قيمة (بدون الخصم) */
+export function starsOf(S, I, kid) {
+  const r = { t: 0, i: 0, a: 0, s: 0, m: 0 };
+  for (const m of S.meetings) { const p = row(I, m.id, kid); if (!p || p.present === false) continue; for (const k in r) if (p[k]) r[k]++; }
+  return r;
+}
 export function level(total) {
   let i = 0; for (let j = 0; j < LEVELS.length; j++) if (total >= LEVELS[j].min) i = j;
   const nx = LEVELS[i + 1] || null;

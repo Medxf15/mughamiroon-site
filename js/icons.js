@@ -23,3 +23,23 @@ export const ICON = {
   mic: `<g ${S}><rect x="24" y="6" width="16" height="28" rx="8"/><path d="M14 26c0 10 8 18 18 18s18-8 18-18"/><path d="M32 44v12M20 56h24"/></g>`,
 };
 export const svg = (k, cls = "") => `<svg class="ic ${cls}" viewBox="0 0 64 64" aria-hidden="true">${ICON[k] || ""}</svg>`;
+
+/** شارات المستويات الستة: رسم + إطار مختلف البنية لكل مستوى. viewBox 64×72، تُرسم بحبر #14284b ولكنة var(--tc). */
+const I = "#14284b";
+const SH = "M32 3 7 12v22c0 17 11 30 25 36 14-6 25-19 25-36V12z";
+const ln = (w = 3) => `fill="none" stroke="${I}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"`;
+const tint = (d, o = 0.14) => `<path d="${d}" fill="var(--tc)" opacity="${o}"/>`;
+export const EMBLEM = [
+  // 0 راكب: حقيبة الطريق داخل لوح مربع
+  `<rect x="8" y="10" width="48" height="52" rx="9" fill="var(--tc)" opacity=".14"/><rect x="8" y="10" width="48" height="52" rx="9" ${ln(2.6)}/><g ${ln(3)}><path d="M18 31c0-9 6-14 14-14s14 5 14 14v22a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4z"/><path d="M18 37q14 9 28 0"/><path d="M29 17v-5h6v5"/><rect x="25" y="43" width="14" height="8" rx="2.5"/><path d="M13 34v17M51 34v17"/></g>`,
+  // 1 رفيق: حلقتان متشابكتان في درع
+  `${tint(SH)}<path d="${SH}" ${ln(2.6)}/><path d="M32 9 12 16v18c0 14 8 25 20 31 12-6 20-17 20-31V16z" fill="none" stroke="var(--tc)" stroke-width="1.4"/><g ${ln(3.4)}><circle cx="24.5" cy="36" r="10.5"/><circle cx="39.5" cy="36" r="10.5"/></g>`,
+  // 2 سَنَد: عمودان يسندان سقفًا، درع بإطار مزدوج
+  `${tint(SH)}<path d="${SH}" ${ln(2.6)}/><path d="M32 9 12 16v18c0 14 8 25 20 31 12-6 20-17 20-31V16z" fill="none" stroke="var(--tc)" stroke-width="1.4"/><g ${ln(3.2)}><path d="M32 18 46 27H18z"/><path d="M23 30v22M41 30v22M32 30v22"/><path d="M17 53h30"/></g>`,
+  // 3 خبير الدرب: بوصلة في ثماني الأضلاع
+  `${tint("M22 4h20l18 18v28L42 68H22L4 50V22z")}<path d="M22 4h20l18 18v28L42 68H22L4 50V22z" ${ln(2.6)}/><path d="M23 10h18l15 15v22L41 62H23L8 47V25z" fill="none" stroke="var(--tc)" stroke-width="1.4"/><g ${ln(2.8)}><circle cx="32" cy="36" r="14"/></g><path d="M32 24l5 12-5 12-5-12z" fill="${I}"/><path d="M32 24l5 12h-10z" fill="var(--tc)"/>`,
+  // 4 حادي القافلة: مكبّر صوت، درع بتاج ثلاثي
+  `${tint("M32 10 10 6v28c0 17 9 28 22 34 13-6 22-17 22-34V6z")}<path d="M10 6l11 8 11-9 11 9 11-8v28c0 17-9 28-22 34C19 62 10 51 10 34z" ${ln(2.6)}/><g ${ln(3)}><path d="M18 34l18-9v22l-18-9z"/><path d="M18 34v9"/><path d="M41 29c4 3 4 12 0 15"/><path d="M46 25c7 6 7 17 0 23"/></g>`,
+  // 5 شيخ القافلة: قمة بها راية ونجمة، درع مرصّع
+  `${tint("M32 4 14 10V3l9 5 9-6 9 6 9-5v7z M7 12v22c0 17 11 30 25 36 14-6 25-19 25-36V12z", 0.22)}<path d="M7 12v22c0 17 11 30 25 36 14-6 25-19 25-36V12L48 8l-9 5-7-9-7 9-9-5z" ${ln(2.6)}/><path d="M32 14 12 20v14c0 14 8 25 20 31 12-6 20-17 20-31V20z" fill="none" stroke="var(--tc)" stroke-width="1.4"/><g ${ln(3)}><path d="M14 52l12-22 7 10 5-8 12 20z"/><path d="M26 30v-9"/></g><path d="M26 21h9l-3 3 3 3h-9z" fill="var(--tc)" stroke="${I}" stroke-width="1.2"/>`,
+];

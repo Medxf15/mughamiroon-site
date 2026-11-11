@@ -4,7 +4,7 @@ import * as L from "./logic.js";
 import { planFor, toMin, fmt12 } from "./plans.js";
 import { powerCard, powerIcon, powerBack, playerCard, packBack } from "./pcard.js";
 import { initField } from "./field.js";
-import { svg as ic } from "./icons.js";
+import { svg as ic, EMBLEM } from "./icons.js";
 
 // ---------------- state ----------------
 const TABLES = ["caravans", "kids", "meetings", "points", "deductions", "team_challenge", "matches", "goals", "cards", "league_rounds", "badges", "measures", "kid_notes", "power_cards", "seals", "app_settings", "duty_log", "field_events"];
@@ -647,25 +647,36 @@ function viewPrint(arg) {
   $app().innerHTML = `<div class="print-page"><header class="pr-guide no-print"><a href="#home">→ رجوع لليوم</a><h1>${title}</h1><ul>${guide}</ul><button class="btn" data-act="doprint">🖨️ طباعة / حفظ PDF</button></header>${sheets}</div>`;
 }
 // ---------------- بطاقة المغامر المعلّقة ----------------
-const LVL_STEPS = [6, 6, 8, 8, 8]; // نقاط كل مستوى للتالي (مجموعها 36 = شيخ القافلة)
+const MT_PTS = [[59, 21], [48, 18], [37, 15], [26, 11], [15, 7], [5, 4]]; // مسار القمة: يصعد من اليمين لليسار
+function mountain(cur) {
+  const ridge = MT_PTS.map((p) => p.join(",")).join(" ");
+  const dots = MT_PTS.map(([x, y], i) => i < cur ? `<circle cx="${x}" cy="${y}" r="2.2" class="d"/>` : i === cur ? `<circle cx="${x}" cy="${y}" r="3.6" class="n"/><circle cx="${x}" cy="${y}" r="1.2" fill="#fff"/>` : `<circle cx="${x}" cy="${y}" r="2.4" class="f"/>`).join("");
+  return `<svg viewBox="0 -3 64 29" class="mt"><polygon points="${ridge} 5,25 59,25" class="bg"/><path d="M5 4V-2l6 2-6 2" class="fl"/><polyline points="${ridge}" class="rd"/>${dots}</svg>`;
+}
+const STAR_SVG = '<svg viewBox="0 0 64 64" class="st"><path d="M32 6l7.8 16 17.6 2.5-12.7 12.4 3 17.5L32 46l-15.7 8.4 3-17.5L6.6 24.5 24.2 22z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>';
 function kidTags() {
   const groups = S.caravans.map((c) => [c, L.kidsOf(S, c.id)]).concat([[null, L.activeKids(S).filter((k) => !k.caravan_id)]]).filter(([, ks]) => ks.length);
   const hole = '<i class="kt-hole l"></i><i class="kt-hole r"></i>';
   const front = (k, c, lv) => `<div class="ktag" style="${carStyle(c)}">${hole}
       <header><small>${c ? "قافلة " + esc(c.name) : "المغامرون"}</small><img src="assets/mahara.png" alt=""></header>
-      <div class="kt-mid"><h2 class="${(k.first_name || "").length > 6 ? "long" : ""}">${esc(k.first_name)}</h2><p class="kt-fam">${esc(k.family_name || "")}</p></div>
-      <p class="kt-lv">${lv.name}</p><p class="kt-motto">أتحدى وأتعاون</p><footer>نادي مهارة · حي الهجرة</footer></div>`;
+      <svg viewBox="0 0 64 72" class="em">${EMBLEM[lv.i]}</svg><h1 class="lvn ${lv.name.length > 9 ? "long" : ""}">${lv.name}</h1><p class="lvt">${lv.what}</p>${mountain(lv.i)}
+      <p class="stp">المستوى ${lv.i + 1} من ${L.LEVELS.length}${lv.next ? " · الجاي: " + lv.next.name : " · وصلت القمة"}</p>
+      <div class="plate"><small>مغامر</small><span class="${(k.first_name || "").length > 6 ? "long" : ""}">${esc(k.first_name)} ${esc(k.family_name || "")}</span></div></div>`;
   const back = (k, c, lv, have) => {
-    const need = lv.next ? lv.next.min - lv.min : 0;
-    const cells = lv.next
-      ? `<p class="kt-goal">طريقك إلى <b>${lv.next.name}</b>: ${need} نقاط</p><div class="kt-cells" style="--n:${need > 6 ? 4 : 3}">${Array(need).fill(0).map((_, i) => `<i class="${i < have ? "pre" : ""}">${i < have ? ic("check", "kt-ck") : ""}</i>`).join("")}</div>
-         <p class="kt-rule">كل نقطة تكسبها = خانة. تكتمل الخانات؟ تستلم بطاقة <b>${lv.next.name}</b> في دائرة الختام، وبطاقتك هذي تروح معك البيت.</p>`
-      : `<p class="kt-goal"><b>وصلت القمة</b></p><p class="kt-rule">مهمتك الآن: أرشد زميلًا. كل مرة تساعد راكبًا جديدًا علّم خانة.</p><div class="kt-cells">${Array(5).fill(0).map(() => "<i></i>").join("")}</div>`;
-    return `<div class="ktag back" style="${carStyle(c)}">${hole}
+    const N = L.STARS[Math.min(lv.i, L.STARS.length - 1)], top = !lv.next;
+    const cs = N <= 4 ? 8.4 : Math.floor((((64 - 6 - 4 - 15) - (N - 1) * 1.2) / N) * 10) / 10;
+    const rows = L.FIVE.map((f) => `<div class="row">${ic(f.ic, "ri")}<div class="lb"><b>${f.name}</b>${N <= 3 ? `<span>${f.what}</span>` : ""}</div><div class="cs" style="--s:${cs}mm">${Array(N).fill(0).map((_, i) => `<i class="${i < (have[f.k] || 0) ? "pre" : ""}">${i < (have[f.k] || 0) ? ic("check", "ck") : STAR_SVG}</i>`).join("")}</div></div>`).join("");
+    const how = top ? `أنت <b>شيخ القافلة</b>: وصلت قمة أُحد. كل نجمة جديدة تسجّلها هنا في سجل الشرف، وهذي البطاقة تبقى لك. علّقها في بيتك.`
+      : `مستواك الآن: <b>${lv.name}</b>. عبّئ كل الخانات، ثم علّق هذي البطاقة عندك في البيت، وخذ بطاقة <b>${lv.next.name}</b>.`;
+    return `<div class="ktag b" style="${carStyle(c)}">${hole}
       <header><small>${esc(k.first_name)} · ${lv.name}</small><small>تُعلَّم في دائرة الختام</small></header>
-      <ul class="kt-five">${L.FIVE.map((f) => `<li>${ic(f.ic, "kt-ic")}<b>${f.name}</b><span>${f.what}</span></li>`).join("")}</ul>${cells}</div>`;
+      <h2 class="bt">${N === 1 ? "نجمة" : N + " نجوم"} في <em>كل قيمة</em></h2><p class="bs">${top ? "سجل الشرف" : "عشان تنتقل إلى مستوى «" + lv.next.name + "»"}</p>${rows}<p class="how">${how}</p></div>`;
   };
-  const all = groups.flatMap(([c, ks]) => ks.map((k) => { const tot = L.kidTotal(S, I, k.id), lv = L.level(tot); return [k, c, lv, Math.max(0, Math.min(tot - lv.min, lv.next ? lv.next.min - lv.min : 0))]; }));
+  const all = groups.flatMap(([c, ks]) => ks.map((k) => {
+    const lv = L.level(L.kidTotal(S, I, k.id)), st = L.starsOf(S, I, k.id), N = L.STARS[Math.min(lv.i, L.STARS.length - 1)], prev = lv.i ? L.STAR_CUM[lv.i - 1] : 0;
+    const have = Object.fromEntries(Object.entries(st).map(([key, n]) => [key, Math.max(0, Math.min(N, n - prev))]));
+    return [k, c, lv, have];
+  }));
   const pages = [];
   for (let i = 0; i < all.length; i += 8) {
     const chunk = all.slice(i, i + 8);
@@ -675,9 +686,9 @@ function kidTags() {
   }
   return { title: "بطاقات المغامرين المعلّقة (بطاقة لكل مستوى)",
     guide: `<li><b>${all.length} بطاقة</b> بمقاس 74×105 مم، 8 بالصفحة، وجه ثم ظهر (اطبع وجهين على الحافة القصيرة). ورق مقوّى، وثقبان للتعليق.</li>
-      <li>كل بطاقة على <b>مستوى الطفل الحالي</b>: ظهرها فيه النقاط الخمس (التعاون، الالتزام، الأخلاق، المبادرة، الإتقان) وخانات بعدد النقاط اللي يحتاجها للمستوى التالي. النقاط اللي كسبها قبل الطباعة معبّأة مسبقًا.</li>
-      <li>في <b>دائرة الختام</b> كل ولد يمسك بطاقته وتعلّم له خانة لكل نقطة كسبها. اكتملت الخانات؟ يستلم بطاقة المستوى التالي (من «بطاقات المستويات» أو أعد الطباعة)، والقديمة يوديها البيت.</li>
-      <li>الخصم ما يُكتب على البطاقة. الرقم المعتمد هو اللي في المنصة، والبطاقة تُقرَّب له. الظهر ما يُقارن قدّام أحد.</li>`,
+      <li>كل بطاقة على <b>مستوى الطفل الحالي</b>: وجهها يعرض مستواه ومكانه على جبل أُحد، وظهرها خمس قيم (التعاون، الالتزام، الأخلاق، المبادرة، الإتقان) لكل قيمة صف خانات نجوم بعدد ثابت لكل المستوى (1، 3، 4، 5، 6). اللي كسبه قبل الطباعة يظهر معبّأ.</li>
+      <li>في <b>دائرة الختام</b> كل ولد يمسك بطاقته وتعلّم له نجمة في القيمة اللي أظهرها اللقاء. تكتمل كل الخانات؟ يعلّق بطاقته في بيته ويستلم بطاقة المستوى التالي (أعد الطباعة من هنا).</li>
+      <li>الخصم ما يُكتب على البطاقة. الظهر ما يُقارن قدّام أحد.</li>`,
     sheets: pages.join("") };
 }
 
