@@ -701,15 +701,17 @@ function kidTags(blankLevel) {
     const have = Object.fromEntries(Object.entries(st).map(([key, n]) => [key, Math.max(0, Math.min(N, n - prev))]));
     return [k, c, lv, have];
   }));
+  // A6 (105×148) × 4 على A4 عمودي: وجه ثم ظهر. الظهر معكوس يمينًا ويسارًا لأن الطباعة وجهين على الحافة الطويلة.
+  const cell = (x, fn) => `<div class="ktag-cell">${x ? fn(...x) : ""}</div>`;
   const pages = [];
-  for (let i = 0; i < all.length; i += 8) {
-    const chunk = all.slice(i, i + 8);
-    pages.push(`<section class="ktag-page">${chunk.map((x) => front(...x)).join("")}</section>`);
-    const rows = [chunk.slice(0, 4), chunk.slice(4, 8)].filter((r) => r.length);
-    pages.push(`<section class="ktag-page">${rows.map((r) => { const m = r.slice().reverse(); while (m.length < 4) m.unshift(null); return m.map((x) => (x ? back(...x) : '<div class="ktag empty"></div>')).join(""); }).join("")}</section>`);
+  for (let i = 0; i < all.length; i += 4) {
+    const chunk = all.slice(i, i + 4);
+    pages.push(`<section class="ktag-page">${[0, 1, 2, 3].map((n) => cell(chunk[n], front)).join("")}</section>`);
+    const rows = [chunk.slice(0, 2), chunk.slice(2, 4)];
+    pages.push(`<section class="ktag-page">${rows.map((r) => { const m = r.slice().reverse(); while (m.length < 2) m.unshift(null); return m.map((x) => cell(x, back)).join(""); }).join("")}</section>`);
   }
   return { title: forced != null ? "بطاقات مستوى " + L.LEVELS[forced].name + " لكل المغامرين" : "بطاقات المغامرين المعلّقة (بطاقة لكل مستوى)",
-    guide: `<li><b>${all.length} بطاقة</b> بمقاس 74×105 مم، 8 بالصفحة، وجه ثم ظهر (اطبع وجهين على الحافة القصيرة). ورق مقوّى، وثقبان للتعليق.</li>
+    guide: `<li><b>${all.length} بطاقة</b> بمقاس A6 (105×148 مم)، 4 بالصفحة على A4 عمودي، وجه ثم ظهر (اطبع وجهين مع القلب على الحافة الطويلة). ورق مقوّى، وثقبان للتعليق.</li>
       <li>كل بطاقة على <b>مستوى الطفل الحالي</b>: وجهها يعرض مستواه ومكانه على جبل أُحد، وظهرها خمس قيم (التعاون، الالتزام، الأخلاق، المبادرة، الإتقان) لكل قيمة صف خانات نجوم بعدد ثابت لكل المستوى (1، 3، 4، 5، 6). اللي كسبه قبل الطباعة يظهر معبّأ.</li>
       <li>في <b>دائرة الختام</b> كل ولد يمسك بطاقته وتعلّم له نجمة في القيمة اللي أظهرها اللقاء. تكتمل كل الخانات؟ يعلّق بطاقته في بيته ويستلم بطاقة المستوى التالي (أعد الطباعة من هنا).</li>
       <li>الخصم ما يُكتب على البطاقة. الظهر ما يُقارن قدّام أحد.</li>`,
