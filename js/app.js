@@ -660,7 +660,7 @@ function kidTags() {
   const front = (k, c, lv) => `<div class="ktag" style="${carStyle(c)}">${hole}
       <header><small>${c ? "قافلة " + esc(c.name) : "المغامرون"}</small><img src="assets/mahara.png" alt=""></header>
       <svg viewBox="0 0 64 72" class="em">${EMBLEM[lv.i]}</svg><h1 class="lvn ${lv.name.length > 9 ? "long" : ""}">${lv.name}</h1><p class="lvt">${lv.what}</p>${mountain(lv.i)}
-      <p class="stp">المستوى ${lv.i + 1} من ${L.LEVELS.length}${lv.next ? " · الجاي: " + lv.next.name : " · وصلت القمة"}</p>
+      <p class="stp">${lv.i + 1} من ${L.LEVELS.length}</p>
       <div class="plate"><small>مغامر</small><span class="${(k.first_name || "").length > 6 ? "long" : ""}">${esc(k.first_name)} ${esc(k.family_name || "")}</span></div></div>`;
   const back = (k, c, lv, have) => {
     const N = L.STARS[Math.min(lv.i, L.STARS.length - 1)], top = !lv.next;
