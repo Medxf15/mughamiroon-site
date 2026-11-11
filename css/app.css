@@ -1247,3 +1247,41 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .main>*,.panel>*{min-width:0}
 .mf-car{min-width:0}
 .main,.panel{grid-template-columns:minmax(0,1fr)}
+
+/* البطاقة الرقمية */
+.dk-q{display:flex;align-items:center;gap:8px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:6px 12px;max-width:420px}
+.dk-q input{flex:1;min-width:0;border:0;background:transparent;outline:none;font-size:1rem;padding:6px 0}
+.dk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(344px,100%),1fr));gap:14px;padding:12px}
+.dk-panel .dk-grid{padding:0}
+.dk-wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;justify-items:center;align-content:start;background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--tc);border-radius:16px;padding:10px}
+.dk-wrap[hidden]{display:none}
+.dk-wrap.abs .dk-card{opacity:.55}
+.dk-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;justify-content:space-between}
+.dk-name{font-weight:700;color:var(--fg);text-decoration:none}
+.dk-n{font-size:.85rem;color:var(--muted)}
+.dk-card{display:flex;justify-content:center;max-width:100%}
+.dk-card .ktag{zoom:1.12;flex:none;width:74mm;height:105mm;border:.3mm solid #d4d9e5;border-radius:2.5mm;box-shadow:0 10px 24px -16px rgba(0,0,0,.6)}
+.ktag .cs button.c{width:var(--s,8.4mm);height:var(--s,8.4mm);border:.4mm solid #14284b;border-radius:1.3mm;display:flex;align-items:center;justify-content:center;color:#a2abbd;background:#fff;padding:0;cursor:pointer;transition:transform .12s,background .12s}
+.ktag .cs button.c:active{transform:scale(.9)}
+.ktag .cs button.c.pre{background:#e9ebf2;color:#14284b}
+.ktag .cs button.c.today{background:var(--tc);border-color:var(--tc);color:#fff;animation:dkpop .28s ease-out}
+.ktag .cs button.c:disabled{cursor:not-allowed;opacity:.5}
+.ktag .cs button.c:focus-visible{outline:.6mm solid #111;outline-offset:.3mm}
+@keyframes dkpop{0%{transform:scale(.6)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.ktag .cs button.c.today{animation:none}}
+.dk-done{margin:0;background:color-mix(in srgb,var(--c-green) 18%,transparent);border:1px solid var(--c-green);border-radius:10px;padding:6px 10px;font-size:.9rem;text-align:center}
+.dk-bar{justify-content:center}
+.dk-wrap .dlist,.dk-wrap .dedbox{width:100%}
+/* لوحة ترتيب القوافل */
+.board{display:grid;gap:10px}
+.bd-row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--soft);border-inline-start:6px solid var(--tc)}
+.bd-rank{font-family:"Lalezar",sans-serif;font-size:1.9rem;line-height:1;text-align:center;color:var(--tc)}
+.bd-name{font-weight:700;font-size:1.05rem}
+.bd-meta{font-size:.85rem;color:var(--muted)}
+.bd-bar{height:8px;border-radius:99px;background:rgba(127,127,127,.2);margin-top:6px;overflow:hidden}
+.bd-bar i{display:block;height:100%;background:var(--tc);border-radius:99px}
+.bd-avg{text-align:center}.bd-avg b{font-size:1.5rem;display:block;line-height:1}.bd-avg small{color:var(--muted);font-size:.75rem}
+.road-next{margin:6px 0 0;font-size:.92rem}
+.tv-board .bd-row{padding:18px 22px;grid-template-columns:70px minmax(0,1fr) auto}
+.tv-board .bd-rank{font-size:3.4rem}.tv-board .bd-name{font-size:2.2rem}.tv-board .bd-meta{font-size:1.3rem}.tv-board .bd-avg b{font-size:3rem}.tv-board .bd-avg small{font-size:1.1rem}
+.tv-board .bd-bar{height:14px}

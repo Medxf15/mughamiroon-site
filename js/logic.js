@@ -314,17 +314,42 @@ export const PERKS = [
   { name: "المهمة السرّية", what: "تتسلم القافلة مهمة خاصة من مسؤول الفئة." },
   { name: "أسطورة الطريق", what: "اسم القافلة في لوحة الشرف، وتختار جائزة اللقاء الختامي." },
 ];
-/** station index after each meeting, and the latest station reached */
+/** نقاط المغامر (الصافي التراكمي) المطلوبة لكل محطة. المحطة p تفتح لما نصف أعضاء القافلة أو أكثر (حتى الغائبين) يبلغون هذا الرقم.
+ *  الأرقام 5 و20 و40 و65 و95 هي بطاقات المستويات (رفيق، سَنَد، خبير الدرب، حادي القافلة، شيخ القافلة)، وبينها محطات وسطى. */
+export const SEAL_REQ = [5, 12, 20, 30, 40, 65, 80, 95];
+/** وصف شرط المحطة p (1..8): اسم المستوى لو الرقم بطاقة مستوى، وإلا عدد النقاط */
+export function sealReqLabel(p) {
+  const r = SEAL_REQ[p - 1]; if (r == null) return "";
+  const lv = LEVELS.find((x) => x.min === r);
+  return lv ? "بطاقة «" + lv.name + "»" : r + " نقطة";
+}
+/** station index after each meeting, and the latest station reached.
+ *  القاعدة: القافلة تتقدم لما نصف أعضائها أو أكثر (من العدد الكامل، الغائب يحسب) يبلغ نقاط المحطة. لا رجوع للخلف. */
 export function roadOf(S, I, cid) {
-  let stars = 0; const reached = [];
-  for (const m of S.meetings) {
-    const before = Math.min(ROAD.length - 1, stars);
-    stars += teamMeet(S, I, m.id, cid).stars + dutyStarAt(S, m.id, cid);
-    const after = Math.min(ROAD.length - 1, stars);
-    for (let p = before + 1; p <= after; p++) reached.push({ pos: p, meeting_id: m.id });
+  const ks = kidsOf(S, cid), need = Math.max(1, Math.ceil(ks.length / 2));
+  const cum = {}; for (const k of ks) cum[k.id] = 0;
+  const reached = []; let pos = 0;
+  const count = (req) => ks.filter((k) => cum[k.id] >= req).length;
+  if (ks.length) for (const m of S.meetings) {
+    for (const k of ks) cum[k.id] += net(I, m.id, k.id);
+    let p = pos;
+    while (p < SEAL_REQ.length && count(SEAL_REQ[p]) >= need) p++;
+    for (let q = pos + 1; q <= p; q++) reached.push({ pos: q, meeting_id: m.id });
+    pos = p;
   }
-  const pos = Math.min(ROAD.length - 1, stars);
-  return { pos, reached, last: reached[reached.length - 1] || null };
+  const nextReq = SEAL_REQ[pos];
+  const next = nextReq == null ? null : { pos: pos + 1, req: nextReq, label: sealReqLabel(pos + 1), have: count(nextReq), need, n: ks.length };
+  return { pos, reached, last: reached[reached.length - 1] || null, next };
+}
+/** ترتيب القوافل بمتوسط نقاط المغامر (مجموع نقاط الأعضاء ÷ عددهم)، حتى لا تفوز القافلة لأن أعضاءها أكثر */
+export function caravanBoard(S, I) {
+  const rows = S.caravans.map((c) => {
+    const ks = kidsOf(S, c.id); const sum = ks.reduce((n, k) => n + kidTotal(S, I, k.id), 0);
+    return { c, n: ks.length, sum, avg: ks.length ? sum / ks.length : 0, pos: roadOf(S, I, c.id).pos };
+  });
+  rows.sort((a, b) => b.avg - a.avg || b.pos - a.pos || a.c.sort - b.c.sort);
+  let r = 0, prev = null; rows.forEach((x, i) => { const v = Math.round(x.avg * 100); if (v !== prev) { r = i + 1; prev = v; } x.rank = r; });
+  return rows;
 }
 
 /** seals: one sealed letter waits at each station. A caravan opens letter n when its camel reaches station n (every star = one step). No dependence on other caravans. */
