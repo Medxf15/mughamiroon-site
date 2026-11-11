@@ -618,6 +618,20 @@ function viewPrint(arg) {
     ({ title, guide, sheets } = kidTags());
   } else if (/^lv[0-5]$/.test(arg)) {
     ({ title, guide, sheets } = kidTags(+arg[2]));
+  } else if (arg === "pcu" || arg === "dutyu" || arg === "topicu") {
+    // كل بطاقة مرة وحدة في صفحة مستقلة، تطبع أي صفحة بالعدد اللي تبيه
+    const one = (h) => `<div class="one">${h}</div>`;
+    if (arg === "pcu") {
+      title = "بطاقات القوة: كل بطاقة مرة وحدة"; const kinds = Object.keys(L.DECK);
+      guide = `<li>${kinds.length} بطاقة، كل بطاقة في صفحة، وآخر صفحة ظهر البطاقات. اطبع كل صفحة بالعدد اللي تبيه.</li>`;
+      sheets = kinds.map((k) => one(pc(k))).join("") + one(`<div class="pp-cell">${powerBack()}</div>`);
+    } else if (arg === "dutyu") {
+      title = "بطاقات التكليف: كل بطاقة مرة وحدة"; guide = `<li>${L.DUTIES.length} تكاليف، كل بطاقة في صفحة. اطبع كل صفحة بالعدد اللي تبيه.</li>`;
+      sheets = L.DUTIES.map((d) => one(duty(d))).join("");
+    } else {
+      title = "مواضيع المنبر: كل موضوع مرة وحدة"; guide = `<li>${L.TOPICS.length} موضوع، كل موضوع في صفحة. اطبع كل صفحة بالعدد اللي تبيه.</li>`;
+      sheets = L.TOPICS.map((_, i) => one(topic(i))).join("");
+    }
   } else if (arg === "deck") {
     title = "بطاقات القوة";
     guide = `<li><b>${deck.length} بطاقة</b> في ${Math.ceil(deck.length / 9)} صفحات: برونزية ×4 لكل نوع، فضية وذهبية ×3، أسطورية ×2.</li><li>ورق مقوّى 250–300 جرام لامع أو مطفي، A4، الهوامش «بلا»، وفعّل «رسومات الخلفية».</li><li>الصفحة الأخيرة ظهر البطاقات (اختياري): اطبعها على ظهر الصفحات الثلاث إذا الطابعة تطبع وجهين.</li><li>قصّها على الخطوط، وخلها في ظرف معك. البطاقة تُسلّم للقائد بعد السحب، وترجع لك بعد المباراة.</li>`;

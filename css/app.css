@@ -1191,3 +1191,6 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .ktag .how{margin-top:auto;border:.4mm solid #14284b;border-radius:1.5mm;padding:2mm 2.5mm;font-size:2.9mm;line-height:1.45;text-align:center;margin-bottom:0}.ktag .how b{font-family:"Lalezar",sans-serif;font-size:4mm;color:var(--tc);font-weight:400}
 @media print{.ktag-page{margin:0;padding:0;break-after:page}.ktag-page:last-child{break-after:auto}}
 .pl-star{width:11mm;height:11mm}
+
+.one{display:grid;place-items:center;min-height:200px;padding:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+@media print{.one{break-after:page;height:270mm;padding:0;overflow:hidden}.one:last-child{break-after:auto}}
