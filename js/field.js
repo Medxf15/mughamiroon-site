@@ -203,16 +203,16 @@ export function initField(ctx) {
     $app().innerHTML = ctx.shell(`
       ${ctx.pageHead("الملعب", m ? `اللقاء ${m.number} · الخميس ${ctx.fmtDate(m.meet_date)}` : "", ctx.meetPicker())}
       <div class="ftools">
-        ${tool("#pts", "🎮", "نقاط", evToday.some((e) => e.kind === "manual") ? "✓ " + evToday.filter((e) => e.kind === "manual").length + " إدخال الليلة" : "تكتب العدد والسبب بنفسك")}
+        ${tool("#quick", "⚡", "سريع", evToday.some((e) => e.kind === "manual") ? "✓ " + evToday.filter((e) => e.kind === "manual").length + " إدخال الليلة" : "نقاط القوافل ونجوم المغامرين")}
         ${tool("#cards", "🎴", "بطاقات القوة", "اسحب، وشوف رصيد كل قافلة")}
-        ${tool("#closing", "🌙", "الختام", evToday.some((e) => e.kind === "prize") ? "✓ جائزة الأسبوع معتمدة" : "أرقام الليلة وجائزة الأسبوع")}
+        ${tool("#closing", "🌙", "ختام الليلة", evToday.some((e) => e.kind === "prize") ? "✓ جائزة الأسبوع معتمدة" : "ترتيب الليلة وجائزة الأسبوع")}
         ${ctx.can("plan") ? `<button class="ftool" data-f="linkopen"><span>🔗</span><b>رابط الحكم</b><small>يسجّل المباراة بدون دخول</small></button>` : ""}
       </div>
       ${ui.linkOpen ? linkPanel() : ""}
       <section class="fsec"><h2 class="h2">⚽ مباريات اليوم</h2>
         ${today.length ? `<div class="fmatches">${today.map((x) => matchRow(x, "#match/" + x.id, md)).join("")}</div><p class="muted small">ترتيب اللعب على كيفك، افتح أي مباراة وابدأ.</p>` : `<p class="muted">ما فيه مباريات في هذا اللقاء.${!anyPlayed ? " ابنِ الدوري تحت." : ""}</p>`}
       </section>
-      ${evToday.length ? `<section class="fsec"><h2 class="h2">📊 نقاط الميدان اليوم</h2><div class="fpts">${S.caravans.map((c) => `<span style="${carStyle(c)}"><b>${esc(c.name)}</b><b class="num">${ptsToday(c.id)}</b></span>`).join("")}</div><p class="muted small">من «نقاط» اللي تكتبها بنفسك.</p></section>` : ""}
+      ${evToday.length ? `<section class="fsec"><h2 class="h2">📊 نقاط الميدان اليوم</h2><div class="fpts">${S.caravans.map((c) => `<span style="${carStyle(c)}"><b>${esc(c.name)}</b><b class="num">${ptsToday(c.id)}</b></span>`).join("")}</div><p class="muted small">من «سريع»: إضافاتك وخصوماتك.</p></section>` : ""}
       ${edit ? builder(S) : ""}
       <section class="fsec"><h2 class="h2">🏆 الترتيب</h2><div class="tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>القافلة</th><th>لعب</th><th>فاز</th><th>تعادل</th><th>خسر</th><th>الفارق</th><th>النقاط</th></tr></thead><tbody>${st.map((s, i) => `<tr><td class="num">${i + 1}</td><td><span class="sw" style="${carStyle(I.car[s.id])}"></span>${esc(I.car[s.id] ? I.car[s.id].name : "")}</td><td class="num">${s.p}</td><td class="num">${s.w}</td><td class="num">${s.d}</td><td class="num">${s.l}</td><td class="num">${s.gf - s.ga}</td><td class="num"><b>${s.pts}</b></td></tr>`).join("")}</tbody></table></div>
         <p class="muted small">فوز 3، تعادل 1، و+1 لعب نظيف يعطيه الحكم آخر المباراة.</p></section>
@@ -403,26 +403,6 @@ export function initField(ctx) {
       <p class="small">⚠️ ${esc(x.safety)} · 🔁 <b>البديل:</b> ${esc(x.alt)}</p></article>`;
   }
 
-  // ======== نقاط «لعبة» (يدوي) ========
-  const PTS_QUICK = [1, 2, 3, 5, 10];
-  function viewPts() {
-    const S = ctx.S(), I = ctx.I(); const m = I.meet[ctx.meetId()]; const ed = ctx.can("points");
-    const p = ui.pts;
-    const evs = m ? (S.field_events || []).filter((e) => e.meeting_id === m.id && e.kind === "manual").sort((a, b) => b.id - a.id) : [];
-    const board = L.gameBoard(S, m ? m.id : null);
-    const sign = (n) => `<bdi dir="ltr">${n > 0 ? "+" + n : n}</bdi>`;
-    $app().innerHTML = ctx.shell(`<a class="back" href="#field">→ الملعب</a>
-      ${ctx.pageHead("🎮 نقاط", "أنت تكتب كم نقطة والسبب، وتنضاف تحت «لعبة» وتظهر في لوحة القوافل.", ctx.meetPicker())}
-      <section class="panel pts-board">${board.map((x) => `<div class="pts-car" style="${carStyle(x.c)}"><b>${esc(x.c.name)}</b><span class="num pts-tot"><bdi dir="ltr">${x.total}</bdi></span><small>الليلة ${sign(x.today)}</small></div>`).join("")}</section>
-      ${ed && m ? `<section class="panel pts-form"><h3>أضف نقاط</h3>
-        <div class="prize-pick">${S.caravans.map((c) => `<button class="ga-car sm ${p.cid === c.id ? "on" : ""}" style="${carStyle(c)}" data-f="ptscar" data-car="${c.id}">${esc(c.name)}</button>`).join("")}</div>
-        <div class="pts-step"><button class="step" data-f="ptsn" data-d="-1" aria-label="نقص">−</button><output class="num pts-n">${sign(p.n)}</output><button class="step" data-f="ptsn" data-d="1" aria-label="زد">+</button></div>
-        <div class="pts-quick">${PTS_QUICK.map((q) => `<button class="chip" data-f="ptsq" data-v="${q}"><bdi dir="ltr">+${q}</bdi></button>`).join("")}<button class="chip" data-f="ptsq" data-v="-1"><bdi dir="ltr">-1</bdi></button><button class="chip" data-f="ptsq" data-v="-3"><bdi dir="ltr">-3</bdi></button></div>
-        <label>السبب<input id="pts-why" maxlength="60" placeholder="مثال: أسرع جمع، أفضل تعاون في اللعبة" value="${esc(p.why)}"></label>
-        <div class="row-btns"><button class="btn" data-f="ptssave" ${p.cid && p.n ? "" : "disabled"}>أضف النقاط</button></div></section>` : ""}
-      <section class="panel"><h3>إدخالات الليلة</h3>${evs.length ? `<ul class="pts-list">${evs.map((e) => `<li style="${carStyle(I.car[e.caravan_id])}"><b>${esc(I.car[e.caravan_id] ? I.car[e.caravan_id].name : "")}</b><span class="num ${e.points < 0 ? "bad" : "good"}">${sign(e.points)}</span><span class="muted">${esc(e.note || "بدون سبب")}</span>${ed ? `<button class="x" data-f="ptsdel" data-id="${e.id}" aria-label="احذف">×</button>` : ""}</li>`).join("")}</ul>` : '<p class="muted">ما أُدخلت نقاط الليلة.</p>'}</section>`, "pts");
-  }
-
   // ======== الختام ========
   function viewClosing() {
     const S = ctx.S(), I = ctx.I(); const m = I.meet[ctx.meetId()]; const ed = ctx.can("points");
@@ -488,7 +468,7 @@ export function initField(ctx) {
     if (t.id === "gm-name" && ui.game) ui.game.name = t.value.trim();
     if (t.id === "prize-why") ui.prize = { ...(ui.prize || {}), why: t.value.trim() };
   });
-  document.addEventListener("input", (e) => { const t = e.target; if (t.id === "gm-name" && ui.game) ui.game.name = t.value.trim(); if (t.id === "pts-why") ui.pts.why = t.value; });
+  document.addEventListener("input", (e) => { const t = e.target; if (t.id === "gm-name" && ui.game) ui.game.name = t.value.trim(); });
 
   const busy = new Set();
   document.addEventListener("click", async (e) => {
@@ -572,16 +552,6 @@ export function initField(ctx) {
         return ctx.doUndoable("انحذف", async () => { for (const x of xs) await db.remove("field_events", { id: x.id }); return xs; }, async (r) => { await db.insert("field_events", r.map(({ id, created_at, ...x }) => x)); }, ["field_events"]); }
       case "gbuild": ui.fb = { a: b.dataset.a, b: b.dataset.b, from: Math.max(0, ctx.S().meetings.findIndex((x) => x.id === ctx.meetId())) }; { const S = ctx.S(); ui.fbPlan = buildPlan(S, [Number(b.dataset.a), Number(b.dataset.b)], ui.fb.from); } location.hash = "field"; return;
 
-      // --- نقاط يدوية
-      case "ptscar": ui.pts.cid = Number(b.dataset.car); return viewPts();
-      case "ptsn": ui.pts.n = Math.max(-50, Math.min(100, ui.pts.n + Number(b.dataset.d))) || 0; return viewPts();
-      case "ptsq": ui.pts.n = Number(b.dataset.v); return viewPts();
-      case "ptssave": { const p = ui.pts; const mid = ctx.meetId(); if (!p.cid || !p.n || !mid) return; const why = ((document.getElementById("pts-why") || {}).value || p.why || "").trim();
-        ui.pts = { cid: p.cid, n: 1, why: "" };
-        return ctx.doUndoable("أُضيفت النقاط", () => db.insert("field_events", [{ meeting_id: mid, caravan_id: p.cid, kind: "manual", game: "لعبة", points: p.n, note: why || null }]), async (r) => { for (const x of r || []) await db.remove("field_events", { id: x.id }); }, ["field_events"]); }
-      case "ptsdel": { if (!arm("احذف؟")) return; const xs = (ctx.S().field_events || []).filter((x) => String(x.id) === b.dataset.id);
-        return ctx.doUndoable("انحذف الإدخال", async () => { for (const x of xs) await db.remove("field_events", { id: x.id }); return xs; }, async (r) => { await db.insert("field_events", r.map(({ id, created_at, ...x }) => x)); }, ["field_events"]); }
-
       // --- game points
       case "gstep": { const g = ui.game; const cid = b.dataset.car, k = b.dataset.k; const o = (g.v[cid] ||= { perf: 0, coop: 0 }); o[k] = Math.max(0, Math.min(GAME_MAX[k], (o[k] || 0) + Number(b.dataset.d))); return viewGame(); }
       case "gmreset": if (!arm("متأكد؟ يمسح الأرقام")) return; ui.game = { name: "", v: {} }; return viewGame();
@@ -604,7 +574,7 @@ export function initField(ctx) {
   });
 
   return {
-    viewField, viewGather, viewGame, viewClosing, viewPts,
+    viewField, viewGather, viewGame, viewClosing,
     viewMatch: (id) => { mode = "staff"; return viewMatch(id, "#field"); },
     viewLink,
     leave: () => { mode = "staff"; document.body.classList.remove("is-match"); clearInterval(tick); clearInterval(ui.gT); curMid = null; keepAwake(false); },

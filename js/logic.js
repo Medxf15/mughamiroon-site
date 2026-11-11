@@ -65,7 +65,9 @@ export function meaningful(p) { return !!p && (p.present === false || CATS.some(
 export function row(I, mid, kid) { return I.pts[mid + "|" + kid] || null; }
 export function present(I, mid, kid) { const r = row(I, mid, kid); return r ? r.present !== false : true; }
 /** an absent kid earns nothing that day, but his marks are kept so a mistaken "absent" can be undone */
-export function earned(I, mid, kid) { const r = row(I, mid, kid); if (!r || r.present === false) return 0; return CATS.reduce((n, c) => n + (r[c[0]] ? 1 : 0), 0); }
+export function earned(I, mid, kid) { const r = row(I, mid, kid); if (!r || r.present === false) return 0; return CATS.reduce((n, c) => n + (Number(r[c[0]]) || 0), 0); }
+/** عدد القيم المختلفة اللي كسبها الليلة (0..5). نجمة القافلة تُبنى عليه، لا على عدد النجوم. */
+export function distinct(I, mid, kid) { const r = row(I, mid, kid); if (!r || r.present === false) return 0; return CATS.reduce((n, c) => n + (r[c[0]] ? 1 : 0), 0); }
 export function deds(I, mid, kid) { return (I.ded[mid + "|" + kid] || []).slice().sort((a, b) => (a.created_at || "").localeCompare(b.created_at || "")); }
 export function minus(I, mid, kid) { if (!present(I, mid, kid)) return 0; return Math.min(DED_CAP, deds(I, mid, kid).reduce((n, d) => n + (d.value || 0), 0)); }
 export function warned(I, mid, kid) { return deds(I, mid, kid).some((d) => d.value === 0); }
@@ -84,7 +86,8 @@ export function teamMeet(S, I, mid, cid) {
   let ready = 0, full = 0, sum = 0, fz = null;
   for (const k of ks) {
     const r = row(I, mid, k.id); if (r && r.fazaa) fz = k.id;
-    const n = net(I, mid, k.id); sum += n;
+    sum += net(I, mid, k.id);
+    const n = distinct(I, mid, k.id) - minus(I, mid, k.id);
     const eff = Math.min(NC, n + (r && r.fazaa ? 1 : 0));
     if (eff >= NC - 1) ready++;
     if (n >= NC) full++;
@@ -258,10 +261,10 @@ export const LEVELS = [
 /** نجوم كل قيمة لكل مستوى (خمس قيم): تجمع الخانات الخمس. مجموع كل قيمة 19 نجمة = شيخ القافلة، والمجموع الكلي 95. */
 export const STARS = [1, 3, 4, 5, 6];
 export const STAR_CUM = STARS.reduce((a, n) => (a.push((a[a.length - 1] || 0) + n), a), []); // 1,4,8,13,19
-/** عدد اللقاءات اللي كسب فيها الطفل كل قيمة (بدون الخصم) */
+/** مجموع نجوم الطفل في كل قيمة عبر اللقاءات (بدون الخصم) */
 export function starsOf(S, I, kid) {
   const r = { t: 0, i: 0, a: 0, s: 0, m: 0 };
-  for (const m of S.meetings) { const p = row(I, m.id, kid); if (!p || p.present === false) continue; for (const k in r) if (p[k]) r[k]++; }
+  for (const m of S.meetings) { const p = row(I, m.id, kid); if (!p || p.present === false) continue; for (const k in r) r[k] += Number(p[k]) || 0; }
   return r;
 }
 export function level(total) {
@@ -341,28 +344,45 @@ export function roadOf(S, I, cid) {
   const next = nextReq == null ? null : { pos: pos + 1, req: nextReq, label: sealReqLabel(pos + 1), have: count(nextReq), need, n: ks.length };
   return { pos, reached, last: reached[reached.length - 1] || null, next };
 }
-/** ترتيب القوافل بمتوسط نقاط المغامر (مجموع نقاط الأعضاء ÷ عددهم)، حتى لا تفوز القافلة لأن أعضاءها أكثر */
-export function caravanBoard(S, I) {
-  const rows = S.caravans.map((c) => {
-    const ks = kidsOf(S, c.id); const sum = ks.reduce((n, k) => n + kidTotal(S, I, k.id), 0);
-    return { c, n: ks.length, sum, avg: ks.length ? sum / ks.length : 0, pos: roadOf(S, I, c.id).pos };
-  });
-  rows.sort((a, b) => b.avg - a.avg || b.pos - a.pos || a.c.sort - b.c.sort);
-  let r = 0, prev = null; rows.forEach((x, i) => { const v = Math.round(x.avg * 100); if (v !== prev) { r = i + 1; prev = v; } x.rank = r; });
-  return rows;
+/** نقاط المشرف اليدوية (إضافة وخصم) لقافلة، لكل الدورة أو للقاء واحد. جائزة الأسبوع ليست نقاطًا. */
+export function manualOf(S, cid, mid = null) {
+  const ev = (S.field_events || []).filter((e) => e.caravan_id === cid && e.kind !== "prize" && (mid == null || e.meeting_id === mid));
+  let plus = 0, minus = 0; for (const e of ev) { const v = e.points || 0; if (v >= 0) plus += v; else minus += v; }
+  return { plus, minus, sum: plus + minus, count: ev.filter((e) => e.points).length, ev };
 }
-
-/** نقاط الألعاب اليدوية («لعبة»): المشرف يكتب العدد والسبب، وتنجمع لكل قافلة (الليلة وكل الدورة). الدوري والبطاقات لا تدخل هنا. */
-export function gameBoard(S, meetingId) {
-  const rows = S.caravans.map((c) => {
-    const ev = (S.field_events || []).filter((e) => e.caravan_id === c.id && e.kind === "manual");
-    const total = ev.reduce((n, e) => n + (e.points || 0), 0);
-    const today = ev.filter((e) => e.meeting_id === meetingId).reduce((n, e) => n + (e.points || 0), 0);
-    return { c, total, today, count: ev.length, n: kidsOf(S, c.id).length };
-  });
-  rows.sort((a, b) => b.total - a.total || b.today - a.today || a.c.sort - b.c.sort);
+/** رصيد القافلة = نجوم أعضائها (معدّلة على عدد الأعضاء حتى لا تتفوق القافلة الأكبر) + نقاط المشرف. mid يحصرها في لقاء واحد. */
+export function carScore(S, I, cid, mid = null) {
+  const ks = kidsOf(S, cid); const n = ks.length;
+  const maxN = Math.max(1, ...S.caravans.map((c) => kidsOf(S, c.id).length));
+  const stars = ks.reduce((t, k) => t + (mid == null ? kidTotal(S, I, k.id) : net(I, mid, k.id)), 0);
+  const adj = n ? Math.round((stars * maxN) / n) : 0;
+  const man = manualOf(S, cid, mid);
+  return { n, stars, adj, scaled: n !== maxN, plus: man.plus, minus: man.minus, man: man.sum, count: man.count, total: adj + man.sum };
+}
+/** لوحة ترتيب القوافل الموحّدة. mid = ترتيب ليلة واحدة (ختام الليلة). */
+export function caravanBoard(S, I, mid = null) {
+  const rows = S.caravans.map((c) => ({ c, ...carScore(S, I, c.id, mid), pos: roadOf(S, I, c.id).pos }));
+  rows.sort((a, b) => b.total - a.total || b.adj - a.adj || a.c.sort - b.c.sort);
   let r = 0, prev = null; rows.forEach((x, i) => { if (x.total !== prev) { r = i + 1; prev = x.total; } x.rank = r; });
   return rows;
+}
+/** ختام الليلة: ترتيب الليلة، المرشّح للجائزة (الأعلى وحده، وإلا تعادل يحسمه المشرف)، والجائزة المعتمدة، وأكثر قيمة ظهرت. */
+export function nightOf(S, I, mid) {
+  const rows = caravanBoard(S, I, mid);
+  const any = rows.some((x) => x.stars || x.count);
+  const top = rows.filter((x) => x.rank === 1);
+  const prize = (S.field_events || []).find((e) => e.meeting_id === mid && e.kind === "prize") || null;
+  const vals = CATS.map((c) => ({ k: c[0], name: c[1], n: activeKids(S).reduce((t, k) => { const p = row(I, mid, k.id); return t + (p && p.present !== false ? Number(p[c[0]]) || 0 : 0); }, 0) })).sort((a, b) => b.n - a.n);
+  const present = activeKids(S).filter((k) => present_(I, mid, k.id));
+  const starred = present.filter((k) => earned(I, mid, k.id) > 0).length;
+  return { rows, any, suggest: any && top.length === 1 ? top[0] : null, tie: any && top.length > 1 ? top : [], prize, vals, presentN: present.length, starred };
+}
+const present_ = (I, mid, kid) => { const r = row(I, mid, kid); return r ? r.present !== false : true; };
+/** سجل الجوائز: الفائز والسبب لكل لقاء، وعدد جوائز كل قافلة. */
+export function prizeLog(S) {
+  const list = S.meetings.map((m) => ({ m, prize: (S.field_events || []).find((e) => e.meeting_id === m.id && e.kind === "prize") || null }));
+  const tally = Object.fromEntries(S.caravans.map((c) => [c.id, 0])); for (const x of list) if (x.prize && tally[x.prize.caravan_id] != null) tally[x.prize.caravan_id]++;
+  return { list, tally };
 }
 
 /** seals: one sealed letter waits at each station. A caravan opens letter n when its camel reaches station n (every star = one step). No dependence on other caravans. */
