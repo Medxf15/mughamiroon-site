@@ -190,10 +190,15 @@ export function initField(ctx) {
       <div class="fm-row">${teamChip(h)}<b class="num">${scoreOf(m)}</b>${teamChip(a)}</div><span class="fm-go">${m.played ? "افتح" : "افتح المباراة ←"}</span></a>`;
   }
 
+  // matches grouped by round, no dates: the league is open and is played in order as time allows
+  function roundsHTML(list, href, md) {
+    const rs = [...new Set(list.map((x) => x.round))];
+    return rs.map((r) => { const ms = list.filter((x) => x.round === r); return `<div class="fround"><h4>الجولة ${r}${ms[0].stage !== "league" ? " · " + (ms[0].stage === "final" ? "النهائي" : "المركز الثالث") : ""}</h4><div class="fmatches">${ms.map((x) => matchRow(x, href(x), md)).join("")}</div></div>`; }).join("");
+  }
   // ======== staff: الملعب ========
   function viewField() {
     const S = ctx.S(), I = ctx.I(); const md = M(); const m = md.meeting; const edit = md.edit;
-    const today = m ? S.matches.filter((x) => x.meeting_id === m.id).sort((a, b) => a.round - b.round || a.id - b.id) : [];
+    const allM = S.matches.slice().sort((a, b) => a.round - b.round || a.id - b.id); const nextM = allM.filter((x) => !x.played); const doneM = allM.filter((x) => x.played);
     const anyPlayed = S.matches.some((x) => x.stage === "league" && x.played);
     const st = L.standings(S);
     const evToday = m ? (S.field_events || []).filter((e) => e.meeting_id === m.id) : [];
@@ -209,8 +214,9 @@ export function initField(ctx) {
         ${ctx.can("plan") ? `<button class="ftool" data-f="linkopen"><span>🔗</span><b>رابط الحكم</b><small>يسجّل المباراة بدون دخول</small></button>` : ""}
       </div>
       ${ui.linkOpen ? linkPanel() : ""}
-      <section class="fsec"><h2 class="h2">⚽ مباريات اليوم</h2>
-        ${today.length ? `<div class="fmatches">${today.map((x) => matchRow(x, "#match/" + x.id, md)).join("")}</div><p class="muted small">ترتيب اللعب على كيفك، افتح أي مباراة وابدأ.</p>` : `<p class="muted">ما فيه مباريات في هذا اللقاء.${!anyPlayed ? " ابنِ الدوري تحت." : ""}</p>`}
+      <section class="fsec"><h2 class="h2">⚽ مباريات الدوري</h2>
+        ${nextM.length ? roundsHTML(nextM, (x) => "#match/" + x.id, md) + '<p class="muted small">مفتوحة بدون تواريخ: العب أي مباراة بالترتيب على حسب الوقت. الجدول ثابت.</p>' : `<p class="muted">${allM.length ? "خلصت كل مباريات الدوري 🎉" : "ما فيه جدول."}${!anyPlayed && !allM.length ? " ابنِ الدوري تحت." : ""}</p>`}
+        ${doneM.length ? `<details class="fdone"><summary>✓ المنتهية (${doneM.length})</summary><div class="fmatches">${doneM.map((x) => matchRow(x, "#match/" + x.id, md)).join("")}</div></details>` : ""}
       </section>
       ${evToday.length ? `<section class="fsec"><h2 class="h2">📊 نقاط الميدان اليوم</h2><div class="fpts">${S.caravans.map((c) => `<span style="${carStyle(c)}"><b>${esc(c.name)}</b><b class="num">${ptsToday(c.id)}</b></span>`).join("")}</div><p class="muted small">من «سريع»: إضافاتك وخصوماتك.</p></section>` : ""}
       ${edit ? builder(S) : ""}
@@ -218,7 +224,7 @@ export function initField(ctx) {
         <p class="muted small">فوز 3، تعادل 1، و+1 لعب نظيف يعطيه الحكم آخر المباراة.</p></section>
       <details class="panel fsec-d"><summary><h3>📅 جدول الدوري كامل</h3></summary>
         ${rounds.map((r) => { const ms = S.matches.filter((x) => x.round === r); const mt = ms[0] && I.meet[ms[0].meeting_id];
-          return `<div class="fround"><h4>الجولة ${r}${ms[0] && ms[0].stage !== "league" ? " · " + (ms[0].stage === "final" ? "النهائي" : "المركز الثالث") : ""} <small class="muted">${mt ? "اللقاء " + mt.number + " · " + ctx.fmtDate(mt.meet_date) : "بدون لقاء"}</small></h4>${ms.map((x) => matchRow(x, "#match/" + x.id, md)).join("")}</div>`; }).join("") || '<p class="muted">ما فيه جدول.</p>'}
+          return `<div class="fround"><h4>الجولة ${r}${ms[0] && ms[0].stage !== "league" ? " · " + (ms[0].stage === "final" ? "النهائي" : "المركز الثالث") : ""} </h4>${ms.map((x) => matchRow(x, "#match/" + x.id, md)).join("")}</div>`; }).join("") || '<p class="muted">ما فيه جدول.</p>'}
         <p><a class="btn ghost sm" href="#league">التعديل المتقدم (الحراس، لاعب الروح، الجوائز)</a></p></details>`, "field");
   }
   function builder(S) {
@@ -245,7 +251,7 @@ export function initField(ctx) {
     const t = ((ctx.S().app_settings || []).find((x) => x.key === "field_token") || {}).value;
     const url = t ? location.origin + location.pathname + "#f/" + t : "";
     return `<section class="panel flink"><h3>🔗 رابط الحكم</h3>
-      <p class="small">يفتح على أي جوال بدون دخول، ويسجّل <b>مباريات اللقاء فقط</b>: الوقت والأهداف والبطاقات وبطاقات القوة والنتيجة. ما يشوف النقاط ولا الملاحظات ولا أي شي ثاني.</p>
+      <p class="small">يفتح على أي جوال بدون دخول، ويسجّل <b>كل مباريات الدوري بالترتيب وبدون تواريخ</b>: الوقت والأهداف والبطاقات وبطاقات القوة والنتيجة. ما يشوف النقاط ولا الملاحظات ولا أي شي ثاني.</p>
       ${url ? `<div class="flink-u"><code dir="ltr">${esc(url)}</code><button class="btn sm" data-f="linkcopy" data-v="${esc(url)}">نسخ</button></div>` : '<p class="alert">ما فيه رابط بعد.</p>'}
       <p class="muted small">إذا وصل الرابط لأحد ما تبيه، غيّره، والقديم يوقف فورًا.</p>
       <div class="row-btns"><button class="btn ghost sm" data-f="linknew">${url ? "غيّر الرابط" : "أنشئ رابط"}</button><button class="btn ghost sm" data-f="linkopen">إخفاء</button></div></section>`;
@@ -454,10 +460,15 @@ export function initField(ctx) {
     }
     if (FSerr) { $app().innerHTML = `<div class="mx"><div class="mx-link-err"><img src="assets/mahara.png" alt="نادي مهارة"><h1>الرابط ما يشتغل</h1><p>يمكن تغيّر أو انتهى. اطلب الرابط الجديد من مسؤول الفئة.</p></div></div>`; return; }
     if (mid) return viewMatch(mid, "#f/" + token);
-    const md = M(); const mt = md.meeting;
-    $app().innerHTML = `<div class="mx"><header class="mx-top"><img class="mx-logo" src="assets/mahara.png" alt="نادي مهارة"><span class="mx-round">رابط الحكم${mt ? ` · اللقاء ${mt.number} · ${mt.meet_date}` : ""}</span><button class="mx-back" data-f="lrefresh">↻ تحديث</button></header>
-      <div class="fmatches lnk">${md.matches.map((x) => matchRow(x, "#f/" + token + "/" + x.id, md)).join("") || '<p class="empty">ما فيه مباريات اليوم.</p>'}</div>
-      <p class="muted small mx-note">اختر المباراة وابدأ الوقت. كل شي ينحفظ أول بأول.</p></div>`;
+    const md = M();
+    const all = md.matches.slice().sort((x, y) => x.round - y.round || x.id - y.id); const next = all.filter((x) => !x.played), done = all.filter((x) => x.played);
+    const st = L.standings({ caravans: md.caravans, matches: md.matches });
+    const nm = (id) => { const c = md.car(id); return c ? esc(c.name) : ""; };
+    $app().innerHTML = `<div class="mx"><header class="mx-top"><img class="mx-logo" src="assets/mahara.png" alt="نادي مهارة"><span class="mx-round">رابط الحكم · الدوري</span><button class="mx-back" data-f="lrefresh">↻ تحديث</button></header>
+      ${next.length ? roundsHTML(next, (x) => "#f/" + token + "/" + x.id, md) : '<p class="empty">خلصت كل مباريات الدوري.</p>'}
+      ${done.length ? `<details class="fdone"><summary>✓ المنتهية (${done.length})</summary><div class="fmatches lnk">${done.map((x) => matchRow(x, "#f/" + token + "/" + x.id, md)).join("")}</div></details>` : ""}
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>القافلة</th><th>لعب</th><th>الفارق</th><th>النقاط</th></tr></thead><tbody>${st.map((r, i) => `<tr><td class="num">${i + 1}</td><td>${nm(r.id)}</td><td class="num">${r.p}</td><td class="num">${r.gf - r.ga}</td><td class="num"><b>${r.pts}</b></td></tr>`).join("")}</tbody></table></div>
+      <p class="muted small mx-note">الدوري مفتوح: العب المباريات بالترتيب على حسب الوقت. اختر المباراة وابدأ الوقت، وكل شي ينحفظ أول بأول. الجدول ما يتغيّر من هنا.</p></div>`;
   }
 
   // ---------------- events ----------------

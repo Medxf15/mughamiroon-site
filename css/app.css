@@ -1347,3 +1347,7 @@ body.is-match .top,body.is-match .tabbar{display:none!important}
 .tv-board.reveal .bd-row:nth-child(5){animation-delay:calc(var(--rv) * (var(--rn) - 5))}
 .tv-board.reveal .tv-win,.tv-board.reveal .board + p{animation-delay:calc(var(--rv) * var(--rn) + 600ms)}
 @media (prefers-reduced-motion:reduce){.tv-board.reveal .bd-row,.tv-board.reveal .tv-win,.tv-board.reveal .board + p{opacity:1;animation:none}}
+
+/* open league: finished matches fold away */
+.fdone{margin:10px 0}.fdone>summary{cursor:pointer;font-weight:600;color:var(--muted);padding:6px 2px}.fdone .fmatches{margin-top:8px}
+.mx .fround{margin:10px 0}.mx .fround h4{color:#c9d2ff;margin:8px 4px}
