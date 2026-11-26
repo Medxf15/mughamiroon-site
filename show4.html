@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>ليلة الفار · عرض اللقاء 4 · المغامرون</title>
+<link rel="icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Lalezar&display=swap">
+<style>
+:root{--navy:#1d2a6e;--navy2:#27378a;--deep:#121a47;--pink:#e6457a;--green:#1fa865;--orange:#ef8a33;--yellow:#f7c531;--ink:#fff;--muted:#b9c2ee;--card:rgba(255,255,255,.08);--line:rgba(255,255,255,.16)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:radial-gradient(120% 90% at 80% 0%,#2f3f9c 0%,var(--navy) 45%,var(--deep) 100%);color:var(--ink);font-family:"IBM Plex Sans Arabic",Tahoma,sans-serif;overflow:hidden;font-size:clamp(14px,1.55vw,30px)}
+button{font:inherit;color:inherit;cursor:pointer}
+.app{display:grid;grid-template-rows:auto 1fr auto;height:100vh;height:100dvh}
+.top{display:flex;align-items:center;gap:.6em;padding:.45em .9em;background:rgba(0,0,0,.18);border-bottom:1px solid var(--line)}
+.top img{height:1.8em}
+.top .ttl{font-family:Lalezar,sans-serif;font-size:1.25em;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .cnt{color:var(--muted);font-size:.8em;font-variant-numeric:tabular-nums}
+.top .sp{flex:1}
+.tb{background:var(--card);border:1px solid var(--line);border-radius:.6em;padding:.25em .6em;font-size:.78em;white-space:nowrap}
+.tb:hover,.tb:focus-visible{background:rgba(255,255,255,.18);outline:none}
+.stage{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:1.2em 2em}
+.slide{width:100%;max-width:62em;animation:in .35s ease}
+@keyframes in{from{opacity:0;transform:translateY(.6em)}to{opacity:1;transform:none}}
+.kick{color:var(--yellow);font-weight:700;font-size:.9em;margin:0 0 .3em}
+h1{font-family:Lalezar,sans-serif;font-weight:400;font-size:3.3em;line-height:1.15;margin:0 0 .25em}
+h2{font-family:Lalezar,sans-serif;font-weight:400;font-size:2.2em;line-height:1.2;margin:0 0 .45em}
+.lead{font-size:1.25em;color:#e3e8ff;line-height:1.6;margin:0}
+.rules{list-style:none;padding:0;margin:0;display:grid;gap:.5em}
+.rules li{background:var(--card);border:1px solid var(--line);border-radius:.8em;padding:.55em .9em;font-size:1.15em;display:flex;gap:.6em;align-items:baseline}
+.rules li b{color:var(--yellow);font-family:Lalezar,sans-serif;font-weight:400;min-width:1.4em}
+.case{font-size:1.45em;line-height:1.55;font-weight:600;margin:0 0 .8em}
+.opts{display:grid;gap:.5em}
+.opt{display:flex;align-items:center;gap:.7em;background:var(--card);border:2px solid var(--line);border-radius:.9em;padding:.45em .9em;font-size:1.3em;transition:all .3s}
+.opt .n{font-family:Lalezar,sans-serif;font-size:1.6em;width:1.5em;height:1.5em;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.15);flex:0 0 auto;line-height:1}
+.opt.ok{border-color:var(--green);background:rgba(31,168,101,.25)}
+.opt.ok .n{background:var(--green)}
+.opt.no{opacity:.35}
+.why{margin-top:.7em;background:rgba(247,197,49,.14);border:1px solid rgba(247,197,49,.5);border-radius:.8em;padding:.5em .9em;font-size:1.1em}
+.acts{display:flex;gap:.5em;flex-wrap:wrap;margin-top:.9em}
+.ab{background:var(--pink);border:0;border-radius:.7em;padding:.45em 1.1em;font-weight:700;font-size:1em;box-shadow:0 .2em 0 rgba(0,0,0,.25)}
+.ab.alt{background:rgba(255,255,255,.14)}
+.ab.y{background:var(--yellow);color:#1b1b1b}
+.ab:active{transform:translateY(.1em)}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.5em}
+.grid.g4{grid-template-columns:repeat(4,1fr)}
+.it{background:#fff;color:#152060;border-radius:.8em;padding:.4em .3em;text-align:center;position:relative}
+.it .e{font-size:2.3em;line-height:1.15}
+.it .w{font-weight:700;font-size:1.05em}
+.it .k{position:absolute;top:.2em;inset-inline-start:.4em;font-family:Lalezar,sans-serif;color:var(--pink);font-size:1em}
+.bar{height:.5em;background:rgba(255,255,255,.15);border-radius:1em;overflow:hidden;margin:.7em 0}
+.bar i{display:block;height:100%;background:var(--yellow);width:100%;transition:width 1s linear}
+.big{font-family:Lalezar,sans-serif;font-size:7em;line-height:1;text-align:center;margin:.1em 0}
+.qbox{text-align:center}
+.reveal{display:inline-flex;align-items:center;gap:.4em;background:#fff;color:#152060;border-radius:1em;padding:.2em .8em;font-size:2.2em;font-weight:700;margin:.2em 0}
+.story{display:grid;gap:.4em}
+.story p{margin:0;font-size:1.35em;background:var(--card);border-radius:.7em;padding:.35em .8em;border-inline-start:.3em solid var(--yellow)}
+.pitchwrap{display:grid;grid-template-columns:1.1fr 1fr;gap:1.2em;align-items:center}
+svg.pitch{width:100%;height:auto;max-height:68vh}
+.pl circle{fill:#fff;stroke:#152060;stroke-width:3}
+.pl text{font-family:Lalezar,sans-serif;fill:#152060;font-size:26px;text-anchor:middle;dominant-baseline:central}
+.pl .em{font-size:34px;font-family:sans-serif}
+.pl.on circle{fill:var(--yellow)}
+.pl.hl circle{fill:var(--pink);stroke:#fff}
+.pl.hl text{fill:#fff}
+.side p{font-size:1.25em;margin:.2em 0}
+.chat{max-width:30em;margin:0 auto;background:#0e1430;border:1px solid var(--line);border-radius:1.2em;overflow:hidden}
+.chat .hd{display:flex;align-items:center;gap:.6em;padding:.5em .8em;background:rgba(255,255,255,.07);font-size:.95em}
+.chat .av{width:2em;height:2em;border-radius:50%;display:grid;place-items:center;background:#5865f2;font-weight:700}
+.chat .hd small{color:var(--muted);display:block;font-size:.75em}
+.chat .bd{padding:1em .9em 1.2em}
+.bub{background:#253066;border-radius:1em 1em 1em .2em;padding:.6em .9em;font-size:1.3em;line-height:1.55;max-width:92%}
+.verdict{text-align:center;margin-top:.8em}
+.verdict .v{display:inline-block;font-family:Lalezar,sans-serif;font-size:2.6em;padding:.05em .7em;border-radius:.6em}
+.v.trap{background:#d62f4b}.v.safe{background:var(--green)}
+.verdict p{font-size:1.2em;margin:.4em 0 0}
+.how{display:flex;justify-content:center;gap:1.5em;margin-top:.6em;font-size:1.05em;color:var(--muted)}
+.home{display:grid;grid-template-columns:repeat(3,1fr);gap:1em;margin-top:1em}
+.mod{background:var(--card);border:1px solid var(--line);border-radius:1.1em;padding:1em;text-align:start;transition:transform .2s}
+.mod:hover,.mod:focus-visible{transform:translateY(-.2em);background:rgba(255,255,255,.14);outline:none}
+.mod .i{font-size:2.4em}
+.mod h3{font-family:Lalezar,sans-serif;font-weight:400;font-size:1.6em;margin:.1em 0}
+.mod p{margin:0;color:var(--muted);font-size:.9em;line-height:1.5}
+.mod .t{display:inline-block;margin-top:.5em;font-size:.75em;background:rgba(247,197,49,.2);color:var(--yellow);border-radius:1em;padding:.1em .6em}
+.nav{display:flex;align-items:center;gap:.5em;padding:.4em .9em;background:rgba(0,0,0,.22);border-top:1px solid var(--line)}
+.sc{display:flex;gap:.4em;flex:1;justify-content:center;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:.3em;background:rgba(255,255,255,.1);border-radius:2em;padding:.12em .2em .12em .6em;border-inline-start:.4em solid var(--c)}
+.chip b{font-size:.85em;white-space:nowrap}
+.chip .p{font-family:Lalezar,sans-serif;font-size:1.25em;min-width:1.6em;text-align:center;font-variant-numeric:tabular-nums}
+.chip button{background:rgba(255,255,255,.12);border:0;border-radius:50%;width:1.6em;height:1.6em;font-weight:700;line-height:1}
+.nb{background:var(--card);border:1px solid var(--line);border-radius:.6em;padding:.3em .9em;font-size:.9em}
+.timer{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,14,40,.72);z-index:5}
+.timer.on{display:flex}
+.timer .ring{width:16em;height:16em;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--yellow) var(--a,360deg),rgba(255,255,255,.12) 0)}
+.timer .ring>div{width:13.6em;height:13.6em;border-radius:50%;background:var(--deep);display:grid;place-items:center;font-family:Lalezar,sans-serif;font-size:1em}
+.timer .num{font-size:6em;line-height:1}
+.timer .lb{font-size:1.4em;color:var(--muted);margin-top:-.4em}
+.timer.done .ring{background:var(--pink)}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:1em;align-items:end;height:52vh;margin-top:1em}
+.col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.col .bar2{width:70%;background:var(--c);border-radius:.6em .6em 0 0;transition:height .6s;min-height:.4em}
+.col .pp{font-family:Lalezar,sans-serif;font-size:2.4em}
+.col .nm{font-family:Lalezar,sans-serif;font-size:1.5em;margin-top:.2em}
+.hint{color:var(--muted);font-size:.85em;margin-top:.8em}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:1em}
+.tag{display:inline-block;background:rgba(255,255,255,.12);border-radius:1em;padding:.05em .6em;font-size:.8em;margin-inline-end:.3em}
+@media (max-width:720px){body{font-size:14px;overflow:auto}.top{flex-wrap:wrap}.tb[data-t="45"],.tb[data-t="10"]{display:none}.app{height:auto;min-height:100dvh}.stage{padding:1em}.home{grid-template-columns:1fr}.grid{grid-template-columns:repeat(3,1fr)}.grid.g4{grid-template-columns:repeat(3,1fr)}.pitchwrap,.cols2{grid-template-columns:1fr}h1{font-size:2.3em}.top .cnt{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <img src="assets/mahara.png" alt="">
+    <div class="ttl" id="ttl">ليلة الفار</div>
+    <div class="cnt" id="cnt"></div>
+    <div class="sp"></div>
+    <button class="tb" data-t="10">⏱ 10ث</button>
+    <button class="tb" data-t="20">⏱ 20ث</button>
+    <button class="tb" data-t="45">⏱ 45ث</button>
+    <button class="tb" data-t="60">⏱ دقيقة</button>
+    <button class="tb" id="bBoard">📊 النقاط</button>
+    <button class="tb" id="bHome">🏠 القائمة</button>
+    <button class="tb" id="bFs">⛶</button>
+  </div>
+  <main class="stage" id="stage"></main>
+  <div class="nav">
+    <button class="nb" id="bPrev">→ السابق</button>
+    <div class="sc" id="sc"></div>
+    <button class="nb" id="bStep">خطوة ␣</button>
+    <button class="nb" id="bNext">التالي ←</button>
+  </div>
+</div>
+<div class="timer" id="timer"><div class="ring" id="ring"><div><div class="num" id="tnum">20</div><div class="lb">اضغط للإيقاف</div></div></div></div>
+<script src="js/show4.js"></script>
+</body>
+</html>
